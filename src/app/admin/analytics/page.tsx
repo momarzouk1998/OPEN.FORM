@@ -29,19 +29,17 @@ export default function AdminAnalyticsPage() {
         { count: totalUsers },
         { count: approvedUsers },
         { count: pendingUsers },
-        { count: totalProjects },
         { count: totalForms },
         { count: totalResponses },
       ] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('projects').select('*', { count: 'exact', head: true }),
         supabase.from('forms').select('*', { count: 'exact', head: true }),
         supabase.from('form_responses').select('*', { count: 'exact', head: true }),
       ])
 
-      setStats({ totalUsers, approvedUsers, pendingUsers, totalProjects, totalForms, totalResponses })
+      setStats({ totalUsers, approvedUsers, pendingUsers, totalForms, totalResponses })
     } catch (e) {
       console.error(e)
     } finally {
@@ -59,7 +57,7 @@ export default function AdminAnalyticsPage() {
     { label: 'إجمالي المستخدمين', value: stats?.totalUsers, color: 'bg-blue-500' },
     { label: 'مستخدمين موافق عليهم', value: stats?.approvedUsers, color: 'bg-green-500' },
     { label: 'طلبات معلقة', value: stats?.pendingUsers, color: 'bg-amber-500' },
-    { label: 'المشاريع', value: stats?.totalProjects, color: 'bg-blue-500' },
+
     { label: 'الفورمز', value: stats?.totalForms, color: 'bg-purple-500' },
     { label: 'إجمالي الردود', value: stats?.totalResponses, color: 'bg-indigo-500' },
   ]
