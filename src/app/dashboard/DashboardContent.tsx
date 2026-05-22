@@ -223,11 +223,11 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
                           معاينة
                         </Link>
                         <Link
-                          href={`/forms/${form.serial_number || form.id}/edit`}
+                          href={`/admin/results?formId=${form.id}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="text-blue-600 hover:text-blue-700 font-medium transition-colors px-2 py-1 hover:bg-blue-50 rounded-lg"
+                          className="text-green-600 hover:text-green-700 font-medium transition-colors px-2 py-1 hover:bg-green-50 rounded-lg"
                         >
-                          تعديل
+                          الردود
                         </Link>
                       </div>
                     </div>

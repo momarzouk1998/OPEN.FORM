@@ -157,11 +157,6 @@ export default function ResultsPage() {
         .eq('id', authUser.id)
         .single()
 
-      if (!profile || (profile.role !== 'admin' && profile.role !== 'supervisor')) {
-        router.push('/dashboard')
-        return
-      }
-
       setUser(profile)
       await fetchData(profile)
     } catch (error) {
@@ -172,11 +167,16 @@ export default function ResultsPage() {
 
   async function fetchData(profile: any) {
     try {
-      const { data: formsData } = await supabase
+      let query = supabase
         .from('forms')
         .select('id, name')
         .eq('is_active', true)
-        .order('name')
+
+      if (profile.role !== 'admin') {
+        query = query.eq('created_by', profile.id)
+      }
+
+      const { data: formsData } = await query.order('name')
 
       let filteredForms = formsData || []
       setForms(filteredForms)
