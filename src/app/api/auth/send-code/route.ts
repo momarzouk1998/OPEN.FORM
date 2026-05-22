@@ -70,6 +70,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, message: 'تم إرسال كود التحقق إلى بريدك الإلكتروني' })
   } catch (error) {
     console.error('Send code error:', error)
-    return NextResponse.json({ error: 'حدث خطأ أثناء إرسال الكود' }, { status: 500 })
+    const message = error instanceof Error ? error.message : 'حدث خطأ أثناء إرسال الكود'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
