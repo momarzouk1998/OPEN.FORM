@@ -1,163 +1,151 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { createClient } from '@/utils/supabase/client'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { TEMPLATE_CATEGORIES } from '@/types'
-import type { FormTemplate } from '@/types'
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import { Briefcase, ShoppingCart, UserCheck, Stethoscope, Sparkles, ChevronLeft, GraduationCap, LayoutTemplate } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
+
+// Define the template type from the database
+interface FormTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  questions_data: any[];
+}
 
 export default function TemplatesPage() {
-  const [templates, setTemplates] = useState<FormTemplate[]>([])
-  const [loading, setLoading] = useState(true)
-  const [activeCategory, setActiveCategory] = useState<string | null>(null)
-  const router = useRouter()
-  const supabase = createClient()
+  const [templates, setTemplates] = useState<FormTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
 
   useEffect(() => {
-    fetchTemplates()
-  }, [])
-
-  const fetchTemplates = async () => {
-    try {
+    const fetchTemplates = async () => {
       const { data, error } = await supabase
         .from('form_templates')
         .select('*')
-        .order('sort_order')
-      if (error) throw error
-      setTemplates(data || [])
-    } catch (e) {
-      console.error('Error fetching templates:', e)
-    } finally {
-      setLoading(false)
+        .order('sort_order', { ascending: true });
+        
+      if (data && !error) {
+        setTemplates(data);
+      }
+      setLoading(false);
+    };
+
+    fetchTemplates();
+  }, []);
+
+  // Helper to get nice icons and colors based on the DB category
+  const getCategoryTheme = (category: string) => {
+    switch (category) {
+      case 'medical':
+        return {
+          icon: <Stethoscope className="w-8 h-8 text-brand-500" />,
+          color: "from-brand-500/20 to-teal-500/20"
+        };
+      case 'employment':
+        return {
+          icon: <Briefcase className="w-8 h-8 text-blue-500" />,
+          color: "from-blue-500/20 to-cyan-500/20"
+        };
+      case 'education':
+        return {
+          icon: <GraduationCap className="w-8 h-8 text-purple-500" />,
+          color: "from-purple-500/20 to-pink-500/20"
+        };
+      case 'survey':
+        return {
+          icon: <UserCheck className="w-8 h-8 text-green-500" />,
+          color: "from-green-500/20 to-emerald-500/20"
+        };
+      default:
+        return {
+          icon: <LayoutTemplate className="w-8 h-8 text-orange-500" />,
+          color: "from-orange-500/20 to-red-500/20"
+        };
     }
-  }
-
-  const categories = Object.entries(TEMPLATE_CATEGORIES) as [string, string][]
-
-  const filteredTemplates = activeCategory
-    ? templates.filter(t => t.category === activeCategory)
-    : templates
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50/30 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent" />
-      </div>
-    )
-  }
+  };
 
   return (
-    <div dir="rtl" className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50/30">
-      {/* Header */}
-      <header className="bg-white/95 backdrop-blur-md border-b border-gray-100/80">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors text-sm"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            رجوع
-          </button>
-          <h1 className="text-base font-bold text-gray-800">قوالب النماذج</h1>
-          <div className="w-16" />
-        </div>
-      </header>
+    <div className="min-h-screen p-6 md:p-12 max-w-7xl mx-auto">
+      <div className="flex flex-col items-center text-center mb-16 mt-8">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-panel text-brand-600 font-medium mb-6"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>مكتبة القوالب الذكية</span>
+        </motion.div>
+        
+        <motion.h1 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="text-4xl md:text-5xl font-black mb-6 text-foreground tracking-tight"
+        >
+          ابدأ بنموذج احترافي <span className="text-brand-500">بضغطة زر</span>
+        </motion.h1>
+        
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="text-lg text-slate-500 max-w-2xl"
+        >
+          اختر من قوالبنا الجاهزة والمصممة بعناية لتناسب كافة احتياجاتك، أو دع الذكاء الاصطناعي يبني نموذجك الخاص من الصفر.
+        </motion.p>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8 text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">ابدأ من قالب جاهز</h2>
-          <p className="text-gray-500">اختر قالباً من القوالب الجاهزة لتبدأ بإنشاء نموذجك بسرعة</p>
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <div className="w-12 h-12 border-4 border-brand-200 border-t-brand-500 rounded-full animate-spin"></div>
         </div>
-
-        {/* Category Filter */}
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-2 justify-center">
-          <button
-            onClick={() => setActiveCategory(null)}
-            className={`px-5 py-2 rounded-full text-sm font-medium transition-all shrink-0 ${
-              !activeCategory
-                ? 'bg-gradient-to-l from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25'
-                : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            الكل
-          </button>
-          {categories.map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => setActiveCategory(key)}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-all shrink-0 ${
-                activeCategory === key
-                  ? 'bg-gradient-to-l from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25'
-                  : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Templates Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {filteredTemplates.map(template => (
-            <div
-              key={template.id}
-              className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg hover:border-blue-200 transition-all group"
-            >
-              {/* Image */}
-              <div className="w-full h-40 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center relative overflow-hidden">
-                {template.image_url ? (
-                  <img src={template.image_url} alt={template.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                ) : (
-                  <div className="w-16 h-16 bg-white/80 rounded-2xl flex items-center justify-center shadow-sm">
-                    <svg className="w-8 h-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
+      ) : (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        >
+          {templates.map((template, index) => {
+            const theme = getCategoryTheme(template.category);
+            const questionsCount = template.questions_data?.length || 0;
+            
+            return (
+              <motion.div
+                key={template.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: index * 0.1 + 0.4 }}
+                whileHover={{ y: -8, scale: 1.02 }}
+                className="glass-panel p-6 rounded-3xl relative overflow-hidden group cursor-pointer flex flex-col h-full"
+              >
+                <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${theme.color} rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-150`}></div>
+                
+                <div className="relative z-10 flex flex-col h-full">
+                  <div className="w-16 h-16 rounded-2xl bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center mb-6">
+                    {theme.icon}
                   </div>
-                )}
-                {template.is_featured && (
-                  <span className="absolute top-3 right-3 bg-gradient-to-l from-amber-400 to-orange-400 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-sm">
-                    مميز
-                  </span>
-                )}
-                <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-600 text-xs px-2.5 py-1 rounded-lg shadow-sm">
-                  {TEMPLATE_CATEGORIES[template.category] || template.category}
-                </span>
-              </div>
-
-              {/* Content */}
-              <div className="p-5">
-                <h3 className="font-bold text-gray-900 mb-1.5 group-hover:text-blue-600 transition-colors">{template.name}</h3>
-                <p className="text-gray-500 text-sm line-clamp-2 mb-4">{template.description}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-400">
-                    {template.questions_data?.length || 0} أسئلة
-                  </span>
-                  <Link
-                    href={`/templates/${template.id}`}
-                    className="px-4 py-2 bg-gradient-to-l from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all text-sm font-medium shadow-lg shadow-blue-500/25"
-                  >
-                    استخدام القالب
-                  </Link>
+                  
+                  <h3 className="text-2xl font-bold mb-3">{template.name}</h3>
+                  <p className="text-slate-500 mb-6 leading-relaxed flex-grow">{template.description}</p>
+                  
+                  <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100 dark:border-slate-800/50">
+                    <span className="text-sm font-medium text-slate-400">{questionsCount} أسئلة</span>
+                    <Link href={`/templates/${template.id}`} className="text-brand-500 font-bold flex items-center gap-1 group-hover:gap-2 transition-all">
+                      معاينة واستخدام
+                      <ChevronLeft className="w-4 h-4" />
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {filteredTemplates.length === 0 && (
-          <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-4 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-100">
-              <svg className="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-            </div>
-            <p className="text-gray-500">لا توجد قوالب في هذا التصنيف</p>
-          </div>
-        )}
-      </main>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      )}
     </div>
-  )
+  );
 }

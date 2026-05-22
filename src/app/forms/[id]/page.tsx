@@ -10,11 +10,12 @@ export default async function FormPage({ params }: PageProps) {
   const { id } = await params
   const supabase = await createClient()
 
-  // Get form data
+  // Get form data - accept UUID or serial_number
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
   const { data: form } = await supabase
     .from('forms')
     .select('*')
-    .eq('id', id)
+    .eq(isUUID ? 'id' : 'serial_number', isUUID ? id : parseInt(id))
     .single()
 
   if (!form) {

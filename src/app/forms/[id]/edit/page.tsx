@@ -9,25 +9,43 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import ImageUpload from '@/components/ImageUpload'
+import FormFiller from '../FormFiller'
 
-import type { QuestionType, QuestionOption } from '@/types'
+import type { QuestionType, QuestionOption, ThemeSettings } from '@/types'
 import { generateShortCode } from '@/lib/shortCode'
 
 
 
 // Question type definitions with detailed explanations
-const QUESTION_TYPES = {
+const QUESTION_TYPES: Record<string, { label: string; icon: string; description: string; explanation: string }> = {
+  // نصوص
   text: { label: 'نص', icon: 'T', description: 'إجابة نصية قصيرة', explanation: 'مثال: "ما اسمك؟"' },
   textarea: { label: 'نص طويل', icon: '¶', description: 'إجابة مفصلة', explanation: 'مثال: "صف تجربتك"' },
+  email_confirm: { label: 'تأكيد البريد', icon: '✉️', description: 'إدخال الإيميل مرتين', explanation: 'للتأكد من صحة البريد الإلكتروني' },
+  // اختيارات
   single_choice: { label: 'اختيار واحد', icon: '○', description: 'اختيار إجابة واحدة', explanation: 'مثال: "نعم أو لا"' },
   multiple_choice: { label: 'اختيار متعدد', icon: '☑', description: 'اختيار عدة إجابات', explanation: 'مثال: "الهوايات"' },
+  button_choice: { label: 'اختيار بأزرار', icon: '🔘', description: 'خيارات كأزرار مرئية', explanation: 'بديل جميل للاختيار الواحد' },
   dropdown: { label: 'قائمة منسدلة', icon: '▼', description: 'اختيار من قائمة', explanation: 'قائمة مضغوطة لتوفير المساحة' },
+  // تقييم وترتيب
   scale: { label: 'تقييم', icon: '⭐', description: 'تقييم من 1 إلى 10', explanation: 'مثال: تقييم الأداء' },
+  star_rating: { label: 'تقييم بالنجوم', icon: '🌟', description: 'تقييم باستخدام النجوم', explanation: 'بديل مرئي للتقييم الرقمي' },
+  slider: { label: 'شريط رقمي', icon: '🎚️', description: 'اختيار قيمة بالسحب', explanation: 'مثال: تحديد ميزانية أو عمر' },
   ranking: { label: 'ترتيب', icon: '#', description: 'ترتيب العناصر', explanation: 'ترتيب العناصر حسب الأولوية' },
   matrix: { label: 'مصفوفة', icon: '⊞', description: 'خيارات مشتركة', explanation: 'عدة أسئلة مع نفس الخيارات' },
+  match_items: { label: 'توصيل العناصر', icon: '🔗', description: 'مطابقة عمودين', explanation: 'مثال: وصّل الكلمة بمعناها' },
+  // تواريخ وملفات
   date: { label: 'تاريخ', icon: '📅', description: 'إدخال تاريخ', explanation: 'مثال: "تاريخ الميلاد"' },
+  date_range: { label: 'نطاق تاريخ', icon: '📆', description: 'من تاريخ إلى تاريخ', explanation: 'مثال: فترة الإجازة' },
   time: { label: 'وقت', icon: '⏰', description: 'إدخال وقت', explanation: 'مثال: "وقت الحضور"' },
-  file_upload: { label: 'رفع ملف', icon: '📎', description: 'إرفاق ملف أو صورة', explanation: 'مثال: رفع السيرة الذاتية أو صورة' }
+  file_upload: { label: 'رفع ملف', icon: '📎', description: 'إرفاق ملف أو صورة', explanation: 'مثال: رفع السيرة الذاتية أو صورة' },
+  signature: { label: 'التوقيع', icon: '✍️', description: 'حقل توقيع', explanation: 'للحصول على توقيع رقمي' },
+  // محتوى ثابت
+  static_text: { label: 'فقرة (نص ثابت)', icon: '📝', description: 'نص للقراءة فقط', explanation: 'لعرض تعليمات أو معلومات' },
+  static_image: { label: 'صورة ثابتة', icon: '🖼️', description: 'عرض صورة', explanation: 'لعرض شعار أو توضيح' },
+  youtube: { label: 'فيديو يوتيوب', icon: '▶️', description: 'تضمين فيديو يوتيوب', explanation: 'لعرض فيديو توضيحي داخل النموذج' },
+  divider: { label: 'فاصل', icon: '➖', description: 'خط فاصل', explanation: 'للفصل بين الأقسام' },
+  terms: { label: 'الشروط والأحكام', icon: '📋', description: 'موافقة على الشروط', explanation: 'المستخدم يقرأ ويوافق على نص' },
 } as const;
 
 
@@ -69,6 +87,7 @@ interface Question {
   dropdown_type?: 'single' | 'multiple'
   correct_option_ids?: string[]
   row_group?: number | null
+  page?: number
 
 }
 
@@ -97,6 +116,11 @@ interface FormData {
   is_active: boolean
   image_url: string
   short_code?: string
+  serial_number?: number
+  page_titles?: Record<string, string>
+  enable_auto_save?: boolean
+  redirect_rules?: Array<{ question_id: string; operator: string; value: string; redirect_url: string; message?: string }>
+  default_redirect_url?: string
 
 }
 
@@ -117,9 +141,283 @@ function EditFormContent() {
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null>(null)
   const [showLeftPanel, setShowLeftPanel] = useState(true)
   const [showRightPanel, setShowRightPanel] = useState(true)
+  const [isPreviewActive, setIsPreviewActive] = useState(false)
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
 
   const [responseCount, setResponseCount] = useState(0)
-  
+
+  const [isDesignerOpen, setIsDesignerOpen] = useState(false)
+  const [designerTab, setDesignerTab] = useState<'colors' | 'styles' | 'themes' | 'layout'>('colors')
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
+
+  const PRESET_THEMES: Array<{ name: string; label: string; settings: ThemeSettings }> = [
+    {
+      name: 'Default',
+      label: 'الافتراضي الكلاسيكي',
+      settings: {
+        pageColor: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+        formBgColor: '#ffffff',
+        textColor: '#1e293b',
+        primaryColor: '#2563eb',
+        borderRadius: '16px',
+        spacing: 'normal',
+        fontFamily: 'Cairo',
+        flatLayout: false,
+        borderStyle: 'none',
+        borderWidth: 0
+      }
+    },
+    {
+      name: 'Simplicity',
+      label: 'البساطة الفائقة',
+      settings: {
+        pageColor: '#ffffff',
+        formBgColor: '#fafafa',
+        textColor: '#262626',
+        primaryColor: '#171717',
+        borderRadius: '8px',
+        spacing: 'compact',
+        fontFamily: 'Inter',
+        flatLayout: true,
+        borderStyle: 'solid',
+        borderWidth: 1
+      }
+    },
+    {
+      name: 'Sunset Poetry',
+      label: 'شعر الغروب',
+      settings: {
+        pageColor: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fca5a5 100%)',
+        formBgColor: '#ffffffc0',
+        textColor: '#78350f',
+        primaryColor: '#db2777',
+        borderRadius: '24px',
+        spacing: 'cozy',
+        fontFamily: 'Tajawal',
+        flatLayout: false,
+        borderStyle: 'none',
+        borderWidth: 0
+      }
+    },
+    {
+      name: 'Vintage Star',
+      label: 'النجم الكلاسيكي',
+      settings: {
+        pageColor: 'linear-gradient(135deg, #fefbf3 0%, #f1efe3 100%)',
+        formBgColor: '#fdfcf7',
+        textColor: '#4a3f35',
+        primaryColor: '#b45309',
+        borderRadius: '4px',
+        spacing: 'normal',
+        fontFamily: 'Cairo',
+        flatLayout: false,
+        borderStyle: 'solid',
+        borderWidth: 2
+      }
+    },
+    {
+      name: 'Brick Wall',
+      label: 'جدار الطوب الدافئ',
+      settings: {
+        pageColor: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+        formBgColor: '#ffffff',
+        textColor: '#991b1b',
+        primaryColor: '#dc2626',
+        borderRadius: '12px',
+        spacing: 'normal',
+        fontFamily: 'Cairo',
+        flatLayout: false,
+        borderStyle: 'none',
+        borderWidth: 0
+      }
+    },
+    {
+      name: 'Colorful Smart',
+      label: 'الذكي الملون',
+      settings: {
+        pageColor: 'linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%)',
+        formBgColor: '#ffffff',
+        textColor: '#0f172a',
+        primaryColor: '#0ea5e9',
+        borderRadius: '20px',
+        spacing: 'normal',
+        fontFamily: 'Outfit',
+        flatLayout: false,
+        borderStyle: 'none',
+        borderWidth: 0
+      }
+    },
+    {
+      name: 'Basic Cool',
+      label: 'البارد الأساسي',
+      settings: {
+        pageColor: '#f1f5f9',
+        formBgColor: '#ffffff',
+        textColor: '#334155',
+        primaryColor: '#64748b',
+        borderRadius: '12px',
+        spacing: 'normal',
+        fontFamily: 'Inter',
+        flatLayout: false,
+        borderStyle: 'none',
+        borderWidth: 0
+      }
+    },
+    {
+      name: 'Tech Cyber',
+      label: 'السيبراني التقني',
+      settings: {
+        pageColor: '#030712',
+        formBgColor: '#111827',
+        textColor: '#f3f4f6',
+        primaryColor: '#10b981',
+        borderRadius: '0px',
+        spacing: 'compact',
+        fontFamily: 'Outfit',
+        flatLayout: true,
+        borderStyle: 'solid',
+        borderWidth: 1
+      }
+    },
+    {
+      name: 'Pet Lover',
+      label: 'عشاق الأليفة دافئ',
+      settings: {
+        pageColor: 'linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%)',
+        formBgColor: '#ffffff',
+        textColor: '#7c2d12',
+        primaryColor: '#ea580c',
+        borderRadius: '24px',
+        spacing: 'cozy',
+        fontFamily: 'Tajawal',
+        flatLayout: false,
+        borderStyle: 'none',
+        borderWidth: 0
+      }
+    },
+    {
+      name: 'Natural Green',
+      label: 'الأخضر الطبيعي',
+      settings: {
+        pageColor: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+        formBgColor: '#ffffff',
+        textColor: '#14532d',
+        primaryColor: '#16a34a',
+        borderRadius: '16px',
+        spacing: 'normal',
+        fontFamily: 'Cairo',
+        flatLayout: false,
+        borderStyle: 'none',
+        borderWidth: 0
+      }
+    },
+    {
+      name: 'Blue Ocean',
+      label: 'المحيط الأزرق العميق',
+      settings: {
+        pageColor: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)',
+        formBgColor: '#1e293b',
+        textColor: '#f8fafc',
+        primaryColor: '#3b82f6',
+        borderRadius: '16px',
+        spacing: 'normal',
+        fontFamily: 'Outfit',
+        flatLayout: false,
+        borderStyle: 'none',
+        borderWidth: 0
+      }
+    },
+    {
+      name: 'Purple Galaxy',
+      label: 'مجرة الأرجوان السحرية',
+      settings: {
+        pageColor: 'linear-gradient(135deg, #581c87 0%, #2e1065 100%)',
+        formBgColor: '#ffffff10',
+        textColor: '#f3e8ff',
+        primaryColor: '#a855f7',
+        borderRadius: '24px',
+        spacing: 'cozy',
+        fontFamily: 'Cairo',
+        flatLayout: false,
+        borderStyle: 'dashed',
+        borderWidth: 1
+      }
+    }
+  ]
+
+  const getThemeSettings = (): ThemeSettings | null => {
+    if (!formData?.page_titles?.theme_settings) return null
+    const ts = formData.page_titles.theme_settings
+    if (typeof ts === 'string') {
+      try {
+        return JSON.parse(ts)
+      } catch {
+        return null
+      }
+    }
+    return ts as any
+  }
+
+  const theme = getThemeSettings()
+
+  const updateThemeSettings = (updates: Partial<ThemeSettings>) => {
+    if (!formData) return
+    const currentTheme = theme || {}
+    const newTheme = { ...currentTheme, ...updates }
+    setFormData(prev => {
+      if (!prev) return null
+      return {
+        ...prev,
+        page_titles: {
+          ...prev.page_titles,
+          theme_settings: JSON.stringify(newTheme)
+        }
+      }
+    })
+  }
+
+  const renderThemeStyles = () => {
+    if (!theme) return null
+    return (
+      <style dangerouslySetInnerHTML={{ __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700;800&display=swap');
+        
+        .builder-themed-container {
+          ${theme.pageColor ? `background: ${theme.pageColor} !important;` : ''}
+          ${theme.fontFamily ? `font-family: '${theme.fontFamily}', sans-serif !important;` : ''}
+        }
+        .form-themed-card {
+          ${theme.formBgColor ? `background-color: ${theme.formBgColor} !important;` : ''}
+          ${theme.borderRadius ? `border-radius: ${theme.borderRadius} !important;` : ''}
+          ${theme.textColor ? `color: ${theme.textColor} !important;` : ''}
+          ${theme.flatLayout ? `box-shadow: none !important;` : ''}
+          ${theme.borderStyle && theme.borderStyle !== 'none' ? `border: ${theme.borderWidth || 1}px ${theme.borderStyle} ${theme.textColor || '#d1d5db'} !important;` : ''}
+        }
+        .form-themed-text {
+          ${theme.textColor ? `color: ${theme.textColor} !important;` : ''}
+        }
+        .form-themed-description {
+          ${theme.textColor ? `color: ${theme.textColor}cc !important;` : ''}
+        }
+        .form-themed-primary-bg {
+          ${theme.primaryColor ? `background: ${theme.primaryColor} !important; background-color: ${theme.primaryColor} !important;` : ''}
+          color: #ffffff !important;
+        }
+        .form-themed-primary-text {
+          ${theme.primaryColor ? `color: ${theme.primaryColor} !important;` : ''}
+        }
+        .form-themed-primary-border {
+          ${theme.primaryColor ? `border-color: ${theme.primaryColor} !important;` : ''}
+        }
+        .form-themed-spacing {
+          ${theme.spacing === 'compact' ? 'margin-bottom: 0.5rem !important;' : theme.spacing === 'cozy' ? 'margin-bottom: 2rem !important;' : 'margin-bottom: 1.5rem !important;'}
+        }
+        .form-themed-width {
+          ${theme.formWidth ? `max-width: ${theme.formWidth}px !important; width: 100% !important;` : ''}
+        }
+      `}} />
+    )
+  }
 
   const router = useRouter()
 
@@ -137,6 +435,58 @@ function EditFormContent() {
     return Array.isArray(options) ? options : []
   }
 
+  const prepareQuestionsForPreview = (qs: any[]): any[] => {
+    return qs.map((q, index) => {
+      let optionsData: any
+
+      if (q.type === 'matrix') {
+        optionsData = {
+          matrix_rows: (q.matrix_rows || []).map((row: any) => ({
+            id: row.id,
+            text: row.text,
+            required: row.required
+          })),
+          matrix_columns: (q.matrix_columns || []).map((col: any) => ({
+            id: col.id,
+            text: col.text,
+            points: col.points || 0
+          }))
+        }
+      } else if (q.type === 'dropdown') {
+        const items = parseOptions(q.options).map((opt: any) => ({
+          id: opt.id,
+          text: opt.text,
+          points: opt.points || 0
+        }))
+        optionsData = {
+          dropdown_type: q.dropdown_type || 'single',
+          correct_option_ids: q.dropdown_type === 'multiple' ? (q.correct_option_ids || []) : (q.correct_option_id ? [q.correct_option_id] : []),
+          options: items
+        }
+      } else if (q.type === 'match_items') {
+        optionsData = {
+          left_items: (q.matrix_rows || []).map((row: any) => ({ id: row.id, text: row.text })),
+          right_items: (q.matrix_columns || []).map((col: any) => ({ id: col.id, text: col.text }))
+        }
+      } else {
+        optionsData = parseOptions(q.options)
+      }
+
+      return {
+        id: q.id,
+        text: q.text,
+        type: q.type,
+        required: q.required || false,
+        points: q.points || 0,
+        has_counter: q.has_counter || false,
+        order_index: index,
+        row_group: q.row_group || null,
+        page: q.page || 1,
+        options: JSON.stringify(optionsData)
+      }
+    })
+  }
+
 const params = useParams()
 
   const formId = params.id as string
@@ -150,6 +500,21 @@ const params = useParams()
     fetchData()
 
   }, [formId])
+
+  // Auto-save form edits to localStorage when enabled
+  useEffect(() => {
+    if (!formData) return
+    try {
+      const key = `form_draft_${formId}`
+      if (formData.enable_auto_save !== false) {
+        localStorage.setItem(key, JSON.stringify(formData))
+      } else {
+        localStorage.removeItem(key)
+      }
+    } catch (e) {
+      // ignore localStorage errors
+    }
+  }, [formData, formId])
 
 
 
@@ -187,15 +552,16 @@ const params = useParams()
 
       setProfile(profileData)
 
-      // Fetch form data (including created_by)
+      // Fetch form data - accept UUID or serial_number
 
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(formId)
       const { data: form, error: formError } = await supabase
 
         .from('forms')
 
         .select('*')
 
-        .eq('id', formId)
+        .eq(isUUID ? 'id' : 'serial_number', isUUID ? formId : parseInt(formId))
 
         .single()
 
@@ -274,7 +640,8 @@ const params = useParams()
           matrix_columns,
           dropdown_type,
           correct_option_ids,
-          correct_option_id: correct_option_ids?.[0]
+          correct_option_id: correct_option_ids?.[0],
+          page: q.page || 1
         }
       })
 
@@ -304,9 +671,27 @@ const params = useParams()
 
         is_active: form.is_active,
         image_url: form.image_url || '',
-        short_code: form.short_code || ''
+        short_code: form.short_code || '',
+        serial_number: form.serial_number,
+        page_titles: form.page_titles || {}
 
       })
+
+      // If there is a locally saved draft and auto-save is enabled, offer to restore it
+      try {
+        const key = `form_draft_${formId}`
+        const draft = localStorage.getItem(key)
+        if (draft) {
+          const parsed = JSON.parse(draft)
+          if (parsed && parsed.id === form.id && parsed.enable_auto_save !== false) {
+            if (confirm('يوجد مسودة محفوظة محلياً. هل تريد استعادتها؟')) {
+              setFormData({ ...parsed })
+            }
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
 
       // Get existing forms for question import
       const { data: allForms } = await supabase
@@ -349,7 +734,8 @@ const params = useParams()
 
       points: 0,
 
-      options: []
+      options: [],
+      page: formData.questions.length > 0 ? (formData.questions[formData.questions.length - 1].page || 1) : 1
 
     }
 
@@ -372,6 +758,24 @@ const params = useParams()
     } else if (type === 'dropdown') {
       newQuestion.dropdown_type = 'single'
       newQuestion.correct_option_ids = []
+    } else if (type === 'button_choice') {
+      newQuestion.options = [
+        { id: `opt_${Date.now()}_1`, text: '', points: 0 },
+        { id: `opt_${Date.now()}_2`, text: '', points: 0 }
+      ]
+    } else if (type === 'slider') {
+      newQuestion.options = [{ id: `opt_${Date.now()}_1`, text: '0|100|1', points: 0 }] as any
+    } else if (type === 'star_rating') {
+      newQuestion.options = Array.from({ length: 5 }).map((_, i) => ({ id: `opt_${Date.now()}_${i}`, text: String(i+1), points: i+1 }))
+    } else if (type === 'match_items') {
+      newQuestion.matrix_rows = [
+        { id: `left_${Date.now()}_1`, text: 'عنصر 1', required: true },
+        { id: `left_${Date.now()}_2`, text: 'عنصر 2', required: true }
+      ]
+      newQuestion.matrix_columns = [
+        { id: `right_${Date.now()}_1`, text: 'إجابة 1', points: 0 },
+        { id: `right_${Date.now()}_2`, text: 'إجابة 2', points: 0 }
+      ]
     }
 
 
@@ -561,6 +965,32 @@ const params = useParams()
     })
   }
 
+  // Redirect rules helpers
+  const addRedirectRule = () => {
+    if (!formData) return
+    const firstQuestionId = formData.questions && formData.questions.length > 0 ? formData.questions[0].id : ''
+    setFormData(prev => prev ? ({
+      ...prev,
+      redirect_rules: [...(prev.redirect_rules || []), { question_id: firstQuestionId, operator: 'equals', value: '', redirect_url: '', message: '' }]
+    }) : null)
+  }
+
+  const updateRedirectRule = (index: number, updates: Partial<{ question_id: string; operator: string; value: string; redirect_url: string; message?: string }>) => {
+    if (!formData) return
+    setFormData(prev => prev ? ({
+      ...prev,
+      redirect_rules: (prev.redirect_rules || []).map((r: any, i: number) => i === index ? { ...r, ...updates } : r)
+    }) : null)
+  }
+
+  const removeRedirectRule = (index: number) => {
+    if (!formData) return
+    setFormData(prev => prev ? ({
+      ...prev,
+      redirect_rules: (prev.redirect_rules || []).filter((_: any, i: number) => i !== index)
+    }) : null)
+  }
+
   const saveForm = async () => {
 
     if (!formData || !formData.name.trim()) {
@@ -611,8 +1041,10 @@ const params = useParams()
 
           allow_delete_responses: formData.allow_delete_responses || false,
           randomize_questions: formData.randomize_questions || false,
+          enable_auto_save: formData.enable_auto_save !== false,
           image_url: formData.image_url || null,
-          short_code: formData.short_code || generateShortCode()
+          short_code: formData.short_code || generateShortCode(),
+          page_titles: formData.page_titles || {}
 
         })
 
@@ -637,8 +1069,6 @@ const params = useParams()
 
 
       if (deleteError) throw deleteError
-
-
 
       // Insert updated questions
 
@@ -669,6 +1099,11 @@ const params = useParams()
             correct_option_ids: q.dropdown_type === 'multiple' ? (q.correct_option_ids || []) : (q.correct_option_id ? [q.correct_option_id] : []),
             options: items
           }
+        } else if (q.type === 'match_items') {
+          optionsData = {
+            left_items: (q.matrix_rows || []).map((row: any) => ({ id: row.id, text: row.text })),
+            right_items: (q.matrix_columns || []).map((col: any) => ({ id: col.id, text: col.text }))
+          }
         } else {
           optionsData = parseOptions(q.options)
         }
@@ -682,6 +1117,7 @@ const params = useParams()
           has_counter: q.has_counter || false,
           order_index: index,
           row_group: q.row_group || null,
+          page: q.page || 1,
           options: JSON.stringify(optionsData)
         }
       })
@@ -746,6 +1182,44 @@ const params = useParams()
       questions: [...prev.questions, newQuestion]
     }) : null)
     setShowQuestionPicker(false)
+  }
+
+  const addPage = () => {
+    if (!formData) return
+    const maxPage = Math.max(1, ...formData.questions.map(q => q.page || 1))
+    const newPage = maxPage + 1
+    setFormData(prev => prev ? ({
+      ...prev,
+      page_titles: { ...prev.page_titles, [String(newPage)]: '' }
+    }) : null)
+  }
+
+  const removePage = (pageNum: number) => {
+    if (!formData) return
+    const qs = formData.questions
+    const hasQuestions = qs.some(q => (q.page || 1) === pageNum)
+    if (hasQuestions) {
+      if (!confirm('هناك أسئلة في هذه الصفحة. هل تريد نقلها للصفحة السابقة؟')) return
+    }
+    const newPageTitles = { ...formData.page_titles }
+    delete newPageTitles[String(pageNum)]
+    setFormData(prev => prev ? ({
+      ...prev,
+      page_titles: newPageTitles,
+      questions: prev.questions.map(q => (q.page || 1) === pageNum ? { ...q, page: Math.max(1, pageNum - 1) } : q)
+    }) : null)
+  }
+
+  const setPageTitle = (pageNum: number, title: string) => {
+    if (!formData) return
+    setFormData(prev => prev ? ({
+      ...prev,
+      page_titles: { ...prev.page_titles, [String(pageNum)]: title }
+    }) : null)
+  }
+
+  const moveToPage = (qIndex: number, pageNum: number) => {
+    updateQuestion(qIndex, { page: pageNum })
   }
 
   const renderQuestionPreview = (question: any, qIndex: number) => (
@@ -847,12 +1321,13 @@ const params = useParams()
   return (
 
     <div dir="rtl" className="min-h-screen bg-gray-50">
+      {renderThemeStyles()}
 
       {/* Header */}
 
       <header className="bg-white shadow-sm sticky top-0 z-10">
 
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-4">
 
           <button
             onClick={() => router.back()}
@@ -864,532 +1339,831 @@ const params = useParams()
             رجوع
           </button>
 
-          {responseCount > 0 && (profile?.role === 'admin' || profile?.role === 'supervisor') && (
-            <>
-              <a
-                href={'/admin/results?formId=' + formId}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium flex items-center gap-1.5"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                عرض التسجيلات
-              </a>
-
-            </>
-          )}
-
           <h1 className="text-lg font-bold text-blue-700">تعديل النموذج</h1>
-
-          <div className="flex gap-2">
-
-              <button
-              onClick={() => {
-                const code = formData?.short_code
-                const link = code ? `${window.location.origin}/f/${code}` : `${window.location.origin}/forms/${formId}`
-                navigator.clipboard.writeText(link)
-                alert('تم نسخ رابط المشاركة: ' + link)
-              }}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium flex items-center gap-1.5"
-              title="نسخ رابط المشاركة"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-              </svg>
-              نسخ الرابط
-            </button>
-
-            <button
-
-              onClick={() => setFormData(prev => prev ? ({ ...prev, is_active: !prev.is_active }) : null)}
-
-              className={`px-4 py-2 rounded-lg transition-colors ${
-
-                formData.is_active 
-
-                  ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-
-                  : 'bg-red-100 text-red-700 hover:bg-red-200'
-
-              }`}
-
-            >
-
-              {formData.is_active ? 'مفعل' : 'معطل'}
-
-            </button>
-
-            <button
-
-              onClick={saveForm}
-
-              disabled={saving}
-
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-
-            >
-
-              {saving ? (
-
-                <>
-
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-
-                  جاري الحفظ...
-
-                </>
-
-              ) : (
-
-                <>
-
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-
-                  </svg>
-
-                  حفظ التعديلات
-
-                </>
-
-              )}
-
-            </button>
-
-          
-
-          </div>
 
         </div>
 
       </header>
 
-
-
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex gap-6">
-
-          {/* ======================== LEFT PANEL - Question Types ======================== */}
-          <aside className="hidden xl:block w-60 shrink-0">
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 sticky top-24">
-              <h3 className="text-sm font-bold text-gray-900 mb-3">عناصر النموذج</h3>
-              <div className="space-y-1">
-                {(Object.entries(QUESTION_TYPES) as [QuestionType, typeof QUESTION_TYPES['text']][]).map(([type, info]) => (
-                  <button
-                    key={type}
-                    onClick={() => { addQuestion(type); setQuestionMenuOpen(false) }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 transition-colors text-right group"
-                  >
-                    <span className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-bold text-sm shrink-0">
-                      {info.icon}
-                    </span>
-                    <div className="min-w-0">
-                      <span className="block text-sm font-medium text-gray-800">{info.label}</span>
-                      <span className="block text-xs text-gray-500 truncate">{info.description}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              <hr className="my-3 border-gray-100" />
-              <button
-                onClick={() => setShowQuestionPicker(true)}
-                className="w-full py-2.5 px-3 bg-emerald-50 text-emerald-700 rounded-xl hover:bg-emerald-100 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
-                </svg>
-                استيراد سؤال
-              </button>
-            </div>
-          </aside>
-
-          {/* Mobile left panel toggle */}
-          {showLeftPanel && (
-            <div className="fixed inset-0 z-50 xl:hidden">
-              <div className="absolute inset-0 bg-black/50" onClick={() => setShowLeftPanel(false)} />
-              <aside className="absolute right-0 top-0 bottom-0 w-72 bg-white shadow-2xl p-4 overflow-y-auto">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-gray-900">عناصر النموذج</h3>
-                  <button onClick={() => setShowLeftPanel(false)} className="p-2 hover:bg-gray-100 rounded-lg">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                <div className="space-y-1">
-                  {(Object.entries(QUESTION_TYPES) as [QuestionType, typeof QUESTION_TYPES['text']][]).map(([type, info]) => (
-                    <button
-                      key={type}
-                      onClick={() => { addQuestion(type); setShowLeftPanel(false) }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 transition-colors text-right"
-                    >
-                      <span className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-bold text-sm shrink-0">{info.icon}</span>
-                      <div>
-                        <span className="block text-sm font-medium text-gray-800">{info.label}</span>
-                        <span className="block text-xs text-gray-500">{info.description}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </aside>
-            </div>
-          )}
-
-          {/* ======================== CENTER PANEL - Form Preview ======================== */}
-          <div className="flex-1 min-w-0 max-w-2xl mx-auto">
-
-            {/* Form Basic Info - Collapsible */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-4">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-gray-900">معلومات النموذج</h2>
-              </div>
-
-              {(() => {
-                const qs = formData.questions || []
-                let totalPts = 0
-                qs.forEach((q: any) => {
-                  if (q.type === 'file_upload') return
-                  if (q.type === 'single_choice') {
-                    totalPts += Math.max(0, ...parseOptions(q.options).map((o:any) => o.points || 0))
-                  } else if (q.type === 'multiple_choice') {
-                    totalPts += parseOptions(q.options).reduce((s:number, o:any) => s + (o.points || 0), 0)
-                  } else if (q.type === 'dropdown') {
-                    const opts = parseOptions(q.options)
-                    if (q.dropdown_type === 'multiple') {
-                      totalPts += (q.correct_option_ids || []).reduce((s:number, id:string) => {
-                        const opt = opts.find((o:any) => o.id === id); return s + (opt?.points || 0)
-                      }, 0)
-                    } else {
-                      const opt = opts.find((o:any) => o.id === q.correct_option_id)
-                      totalPts += opt?.points || 0
-                    }
-                  } else if (q.type === 'ranking') {
-                    totalPts += parseOptions(q.options).reduce((s:number, o:any) => s + (o.points || 0), 0)
-                  } else if (q.type === 'matrix') {
-                    const colSum = (q.matrix_columns || []).reduce((s:number, c:any) => s + (c.points || 0), 0)
-                    totalPts += colSum * (q.matrix_rows || []).length
-                  } else if (q.type === 'scale') {
-                    totalPts += Math.max(10, ...parseOptions(q.options).map((o:any) => o.points || 0))
-                  } else {
-                    totalPts += q.points || 0
-                  }
-                })
-                return (
-                  <div className="flex items-center gap-3 mb-4 p-2.5 bg-gradient-to-l from-blue-50 to-purple-50 rounded-xl border border-blue-100 text-sm">
-                    <span className="text-gray-600">الأسئلة: <strong className="text-gray-900">{qs.length}</strong></span>
-                    <span className="text-gray-600">النقاط: <strong className="text-blue-700">{totalPts}</strong></span>
-                  </div>
-                )
-              })()}
-
-              <div className="space-y-3">
-                <ImageUpload onImageUploaded={(url) => setFormData(prev => prev ? ({ ...prev, image_url: url }) : null)} currentImage={formData.image_url} />
-                <input type="text" value={formData.name} onChange={(e) => setFormData(prev => prev ? ({ ...prev, name: e.target.value }) : null)} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="اسم النموذج *" />
-                <textarea value={formData.description} onChange={(e) => setFormData(prev => prev ? ({ ...prev, description: e.target.value }) : null)} rows={2} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="وصف مختصر..." />
-              </div>
-
-              {/* Settings Toggles - Compact */}
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <label className="flex items-center gap-2 p-2 bg-amber-50 rounded-lg cursor-pointer text-sm">
-                  <input type="checkbox" checked={formData.allow_multiple} onChange={(e) => setFormData(prev => prev ? ({ ...prev, allow_multiple: e.target.checked }) : null)} className="w-4 h-4 text-blue-600 rounded" />
-                  <span className="text-gray-700">تسجيل متعدد</span>
-                </label>
-                <label className="flex items-center gap-2 p-2 bg-green-50 rounded-lg cursor-pointer text-sm">
-                  <input type="checkbox" checked={formData.time_limit !== null && formData.time_limit !== undefined} onChange={(e) => setFormData(prev => prev ? ({ ...prev, time_limit: e.target.checked ? 10 : null }) : null)} className="w-4 h-4 text-green-600 rounded" />
-                  <span className="text-gray-700">مؤقت</span>
-                </label>
-                <label className="flex items-center gap-2 p-2 bg-red-50 rounded-lg cursor-pointer text-sm">
-                  <input type="checkbox" checked={!!formData.expires_at} onChange={(e) => setFormData(prev => prev ? ({ ...prev, expires_at: e.target.checked ? new Date(Date.now() + 86400000).toISOString().slice(0, 16) : '' }) : null)} className="w-4 h-4 text-red-600 rounded" />
-                  <span className="text-gray-700">تاريخ إغلاق</span>
-                </label>
-                <label className="flex items-center gap-2 p-2 bg-orange-50 rounded-lg cursor-pointer text-sm">
-                  <input type="checkbox" checked={formData.allow_delete_responses || false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, allow_delete_responses: e.target.checked }) : null)} className="w-4 h-4 text-orange-600 rounded" />
-                  <span className="text-gray-700">حذف الردود</span>
-                </label>
-                <label className="flex items-center gap-2 p-2 bg-purple-50 rounded-lg cursor-pointer text-sm col-span-2">
-                  <input type="checkbox" checked={formData.randomize_questions || false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, randomize_questions: e.target.checked }) : null)} className="w-4 h-4 text-purple-600 rounded" />
-                  <span className="text-gray-700">ترتيب عشوائي للأسئلة</span>
-                </label>
-              </div>
-
-              {formData.time_limit !== null && formData.time_limit !== undefined && (
-                <div className="mt-2 flex items-center gap-2">
-                  <label className="text-sm text-gray-600">الوقت (دقيقة):</label>
-                  <input type="number" min="1" value={formData.time_limit} onChange={(e) => setFormData(prev => prev ? ({ ...prev, time_limit: parseInt(e.target.value) || 1 }) : null)} className="w-20 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-center text-sm" />
-                </div>
+      {/* Action Bar */}
+      <div className="bg-white border-b border-gray-200 sticky top-[73px] z-10 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center sm:justify-start gap-2">
+          <button
+            onClick={() => setShowSettingsModal(prev => !prev)}
+            className="flex flex-col sm:flex-row items-center gap-1 px-2 sm:px-3 py-2 sm:py-1.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:scale-95 transition-all text-[10px] sm:text-xs font-medium cursor-pointer min-w-0 sm:min-w-fit"
+            title="الإعدادات"
+          >
+            <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="hidden sm:inline">الإعدادات</span>
+          </button>
+          <button
+            onClick={() => setFormData(prev => prev ? ({ ...prev, is_active: !prev.is_active }) : null)}
+            className={`flex flex-col sm:flex-row items-center gap-1 px-2 sm:px-3 py-2 sm:py-1.5 rounded-xl active:scale-95 transition-all text-[10px] sm:text-xs font-medium cursor-pointer min-w-0 sm:min-w-fit ${
+              formData?.is_active 
+                ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                : 'bg-red-100 text-red-700 hover:bg-red-200'
+            }`}
+            title={formData?.is_active ? 'مفعل' : 'معطل'}
+          >
+            <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {formData?.is_active ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
               )}
-              {formData.expires_at && (
-                <div className="mt-2">
-                  <input type="datetime-local" value={formData.expires_at} onChange={(e) => setFormData(prev => prev ? ({ ...prev, expires_at: e.target.value }) : null)} className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
-                </div>
-              )}
-            </div>
+            </svg>
+            <span className="hidden sm:inline">{formData?.is_active ? 'مفعل' : 'معطل'}</span>
+          </button>
+          <button
+            onClick={() => {
+              const code = formData?.short_code
+              const serial = formData?.serial_number || formId
+              const link = code ? `${window.location.origin}/f/${code}` : `${window.location.origin}/forms/${serial}`
+              navigator.clipboard.writeText(link)
+              alert('تم نسخ رابط المشاركة: ' + link)
+            }}
+            className="flex flex-col sm:flex-row items-center gap-1 px-2 sm:px-3 py-2 sm:py-1.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 active:scale-95 transition-all text-[10px] sm:text-xs font-medium cursor-pointer min-w-0 sm:min-w-fit"
+            title="نسخ الرابط"
+          >
+            <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+            <span className="hidden sm:inline">نسخ الرابط</span>
+          </button>
+          <button
+            onClick={() => { setIsPreviewActive(prev => !prev); setShowSettingsModal(false) }}
+            className="flex flex-col sm:flex-row items-center gap-1 px-2 sm:px-3 py-2 sm:py-1.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 active:scale-95 transition-all text-[10px] sm:text-xs font-medium cursor-pointer min-w-0 sm:min-w-fit"
+            title="معاينة النموذج"
+          >
+            <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            <span className="hidden sm:inline">معاينة</span>
+          </button>
+        </div>
+      </div>
 
-            {/* Questions Preview */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-gray-900">
-                  الأسئلة ({(formData.questions || []).length})
-                </h2>
+      {showSettingsModal && (
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 py-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">الإعدادات</h3>
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setShowLeftPanel(true)}
-                  className="xl:hidden px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium flex items-center gap-1.5"
+                  onClick={saveForm}
+                  disabled={saving}
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-1 cursor-pointer text-xs font-medium"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                  إضافة
+                  {saving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent"></div>
+                      جاري الحفظ...
+                    </>
+                  ) : (
+                    'حفظ التعديلات'
+                  )}
+                </button>
+                <button onClick={() => setShowSettingsModal(false)} className="p-1.5 hover:bg-gray-100 rounded-lg cursor-pointer">
+                  <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
+            </div>
 
-              {(() => {
-                const qs = formData.questions || []
-                // Group questions by row_group
-                const groups: { group: number | null; questions: any[]; indices: number[] }[] = []
-                let currentGroup: number | null = null
-                let currentItems: any[] = []
-                let currentIndices: number[] = []
-
-                qs.forEach((q: any, idx: number) => {
-                  const g = q.row_group || null
-                  if (g !== currentGroup && currentItems.length > 0) {
-                    groups.push({ group: currentGroup, questions: [...currentItems], indices: [...currentIndices] })
-                    currentItems = []
-                    currentIndices = []
-                  }
-                  currentGroup = g
-                  currentItems.push(q)
-                  currentIndices.push(idx)
-                })
-                if (currentItems.length > 0) {
-                  groups.push({ group: currentGroup, questions: currentItems, indices: currentIndices })
-                }
-
-                return groups.map((grp) => {
-                  if (grp.group !== null && grp.questions.length > 1) {
-                    // Render as a row
-                    return (
-                      <div key={`row_${grp.group}`} className="flex gap-3">
-                        {grp.questions.map((question: any, gi: number) => {
-                          const qIndex = grp.indices[gi]
-                          return (
-                            <div key={question.id} className="flex-1 min-w-0">
-                              {renderQuestionPreview(question, qIndex)}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )
-                  }
-                  // Render single question (no group or group of 1)
-                  return grp.questions.map((question: any, gi: number) => {
-                    const qIndex = grp.indices[gi]
-                    return <div key={question.id}>{renderQuestionPreview(question, qIndex)}</div>
+            <div className="space-y-5">
+              {/* Form Image, Name, Description */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="space-y-3">
+                  <ImageUpload onImageUploaded={(url) => setFormData(prev => prev ? ({ ...prev, image_url: url }) : null)} currentImage={formData?.image_url || ''} />
+                  <input type="text" value={formData?.name || ''} onChange={(e) => setFormData(prev => prev ? ({ ...prev, name: e.target.value }) : null)} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="اسم النموذج *" />
+                  <textarea value={formData?.description || ''} onChange={(e) => setFormData(prev => prev ? ({ ...prev, description: e.target.value }) : null)} rows={2} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="وصف مختصر..." />
+                </div>
+                {(() => {
+                  const qs = formData?.questions || []
+                  let totalPts = 0
+                  qs.forEach((q: any) => {
+                    if (q.type === 'file_upload') return
+                    if (q.type === 'single_choice') {
+                      totalPts += Math.max(0, ...parseOptions(q.options).map((o:any) => o.points || 0))
+                    } else if (q.type === 'multiple_choice') {
+                      totalPts += parseOptions(q.options).reduce((s:number, o:any) => s + (o.points || 0), 0)
+                    } else if (q.type === 'dropdown') {
+                      const opts = parseOptions(q.options)
+                      if (q.dropdown_type === 'multiple') {
+                        totalPts += (q.correct_option_ids || []).reduce((s:number, id:string) => {
+                          const opt = opts.find((o:any) => o.id === id); return s + (opt?.points || 0)
+                        }, 0)
+                      } else {
+                        const opt = opts.find((o:any) => o.id === q.correct_option_id)
+                        totalPts += opt?.points || 0
+                      }
+                    } else if (q.type === 'ranking') {
+                      totalPts += parseOptions(q.options).reduce((s:number, o:any) => s + (o.points || 0), 0)
+                    } else if (q.type === 'matrix') {
+                      const colSum = (q.matrix_columns || []).reduce((s:number, c:any) => s + (c.points || 0), 0)
+                      totalPts += colSum * (q.matrix_rows || []).length
+                    } else if (q.type === 'scale') {
+                      totalPts += Math.max(10, ...parseOptions(q.options).map((o:any) => o.points || 0))
+                    } else {
+                      totalPts += q.points || 0
+                    }
                   })
-                })
-              })()}
-                {(formData.questions || []).length === 0 && (
-                  <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl">
-                    <div className="w-14 h-14 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
-                      <svg className="w-7 h-7 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                  return (
+                    <div className="flex items-center gap-3 mt-3 p-2.5 bg-gradient-to-l from-blue-50 to-purple-50 rounded-xl border border-blue-100 text-sm">
+                      <span className="text-gray-600">الأسئلة: <strong className="text-gray-900">{qs.length}</strong></span>
+                      <span className="text-gray-600">النقاط: <strong className="text-blue-700">{totalPts}</strong></span>
                     </div>
-                    <p className="text-gray-500 text-sm">لم تضف أي أسئلة بعد</p>
-                    <p className="text-gray-400 text-xs mt-1">اختر من القائمة الجانبية أو اضغط إضافة</p>
+                  )
+                })()}
+              </div>
+
+              {/* Settings Toggles */}
+              <div>
+                <h4 className="text-sm font-bold text-gray-900 mb-3">خيارات النموذج</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="flex items-start gap-2 p-2 bg-amber-50 rounded-lg cursor-pointer text-sm">
+                    <input type="checkbox" checked={formData?.allow_multiple || false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, allow_multiple: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-blue-600 rounded" />
+                    <div>
+                      <span className="text-gray-700 font-medium">تسجيل متعدد</span>
+                      <p className="text-xs text-gray-500 mt-0.5">السماح للمستخدم بإعادة ملء النموذج عدة مرات</p>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-2 p-2 bg-green-50 rounded-lg cursor-pointer text-sm">
+                    <input type="checkbox" checked={formData?.time_limit !== null && formData?.time_limit !== undefined} onChange={(e) => setFormData(prev => prev ? ({ ...prev, time_limit: e.target.checked ? 10 : null }) : null)} className="w-4 h-4 mt-0.5 text-green-600 rounded" />
+                    <div>
+                      <span className="text-gray-700 font-medium">مؤقت</span>
+                      <p className="text-xs text-gray-500 mt-0.5">عداد تنازلي لإكمال النموذج خلال مدة محددة</p>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-2 p-2 bg-red-50 rounded-lg cursor-pointer text-sm">
+                    <input type="checkbox" checked={!!formData?.expires_at} onChange={(e) => setFormData(prev => prev ? ({ ...prev, expires_at: e.target.checked ? new Date(Date.now() + 86400000).toISOString().slice(0, 16) : '' }) : null)} className="w-4 h-4 mt-0.5 text-red-600 rounded" />
+                    <div>
+                      <span className="text-gray-700 font-medium">تاريخ إغلاق</span>
+                      <p className="text-xs text-gray-500 mt-0.5">إغلاق النموذج تلقائياً في تاريخ محدد</p>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-2 p-2 bg-orange-50 rounded-lg cursor-pointer text-sm">
+                    <input type="checkbox" checked={formData?.allow_delete_responses || false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, allow_delete_responses: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-orange-600 rounded" />
+                    <div>
+                      <span className="text-gray-700 font-medium">حذف الردود</span>
+                      <p className="text-xs text-gray-500 mt-0.5">إظهار زر حذف لكل تسجيل ليحذفه المستخدم بنفسه</p>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-2 p-2 bg-purple-50 rounded-lg cursor-pointer text-sm">
+                    <input type="checkbox" checked={formData?.randomize_questions || false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, randomize_questions: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-purple-600 rounded" />
+                    <div>
+                      <span className="text-gray-700 font-medium">ترتيب عشوائي للأسئلة</span>
+                      <p className="text-xs text-gray-500 mt-0.5">عرض الأسئلة بترتيب مختلف لكل مستخدم</p>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-2 p-2 bg-indigo-50 rounded-lg cursor-pointer text-sm">
+                    <input type="checkbox" checked={formData?.enable_auto_save !== false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, enable_auto_save: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-indigo-600 rounded" />
+                    <div>
+                      <span className="text-gray-700 font-medium">الحفظ التلقائي (Auto Save)</span>
+                      <p className="text-xs text-gray-500 mt-0.5">حفظ إجابات المستخدم محلياً للعودة لها لاحقاً</p>
+                    </div>
+                  </label>
+                </div>
+
+                {formData?.time_limit !== null && formData?.time_limit !== undefined && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <label className="text-sm text-gray-600">الوقت (دقيقة):</label>
+                    <input type="number" min="1" value={formData?.time_limit || 1} onChange={(e) => setFormData(prev => prev ? ({ ...prev, time_limit: parseInt(e.target.value) || 1 }) : null)} className="w-20 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-center text-sm" />
+                  </div>
+                )}
+                {formData?.expires_at && (
+                  <div className="mt-2">
+                    <input type="datetime-local" value={formData.expires_at} onChange={(e) => setFormData(prev => prev ? ({ ...prev, expires_at: e.target.value }) : null)} className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
                   </div>
                 )}
               </div>
+
+              {/* Smart Redirect Section */}
+              <div>
+                <h4 className="text-sm font-bold text-gray-900 mb-3">التوجيه الذكي بعد الإرسال</h4>
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">التوجيه الافتراضي بعد الإرسال</label>
+                  <input type="text" value={formData?.default_redirect_url || ''} onChange={(e) => setFormData(prev => prev ? ({ ...prev, default_redirect_url: e.target.value }) : null)} placeholder="https://example.com/thank-you" className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                </div>
+                <div className="p-3 bg-white rounded-lg border border-gray-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-bold text-gray-900">قواعد التوجيه الذكي</h4>
+                    <button onClick={addRedirectRule} className="text-xs text-blue-600 hover:underline">+ إضافة قاعدة</button>
+                  </div>
+                  <div className="space-y-2">
+                    {(formData?.redirect_rules || []).map((rule: any, idx: number) => (
+                      <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+                        <select value={rule.question_id} onChange={(e) => updateRedirectRule(idx, { question_id: e.target.value })} className="col-span-4 px-2 py-1.5 bg-white border border-gray-200 rounded text-sm">
+                          {(formData?.questions || []).map((q: any) => (
+                            <option key={q.id} value={q.id}>{q.text || `سؤال ${q.id}`}</option>
+                          ))}
+                        </select>
+                        <select value={rule.operator || 'equals'} onChange={(e) => updateRedirectRule(idx, { operator: e.target.value })} className="col-span-2 px-2 py-1.5 bg-white border border-gray-200 rounded text-sm">
+                          <option value="equals">يساوي</option>
+                          <option value="contains">يحتوي</option>
+                          <option value="not_equals">لا يساوي</option>
+                        </select>
+                        <input type="text" value={rule.value || ''} onChange={(e) => updateRedirectRule(idx, { value: e.target.value })} placeholder="قيمة المطابقة" className="col-span-3 px-2 py-1.5 bg-white border border-gray-200 rounded text-sm" />
+                        <input type="text" value={rule.redirect_url || ''} onChange={(e) => updateRedirectRule(idx, { redirect_url: e.target.value })} placeholder="رابط التوجيه" className="col-span-2 px-2 py-1.5 bg-white border border-gray-200 rounded text-sm" />
+                        <button onClick={() => removeRedirectRule(idx)} className="col-span-1 text-red-500 hover:underline text-sm">حذف</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
             </div>
+          </div>
+        </div>
+      )}
 
-          {/* ======================== RIGHT PANEL - Question Properties ======================== */}
-          {selectedQuestionIndex !== null && formData.questions[selectedQuestionIndex] && (() => {
-            const qIndex = selectedQuestionIndex
-            const question = formData.questions[qIndex]
-
-            return (
-              <aside className="hidden lg:block w-80 shrink-0">
-                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 sticky top-24">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-gray-900">خصائص السؤال</h3>
-                    <button onClick={() => setSelectedQuestionIndex(null)} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                  </div>
-
-                  {/* Question Text */}
-                  <div className="mb-4">
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">نص السؤال</label>
-                    <input type="text" value={question.text} onChange={(e) => updateQuestion(qIndex, { text: e.target.value })} placeholder="اكتب السؤال هنا..." className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
-                  </div>
-
-                  {/* Question Type Badge */}
-                  <div className="mb-4">
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">النوع</label>
-                    <div className="flex items-center gap-2">
-                      <span className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium">{QUESTION_TYPES[question.type as QuestionType]?.label}</span>
-                      {question.points > 0 && <span className="px-2 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-sm">{question.points} نقطة</span>}
-                    </div>
-                  </div>
-
-                  {/* Required */}
-                  <label className="flex items-center gap-2 mb-4 p-2.5 bg-gray-50 rounded-lg cursor-pointer">
-                    <input type="checkbox" checked={question.required} onChange={(e) => updateQuestion(qIndex, { required: e.target.checked })} className="w-4 h-4 text-blue-600 rounded" />
-                    <span className="text-sm text-gray-700 font-medium">مطلوب</span>
-                  </label>
-
-                  {/* Points (for non-choice types) */}
-                  {!['single_choice', 'multiple_choice', 'dropdown', 'ranking', 'matrix'].includes(question.type) && (
-                    <div className="mb-4">
-                      <label className="block text-xs font-medium text-gray-600 mb-1.5">النقاط</label>
-                      <input type="number" min="0" value={question.points} onChange={(e) => updateQuestion(qIndex, { points: Number(e.target.value) })} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" />
-                    </div>
-                  )}
-
-                  {/* Options for choice types */}
-                  {['single_choice', 'multiple_choice'].includes(question.type) && (
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-xs font-medium text-gray-600">الخيارات</label>
-                        {question.type === 'single_choice' && (
-                          <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                            <input type="checkbox" checked={question.has_counter || false} onChange={(e) => updateQuestion(qIndex, { has_counter: e.target.checked })} className="w-3.5 h-3.5 text-emerald-600 rounded" />
-                            <span className="text-gray-600">عداد</span>
-                          </label>
-                        )}
-                      </div>
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                        {(parseOptions(question.options) as any[]).map((opt: any, oi: number) => (
-                          <div key={oi} className="flex items-center gap-1.5">
-                            <input type="text" value={opt.text} onChange={(e) => updateOption(qIndex, oi, { text: e.target.value })} placeholder={`خيار ${oi + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
-                            <input type="number" min="0" value={opt.points} onChange={(e) => updateOption(qIndex, oi, { points: Number(e.target.value) })} className="w-14 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center" placeholder="نقاط" title="النقاط" />
-                            {question.has_counter && (
-                              <input type="number" min="1" value={opt.counter_target || ''} onChange={(e) => updateOption(qIndex, oi, { counter_target: parseInt(e.target.value) || null })} className="w-14 px-2 py-1.5 border border-emerald-200 rounded-lg text-sm text-center" placeholder="هدف" title="العدد المستهدف للتسبيح" />
-                            )}
-                            <button onClick={() => removeOption(qIndex, oi)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg shrink-0">
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      <button onClick={() => addOption(qIndex)} className="w-full mt-2 py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors text-sm flex items-center justify-center gap-1">
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                        إضافة خيار
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Dropdown options */}
-                  {question.type === 'dropdown' && (
-                    <div className="mb-4">
-                      <label className="block text-xs font-medium text-gray-600 mb-1.5">نوع القائمة</label>
-                      <select value={question.dropdown_type || 'single'} onChange={(e) => updateQuestion(qIndex, { dropdown_type: e.target.value as 'single' | 'multiple' })} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm mb-3">
-                        <option value="single">اختيار واحد</option>
-                        <option value="multiple">اختيار متعدد</option>
-                      </select>
-                      <label className="block text-xs font-medium text-gray-600 mb-1.5">الخيارات (سطر لكل خيار)</label>
-                      <textarea value={question.bulk_text || ''} onChange={(e) => updateQuestion(qIndex, { bulk_text: e.target.value })} rows={4} placeholder="اكتب كل خيار في سطر منفصل&#10;خيار 1&#10;خيار 2&#10;خيار 3" className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
-                      <button onClick={() => parseBulkText(qIndex)} className="mt-1.5 w-full py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition-colors">
-                        تطبيق
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Scale options */}
-                  {question.type === 'scale' && (
-                    <div className="mb-4">
-                      <label className="block text-xs font-medium text-gray-600 mb-1.5">نقاط المقياس</label>
-                      <div className="grid grid-cols-5 gap-1.5">
-                        {(parseOptions(question.options) as any[]).map((opt: any, oi: number) => (
-                          <div key={oi} className="text-center">
-                            <div className="w-full py-2 bg-blue-600 text-white rounded-lg font-bold text-sm mb-1">{opt.text}</div>
-                            <input type="number" value={opt.points} onChange={(e) => { const idx = (question.options || []).findIndex((o: any) => o.id === opt.id); if (idx >= 0) updateOption(qIndex, idx, { points: Number(e.target.value) }) }} className="w-full px-1 py-1 border border-blue-200 rounded text-center text-sm" />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Matrix options */}
-                  {question.type === 'matrix' && (
-                    <div className="mb-4 space-y-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">الصفوف</label>
-                        <div className="space-y-1">
-                          {(question.matrix_rows || []).map((row: any, ri: number) => (
-                            <div key={ri} className="flex items-center gap-1">
-                              <input type="text" value={row.text} onChange={(e) => updateMatrixRow(qIndex, ri, { text: e.target.value })} placeholder={`صف ${ri + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
-                              <label className="flex items-center gap-1 text-xs shrink-0">
-                                <input type="checkbox" checked={row.required} onChange={(e) => updateMatrixRow(qIndex, ri, { required: e.target.checked })} className="w-3.5 h-3.5" />
-                                مطلوب
-                              </label>
-                              <button onClick={() => removeMatrixRow(qIndex, ri)} className="p-1 text-red-400 hover:text-red-600"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-                            </div>
-                          ))}
-                        </div>
-                        <button onClick={() => addMatrixRow(qIndex)} className="mt-1 text-xs text-blue-600 hover:text-blue-700 font-medium">+ إضافة صف</button>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">الأعمدة</label>
-                        <div className="space-y-1">
-                          {(question.matrix_columns || []).map((col: any, ci: number) => (
-                            <div key={ci} className="flex items-center gap-1">
-                              <input type="text" value={col.text} onChange={(e) => updateMatrixColumn(qIndex, ci, { text: e.target.value })} placeholder={`عمود ${ci + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
-                              <input type="number" min="0" value={col.points} onChange={(e) => updateMatrixColumn(qIndex, ci, { points: Number(e.target.value) })} className="w-14 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center" placeholder="نقاط" />
-                              <button onClick={() => removeMatrixColumn(qIndex, ci)} className="p-1 text-red-400 hover:text-red-600"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-                            </div>
-                          ))}
-                        </div>
-                        <button onClick={() => addMatrixColumn(qIndex)} className="mt-1 text-xs text-blue-600 hover:text-blue-700 font-medium">+ إضافة عمود</button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Row Group */}
-                  <div className="mb-4 p-2.5 bg-gray-50 rounded-lg">
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">عرض في صف</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min="0"
-                        value={question.row_group || ''}
-                        onChange={(e) => updateQuestion(qIndex, { row_group: e.target.value ? parseInt(e.target.value) : null })}
-                        placeholder="رقم المجموعة"
-                        className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm"
-                      />
-                      <span className="text-xs text-gray-500">نفس الرقم = نفس الصف</span>
-                    </div>
-                  </div>
-
-                  {/* Delete button */}
-                  <button onClick={() => { removeQuestion(qIndex); setSelectedQuestionIndex(null) }} className="w-full py-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors text-sm font-medium flex items-center justify-center gap-2">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    حذف السؤال
-                  </button>
-                </div>
-              </aside>
-            )
-          })()}
-
-          {/* Mobile right panel as overlay */}
-          {selectedQuestionIndex !== null && formData.questions[selectedQuestionIndex] && (
-            <div className="fixed inset-0 z-50 lg:hidden">
-              <div className="absolute inset-0 bg-black/50" onClick={() => setSelectedQuestionIndex(null)} />
-              <aside className="absolute left-0 top-0 bottom-0 w-80 bg-white shadow-2xl p-4 overflow-y-auto">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-gray-900">خصائص السؤال</h3>
-                  <button onClick={() => setSelectedQuestionIndex(null)} className="p-2 hover:bg-gray-100 rounded-lg">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
-                </div>
-                {/* Mobile question properties - reuse the same editing UI */}
-                <div className="text-sm text-gray-500 mb-4">
-                  سيتم عرض خصائص السؤال هنا بنفس محتوى اللوحة اليمنى
-                </div>
-              </aside>
+      {isPreviewActive ? (
+        <div className="bg-slate-900/5 min-h-[calc(100vh-73px)] w-full py-6 flex flex-col items-center justify-start overflow-y-auto">
+          {previewDevice === 'mobile' && (
+            <div className="relative mx-auto my-4 border-[12px] border-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden bg-white w-[375px] h-[780px] max-h-[80vh] flex flex-col shrink-0">
+              {/* Notch */}
+              <div className="absolute top-0 inset-x-0 h-4 bg-slate-900 rounded-b-xl flex items-center justify-center z-20">
+                <div className="w-16 h-1 bg-black/40 rounded-full"></div>
+              </div>
+              {/* Scrollable Form Content */}
+              <div id="preview-device-content" className="w-full h-full overflow-y-auto pt-4 scrollbar-hide">
+                <FormFiller
+                  form={formData as any}
+                  questions={prepareQuestionsForPreview(formData.questions)}
+                  existingResponse={null}
+                  allUserResponses={[]}
+                  project={null}
+                  userId={null}
+                  isPreview={true}
+                />
+              </div>
+              {/* Home Indicator */}
+              <div className="absolute bottom-1 inset-x-0 h-1 w-24 bg-slate-900/40 rounded-full mx-auto z-20"></div>
             </div>
           )}
 
-        </div>
+          {previewDevice === 'tablet' && (
+            <div className="relative mx-auto my-4 border-[14px] border-slate-900 rounded-[2rem] shadow-2xl overflow-hidden bg-white w-[768px] h-[1024px] max-h-[85vh] flex flex-col shrink-0">
+              {/* Tablet Home Button / Indicator */}
+              <div className="absolute bottom-1 inset-x-0 h-1.5 w-20 bg-slate-900/40 rounded-full mx-auto z-20"></div>
+              {/* Scrollable Form Content */}
+              <div id="preview-device-content" className="w-full h-full overflow-y-auto">
+                <FormFiller
+                  form={formData as any}
+                  questions={prepareQuestionsForPreview(formData.questions)}
+                  existingResponse={null}
+                  allUserResponses={[]}
+                  project={null}
+                  userId={null}
+                  isPreview={true}
+                />
+              </div>
+            </div>
+          )}
 
-      </main>
+          {previewDevice === 'desktop' && (
+            <div className="w-full max-w-5xl mx-auto px-4">
+              <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+                <FormFiller
+                  form={formData as any}
+                  questions={prepareQuestionsForPreview(formData.questions)}
+                  existingResponse={null}
+                  allUserResponses={[]}
+                  project={null}
+                  userId={null}
+                  isPreview={true}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <main className="max-w-4xl mx-auto px-4 py-6 rounded-2xl transition-all duration-300 builder-themed-container">
+
+
+
+            {/* Question Preview */}
+            {(() => {
+              const qs = formData.questions || []
+              // removed early return for empty form to allow adding the first question
+              const pageMap: Record<number, { questions: any[], indices: number[] }> = {}
+              qs.forEach((q: any, idx: number) => {
+                const p = q.page || 1
+                if (!pageMap[p]) pageMap[p] = { questions: [], indices: [] }
+                pageMap[p].questions.push(q)
+                pageMap[p].indices.push(idx)
+              })
+              
+              const pageNumbersSet = new Set<number>()
+              qs.forEach((q: any) => pageNumbersSet.add(q.page || 1))
+              if (formData?.page_titles) {
+                Object.keys(formData.page_titles).forEach(p => {
+                  const num = Number(p)
+                  if (!isNaN(num)) pageNumbersSet.add(num)
+                })
+              }
+              if (pageNumbersSet.size === 0) pageNumbersSet.add(1)
+              const pageNumbers = Array.from(pageNumbersSet).sort((a, b) => a - b)
+
+              return (
+                <div className="space-y-3 mb-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-gray-900">الأسئلة</h3>
+                    <span className="text-xs text-gray-500">{qs.length} سؤال</span>
+                  </div>
+                  {pageNumbers.map(pageNum => {
+                    const pageQs = pageMap[pageNum]?.questions || []
+                    const indices = pageMap[pageNum]?.indices || []
+                    const pageTitle = formData?.page_titles?.[String(pageNum)] || ''
+                    return (
+                      <div key={pageNum} className="space-y-2">
+                        {/* Page header */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-lg shrink-0 form-themed-primary-bg">صفحة {pageNum}</span>
+                          {pageNumbers.length > 1 && (
+                            <button onClick={() => removePage(pageNum)} className="p-0.5 text-red-300 hover:text-red-500 shrink-0">
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                          )}
+                        </div>
+                        <input
+                          type="text"
+                          value={pageTitle}
+                          onChange={(e) => setPageTitle(pageNum, e.target.value)}
+                          placeholder={`عنوان الصفحة ${pageNum} (اختياري)`}
+                          className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500"
+                        />
+                        {/* Question cards */}
+                        {pageQs.map((question, pi) => {
+                          const qIndex = indices[pi]
+                          const isSelected = selectedQuestionIndex === qIndex
+                          const typeInfo = QUESTION_TYPES[question.type as QuestionType]
+                          
+                          if (question.type === 'divider') {
+                            return (
+                              <div
+                                key={question.id}
+                                className="group relative flex items-center py-4 px-2 bg-transparent cursor-pointer"
+                              >
+                                <div className="flex-1 h-0.5 bg-gray-300 group-hover:bg-blue-400 transition-colors"></div>
+                                <div className="absolute left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 bg-white shadow-md border border-gray-200 rounded-xl flex items-center gap-1 p-1 transition-opacity z-10">
+                                  <button onClick={() => moveQuestion(qIndex, 'up')} disabled={qIndex === 0} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+                                  </button>
+                                  <button onClick={() => moveQuestion(qIndex, 'down')} disabled={qIndex === qs.length - 1} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                  </button>
+                                  <button onClick={() => removeQuestion(qIndex)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                  </button>
+                                </div>
+                              </div>
+                            )
+                          }
+
+                          return (
+                            <div
+                              key={question.id}
+                              onClick={() => setSelectedQuestionIndex(isSelected ? null : qIndex)}
+                              className={`bg-white rounded-2xl p-5 shadow-sm border transition-all cursor-pointer form-themed-card form-themed-spacing ${
+                                isSelected
+                                  ? 'border-blue-500 ring-2 ring-blue-100'
+                                  : 'border-gray-100 hover:shadow-md'
+                              } ${isSelected && theme?.primaryColor ? 'form-themed-primary-border' : ''}`}
+                            >
+                              <div className="flex items-start gap-3 cursor-pointer" onClick={() => setSelectedQuestionIndex(isSelected ? null : qIndex)}>
+                                <span className="w-7 h-7 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg flex items-center justify-center font-bold text-xs shrink-0 form-themed-primary-bg">
+                                  {qIndex + 1}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="text-base font-semibold text-gray-900 form-themed-text">
+                                    {question.text || 'سؤال جديد'}
+                                    {question.required && <span className="text-red-500 mr-1">*</span>}
+                                  </h4>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-xs text-blue-500 form-themed-primary-text">{typeInfo?.icon} {typeInfo?.label}</span>
+                                    {question.points > 0 && <span className="text-xs text-gray-400">{question.points} نقطة</span>}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                  <button onClick={() => moveQuestion(qIndex, 'up')} disabled={qIndex === 0} className="p-1.5 text-gray-300 hover:text-gray-600 disabled:opacity-20 rounded-lg hover:bg-gray-100">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+                                  </button>
+                                  <button onClick={() => moveQuestion(qIndex, 'down')} disabled={qIndex === qs.length - 1} className="p-1.5 text-gray-300 hover:text-gray-600 disabled:opacity-20 rounded-lg hover:bg-gray-100">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                  </button>
+                                  <button onClick={() => { removeQuestion(qIndex); if (isSelected) setSelectedQuestionIndex(null) }} className="p-1.5 text-red-300 hover:text-red-500 rounded-lg hover:bg-red-50">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                  </button>
+                                </div>
+                              </div>
+                              {isSelected && (
+
+                                <div className="mt-4 pt-4 border-t border-gray-100 space-y-4 cursor-default" onClick={(e) => e.stopPropagation()}>
+                                  {/* Question Text */}
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-600 mb-1.5">نص السؤال</label>
+                                    {['terms', 'static_text'].includes(question.type) ? (
+                                      <textarea value={question.text} onChange={(e) => updateQuestion(qIndex, { text: e.target.value })} rows={4} placeholder="اكتب النص هنا..." className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+                                    ) : (
+                                      <input type="text" value={question.text} onChange={(e) => updateQuestion(qIndex, { text: e.target.value })} placeholder="اكتب السؤال هنا..." className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+                                    )}
+                                  </div>
+
+                                  {/* Required & Points */}
+                                  <div className="flex gap-4">
+                                    <label className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-lg cursor-pointer flex-1">
+                                      <input type="checkbox" checked={question.required} onChange={(e) => updateQuestion(qIndex, { required: e.target.checked })} className="w-4 h-4 text-blue-600 rounded" />
+                                      <span className="text-sm text-gray-700 font-medium">مطلوب</span>
+                                    </label>
+                                    {!['single_choice', 'multiple_choice', 'dropdown', 'ranking', 'matrix', 'button_choice', 'match_items', 'static_text', 'static_image', 'divider', 'terms', 'youtube'].includes(question.type) && (
+                                      <div className="flex-1">
+                                        <input type="number" min="0" value={question.points} onChange={(e) => updateQuestion(qIndex, { points: Number(e.target.value) })} placeholder="النقاط" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" />
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Options */}
+                                  {['single_choice', 'multiple_choice', 'button_choice'].includes(question.type) && (
+                                    <div>
+                                      <div className="flex items-center justify-between mb-2">
+                                        <label className="text-xs font-medium text-gray-600">الخيارات</label>
+                                        {question.type === 'single_choice' && (
+                                          <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                                            <input type="checkbox" checked={question.has_counter || false} onChange={(e) => updateQuestion(qIndex, { has_counter: e.target.checked })} className="w-3.5 h-3.5 text-emerald-600 rounded" />
+                                            <span className="text-gray-600">عداد</span>
+                                          </label>
+                                        )}
+                                      </div>
+                                      <div className="space-y-1.5">
+                                        {(parseOptions(question.options) as any[]).map((opt: any, oi: number) => (
+                                          <div key={oi} className="flex items-center gap-1.5">
+                                            <input type="text" value={opt.text} onChange={(e) => updateOption(qIndex, oi, { text: e.target.value })} placeholder={`خيار ${oi + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
+                                            <input type="number" min="0" value={opt.points} onChange={(e) => updateOption(qIndex, oi, { points: Number(e.target.value) })} className="w-14 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center" placeholder="نقاط" />
+                                            {question.has_counter && (
+                                              <input type="number" min="1" value={opt.counter_target || ''} onChange={(e) => updateOption(qIndex, oi, { counter_target: parseInt(e.target.value) || null })} className="w-14 px-2 py-1.5 border border-emerald-200 rounded-lg text-sm text-center" placeholder="هدف" />
+                                            )}
+                                            <button onClick={() => removeOption(qIndex, oi)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                      <button onClick={() => addOption(qIndex)} className="w-full mt-2 py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors text-sm flex items-center justify-center gap-1">
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> إضافة خيار
+                                      </button>
+                                    </div>
+                                  )}
+
+                                  {/* Dropdown Options */}
+                                  {question.type === 'dropdown' && (
+                                    <div>
+                                      <select value={question.dropdown_type || 'single'} onChange={(e) => updateQuestion(qIndex, { dropdown_type: e.target.value as 'single' | 'multiple' })} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm mb-3">
+                                        <option value="single">اختيار واحد</option>
+                                        <option value="multiple">اختيار متعدد</option>
+                                      </select>
+                                      <textarea value={question.bulk_text || ''} onChange={(e) => updateQuestion(qIndex, { bulk_text: e.target.value })} rows={4} placeholder="اكتب كل خيار في سطر منفصل" className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                                      <button onClick={() => parseBulkText(qIndex)} className="mt-1.5 w-full py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition-colors">تطبيق</button>
+                                    </div>
+                                  )}
+
+                                  {/* Matrix Options */}
+                                  {question.type === 'matrix' && (
+                                    <div className="space-y-3">
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1.5">الصفوف</label>
+                                        <div className="space-y-1">
+                                          {(question.matrix_rows || []).map((row: any, ri: number) => (
+                                            <div key={ri} className="flex items-center gap-1">
+                                              <input type="text" value={row.text} onChange={(e) => updateMatrixRow(qIndex, ri, { text: e.target.value })} placeholder={`صف ${ri + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
+                                              <label className="flex items-center gap-1 text-xs shrink-0"><input type="checkbox" checked={row.required} onChange={(e) => updateMatrixRow(qIndex, ri, { required: e.target.checked })} className="w-3.5 h-3.5" /> مطلوب</label>
+                                              <button onClick={() => removeMatrixRow(qIndex, ri)} className="p-1 text-red-400 hover:text-red-600"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                            </div>
+                                          ))}
+                                        </div>
+                                        <button onClick={() => addMatrixRow(qIndex)} className="mt-1 text-xs text-blue-600 hover:text-blue-700">+ إضافة صف</button>
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1.5">الأعمدة</label>
+                                        <div className="space-y-1">
+                                          {(question.matrix_columns || []).map((col: any, ci: number) => (
+                                            <div key={ci} className="flex items-center gap-1">
+                                              <input type="text" value={col.text} onChange={(e) => updateMatrixColumn(qIndex, ci, { text: e.target.value })} placeholder={`عمود ${ci + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
+                                              <input type="number" min="0" value={col.points} onChange={(e) => updateMatrixColumn(qIndex, ci, { points: Number(e.target.value) })} className="w-14 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center" placeholder="نقاط" />
+                                              <button onClick={() => removeMatrixColumn(qIndex, ci)} className="p-1 text-red-400 hover:text-red-600"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                            </div>
+                                          ))}
+                                        </div>
+                                        <button onClick={() => addMatrixColumn(qIndex)} className="mt-1 text-xs text-blue-600 hover:text-blue-700">+ إضافة عمود</button>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {question.type === 'match_items' && (
+                                    <div className="space-y-3">
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1.5">العمود الأيمن (الخيارات)</label>
+                                        <div className="space-y-1">
+                                          {(question.matrix_rows || []).map((row: any, ri: number) => (
+                                            <div key={ri} className="flex items-center gap-1">
+                                              <input type="text" value={row.text} onChange={(e) => updateMatrixRow(qIndex, ri, { text: e.target.value })} placeholder={`عنصر ${ri + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
+                                              <button onClick={() => removeMatrixRow(qIndex, ri)} className="p-1 text-red-400 hover:text-red-600"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                            </div>
+                                          ))}
+                                        </div>
+                                        <button onClick={() => addMatrixRow(qIndex)} className="mt-1 text-xs text-blue-600 hover:text-blue-700">+ إضافة عنصر</button>
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1.5">العمود الأيسر (الإجابات)</label>
+                                        <div className="space-y-1">
+                                          {(question.matrix_columns || []).map((col: any, ci: number) => (
+                                            <div key={ci} className="flex items-center gap-1">
+                                              <input type="text" value={col.text} onChange={(e) => updateMatrixColumn(qIndex, ci, { text: e.target.value })} placeholder={`إجابة ${ci + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
+                                              <input type="number" min="0" value={col.points} onChange={(e) => updateMatrixColumn(qIndex, ci, { points: Number(e.target.value) })} className="w-14 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center" placeholder="نقاط" />
+                                              <button onClick={() => removeMatrixColumn(qIndex, ci)} className="p-1 text-red-400 hover:text-red-600"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                            </div>
+                                          ))}
+                                        </div>
+                                        <button onClick={() => addMatrixColumn(qIndex)} className="mt-1 text-xs text-blue-600 hover:text-blue-700">+ إضافة إجابة</button>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {question.type === 'slider' && (
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-600 mb-1.5">إعدادات الشريط الرقمي (Min|Max|Step)</label>
+                                      <input type="text" value={(parseOptions(question.options)[0] || {}).text || '0|100|1'} onChange={(e) => { if(parseOptions(question.options).length===0) addOption(qIndex); updateOption(qIndex, 0, { text: e.target.value }) }} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" dir="ltr" placeholder="0|100|1" />
+                                      <p className="text-xs text-gray-500 mt-1">أدخل الحد الأدنى | الحد الأقصى | مقدار الزيادة</p>
+                                    </div>
+                                  )}
+
+                                  {question.type === 'youtube' && (
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-600 mb-1.5">رابط يوتيوب</label>
+                                      <input type="text" value={(parseOptions(question.options)[0] || {}).text || ''} onChange={(e) => { if(parseOptions(question.options).length===0) addOption(qIndex); updateOption(qIndex, 0, { text: e.target.value }) }} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" dir="ltr" placeholder="https://youtube.com/watch?v=..." />
+                                    </div>
+                                  )}
+
+                                  {question.type === 'star_rating' && (
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-600 mb-1.5">عدد النجوم</label>
+                                      <input type="number" min="1" max="10" value={parseOptions(question.options).length} onChange={(e) => {
+                                        const count = parseInt(e.target.value) || 5;
+                                        updateQuestion(qIndex, { options: Array.from({ length: count }).map((_, i) => ({ id: `opt_${Date.now()}_${i}`, text: String(i+1), points: i+1 })) });
+                                      }} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                                    </div>
+                                  )}
+
+                                  {question.type === 'static_image' && (
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-600 mb-1.5">رابط الصورة (URL)</label>
+                                      <input type="text" value={(parseOptions(question.options)[0] || {}).validation_value || ''} onChange={(e) => { if(parseOptions(question.options).length===0) addOption(qIndex); updateOption(qIndex, 0, { validation_value: e.target.value }) }} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" dir="ltr" placeholder="https://..." />
+                                      <p className="text-xs text-gray-500 mt-1">انسخ رابط الصورة وضعه هنا</p>
+                                    </div>
+                                  )}
+
+                                  {/* Text validation options (short text only) */}
+                                  {question.type === 'text' && (() => {
+                                    const opts: any[] = parseOptions(question.options)
+                                    const meta = opts[0] || {}
+                                    const vt = meta.validation_type || ''
+                                    const vcat = meta.validation_category || ''
+                                    const firstOptions = [
+                                      { value: 'name', label: 'اسم' },
+                                      { value: 'email', label: 'ايميل' },
+                                      { value: 'phone', label: 'رقم هاتف' },
+                                      { value: 'number', label: 'رقم' },
+                                      { value: 'plain', label: 'نص بدون تحقق' },
+                                      { value: 'text_check', label: 'نص بتحقق' },
+                                    ]
+                                    const currentFirst = firstOptions.find(o => {
+                                      if (vcat) return o.value === vcat
+                                      if (!vt || vt === '') return o.value === 'plain'
+                                      if (vt === 'name' || vt === 'email' || vt === 'phone' || vt === 'plain') return o.value === vt
+                                      return o.value === 'plain'
+                                    }) || firstOptions[0]
+                  
+                                    const secondOptions = (() => {
+                                      if (currentFirst.value === 'name') return [
+                                        { value: 'name_2', label: 'ثنائي' },
+                                        { value: 'name_3', label: 'ثلاثي' },
+                                        { value: 'name_4', label: 'رباعي' },
+                                      ]
+                                      if (currentFirst.value === 'number') return [
+                                        { value: 'equal_to', label: 'يساوي' },
+                                        { value: 'not_equal_to', label: 'لا يساوي' },
+                                        { value: 'less_than', label: 'أقل من' },
+                                        { value: 'less_than_or_equal', label: 'أقل من أو يساوي' },
+                                        { value: 'greater_than', label: 'أكبر من' },
+                                        { value: 'greater_than_or_equal', label: 'أكبر من أو يساوي' },
+                                        { value: 'between', label: 'بين' },
+                                        { value: 'not_between', label: 'ليس بين' },
+                                        { value: 'whole_number', label: 'عدد صحيح' },
+                                        { value: 'is_number', label: 'اعداد عشرية' },
+                                      ]
+                                      if (currentFirst.value === 'text_check') return [
+                                        { value: 'equal_to', label: 'يساوي' },
+                                        { value: 'not_equal_to', label: 'لا يساوي' },
+                                        { value: 'contains_word', label: 'يحتوى على' },
+                                        { value: 'does_not_contain', label: 'لا يحتوى على' },
+                                      ]
+                                      return []
+                                    })()
+                  
+                                    const setValidation = (firstVal: string, secondVal?: string) => {
+                                      if (firstVal === '' || firstVal === 'email' || firstVal === 'phone' || firstVal === 'plain') {
+                                        updateQuestion(qIndex, { options: [{ validation_type: firstVal, validation_category: '', validation_value: '', validation_min: '', validation_max: '' }] as any })
+                                      } else if (firstVal === 'name') {
+                                        const wordCount = secondVal ? parseInt(secondVal.split('_')[1]) : 2
+                                        updateQuestion(qIndex, { options: [{ validation_type: 'name', validation_category: 'name', validation_value: String(wordCount), validation_min: '', validation_max: '' }] as any })
+                                      } else if (firstVal === 'number') {
+                                        const sv = secondVal || 'equal_to'
+                                        updateQuestion(qIndex, { options: [{ validation_type: sv, validation_category: 'number', validation_value: '', validation_min: '', validation_max: '' }] as any })
+                                      } else if (firstVal === 'text_check') {
+                                        const sv = secondVal || 'contains_word'
+                                        updateQuestion(qIndex, { options: [{ validation_type: sv, validation_category: 'text_check', validation_value: sv === 'contains_word' || sv === 'does_not_contain' ? '' : '', validation_min: '', validation_max: '' }] as any })
+                                      }
+                                    }
+                  
+                                    const currentSecondVal = (() => {
+                                      if (currentFirst.value === 'name') {
+                                        const wc = meta.validation_value || '2'
+                                        return `name_${wc}`
+                                      }
+                                      if (currentFirst.value === 'number' || currentFirst.value === 'text_check') {
+                                        if (['contains_word','does_not_contain','equal_to','not_equal_to','less_than','less_than_or_equal','greater_than','greater_than_or_equal','between','not_between','whole_number','is_number'].includes(vt)) return vt
+                                      }
+                                      return ''
+                                    })()
+                  
+                                    return (
+                                      <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                        <p className="text-sm font-medium text-purple-700 mb-2">نوع التحقق من الإجابة:</p>
+                                        <div className="flex flex-wrap gap-2">
+                                          <select
+                                            value={currentFirst.value}
+                                            onChange={(e) => {
+                                              setValidation(e.target.value)
+                                            }}
+                                            className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500"
+                                          >
+                                            {firstOptions.map(o => (
+                                              <option key={o.value} value={o.value}>{o.label}</option>
+                                            ))}
+                                          </select>
+                                          {secondOptions.length > 0 && (
+                                            <select
+                                              value={currentSecondVal}
+                                              onChange={(e) => {
+                                                setValidation(currentFirst.value, e.target.value)
+                                              }}
+                                              className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500"
+                                            >
+                                              <option value="">اختر...</option>
+                                              {secondOptions.map(o => (
+                                                <option key={o.value} value={o.value}>{o.label}</option>
+                                              ))}
+                                            </select>
+                                          )}
+                                          {(currentFirst.value === 'text_check' && vt) && (
+                                            <input
+                                              type="text"
+                                              value={meta.validation_value || ''}
+                                              onChange={(e) => updateQuestion(qIndex, { options: [{ validation_type: vt, validation_value: e.target.value, validation_min: '', validation_max: '' }] as any })}
+                                              placeholder="أدخل النص..."
+                                              className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500 w-40"
+                                            />
+                                          )}
+                                          {(currentFirst.value === 'number' && (vt === 'equal_to' || vt === 'not_equal_to' || vt === 'less_than' || vt === 'less_than_or_equal' || vt === 'greater_than' || vt === 'greater_than_or_equal')) && (
+                                            <input
+                                              type="number"
+                                              step="any"
+                                              value={meta.validation_value ?? ''}
+                                              onChange={(e) => updateQuestion(qIndex, { options: [{ validation_type: vt, validation_value: e.target.value, validation_min: '', validation_max: '' }] as any })}
+                                              placeholder="القيمة..."
+                                              className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500 w-32"
+                                            />
+                                          )}
+                                          {(currentFirst.value === 'number' && (vt === 'between' || vt === 'not_between')) && (
+                                            <>
+                                              <input
+                                                type="number"
+                                                step="any"
+                                                value={meta.validation_min ?? ''}
+                                                onChange={(e) => updateQuestion(qIndex, { options: [{ validation_type: vt, validation_min: e.target.value, validation_max: meta.validation_max || '', validation_value: '' }] as any })}
+                                                placeholder="الصغرى..."
+                                                className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500 w-28"
+                                              />
+                                              <input
+                                                type="number"
+                                                step="any"
+                                                value={meta.validation_max ?? ''}
+                                                onChange={(e) => updateQuestion(qIndex, { options: [{ validation_type: vt, validation_min: meta.validation_min || '', validation_max: e.target.value, validation_value: '' }] as any })}
+                                                placeholder="العظمى..."
+                                                className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500 w-28"
+                                              />
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )
+                                  })()}
+
+                                  {/* Scale Options */}
+                                  {question.type === 'scale' && (
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-600 mb-1.5">نقاط المقياس</label>
+                                      <div className="grid grid-cols-5 gap-1.5">
+                                        {(parseOptions(question.options) as any[]).map((opt: any, oi: number) => (
+                                          <div key={oi} className="text-center">
+                                            <div className="w-full py-1.5 bg-blue-600 text-white rounded-lg font-bold text-sm mb-1">{opt.text}</div>
+                                            <input type="number" value={opt.points} onChange={(e) => { const idx = (question.options || []).findIndex((o: any) => o.id === opt.id); if (idx >= 0) updateOption(qIndex, idx, { points: Number(e.target.value) }) }} className="w-full px-1 py-1 border border-blue-200 rounded text-center text-sm" />
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+
+
+                                  {/* Page and Row Group */}
+                                  <div className="flex gap-4">
+                                    <div className="flex-1 p-2.5 bg-gray-50 rounded-lg">
+                                      <label className="block text-xs font-medium text-gray-600 mb-1.5">رقم الصفحة</label>
+                                      <select value={question.page || 1} onChange={(e) => updateQuestion(qIndex, { page: parseInt(e.target.value) })} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm">
+                                        {Array.from({ length: Math.max(1, ...formData.questions.map(q => q.page || 1)) + 1 }, (_, i) => i + 1).map(p => (
+                                          <option key={p} value={p}>الصفحة {p}</option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                    {/* Next to previous toggle */}
+                                    {qIndex > 0 && formData.questions[qIndex - 1].page === (question.page || 1) && (
+                                      <label className="flex items-center gap-2 cursor-pointer mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg transition-colors hover:bg-blue-100">
+                                        <input
+                                          type="checkbox"
+                                          checked={!!question.row_group && formData.questions[qIndex - 1].row_group === question.row_group}
+                                          onChange={(e) => {
+                                            if (e.target.checked) {
+                                              const prevQ = formData.questions[qIndex - 1];
+                                              const newGroupId = prevQ.row_group || Date.now();
+                                              if (!prevQ.row_group) updateQuestion(qIndex - 1, { row_group: newGroupId });
+                                              updateQuestion(qIndex, { row_group: newGroupId });
+                                            } else {
+                                              updateQuestion(qIndex, { row_group: null });
+                                            }
+                                          }}
+                                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+                                        />
+                                        <span className="text-sm font-medium text-blue-800">عرض بجوار السؤال السابق (نفس الصف)</span>
+                                      </label>
+                                    )}
+                                  </div>
+                                </div>
+
+                              )}
+
+                            </div>
+                          )
+                        })}
+                        {/* Add question to this page */}
+                        <div className="mt-4 pt-2 border-t border-dashed border-gray-200">
+                          <p className="text-sm font-bold text-gray-700 mb-3">إضافة سؤال جديد:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {(Object.entries(QUESTION_TYPES) as [QuestionType, typeof QUESTION_TYPES['text']][]).map(([type, info]) => (
+                              <button
+                                key={type}
+                                onClick={() => { addQuestion(type); moveToPage(qs.length, pageNum) }}
+                                className="px-3 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors flex items-center gap-2 shadow-sm"
+                              >
+                                <span className="text-blue-500 font-bold">{info.icon}</span> {info.label}
+                              </button>
+                            ))}
+                            
+                            <button
+                              onClick={() => setShowQuestionPicker(true)}
+                              className="px-3 py-2 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-lg text-sm hover:bg-emerald-100 transition-colors flex items-center gap-2 shadow-sm mr-auto"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
+                              استيراد سؤال
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  <button
+                    onClick={addPage}
+                    className="w-full py-2.5 border-2 border-dashed border-blue-200 text-blue-500 rounded-xl hover:border-blue-400 hover:text-blue-700 hover:bg-blue-50 transition-all text-sm font-medium flex items-center justify-center gap-1"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                    إضافة صفحة جديدة
+                  </button>
+                </div>
+              )
+            })()}
+          </main>
+        )}
 
       {showQuestionPicker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1433,6 +2207,454 @@ const params = useParams()
           </div>
         </div>
       )}
+
+      {/* Form Designer Floating Button */}
+      {!isPreviewActive && (
+        <button
+          onClick={() => setIsDesignerOpen(!isDesignerOpen)}
+          className="fixed bottom-6 right-6 z-40 p-4 bg-gradient-to-br from-indigo-600 to-blue-600 text-white rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer group flex items-center justify-center border-0"
+          title="مصمم المظهر"
+        >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+          </svg>
+          <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-out whitespace-nowrap mr-0 group-hover:mr-2 font-bold text-sm">
+            مصمم المظهر
+          </span>
+        </button>
+      )}
+
+      {/* Sliding Designer Sidebar */}
+      <div 
+        dir="rtl"
+        className={`fixed top-[73px] right-0 bottom-0 w-full sm:w-[420px] bg-white shadow-2xl z-30 transition-transform duration-300 ease-in-out border-l border-gray-100 flex flex-col ${
+          isDesignerOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        {/* Header */}
+        <div className="p-3 sm:p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 shrink-0">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+              </svg>
+            </div>
+            <h3 className="font-bold text-gray-900 text-sm sm:text-base">مصمم النموذج</h3>
+          </div>
+          <button 
+            onClick={() => setIsDesignerOpen(false)}
+            className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer text-gray-400 hover:text-gray-700 border-0 bg-transparent"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Tabs Bar */}
+        <div className="flex border-b border-gray-100 bg-gray-50/50 p-1">
+          {[
+            { id: 'themes', label: 'الثيمات', icon: '🎨' },
+            { id: 'colors', label: 'الألوان', icon: '✨' },
+            { id: 'styles', label: 'الأنماط', icon: '📏' },
+            { id: 'layout', label: 'التخطيط', icon: '🖼️' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setDesignerTab(tab.id as any)}
+              className={`flex-1 py-2 px-1 text-center font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer border-0 ${
+                designerTab === tab.id
+                  ? 'bg-white text-blue-600 shadow-sm border border-gray-200'
+                  : 'text-gray-500 hover:text-gray-800 bg-transparent'
+              }`}
+            >
+              <span>{tab.icon}</span>
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-5 scrollbar-thin">
+          {designerTab === 'themes' && (
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3.5 text-xs text-blue-700 font-medium">
+                💡 اختر من القوالب الجاهزة لتغيير مظهر استبيانك بضغطة زر واحدة. يمكنك بعدها تخصيص الألوان والتفاصيل كما تحب.
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {PRESET_THEMES.map(preset => {
+                  const isSelected = theme?.themeName === preset.name || (!theme?.themeName && preset.name === 'Default');
+                  return (
+                    <button
+                      key={preset.name}
+                      onClick={() => updateThemeSettings({ ...preset.settings, themeName: preset.name })}
+                      className={`p-3 rounded-xl border text-right transition-all hover:scale-[1.02] flex flex-col justify-between h-28 cursor-pointer relative overflow-hidden ${
+                        isSelected 
+                          ? 'border-blue-500 ring-2 ring-blue-50 bg-blue-50/10' 
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                      style={{ 
+                        background: isSelected ? undefined : preset.settings.formBgColor === '#ffffff10' ? '#1e293b' : preset.settings.formBgColor 
+                      }}
+                    >
+                      {/* Mini Preview Background */}
+                      <div 
+                        className="absolute inset-0 opacity-5 pointer-events-none" 
+                        style={{ background: preset.settings.pageColor }}
+                      />
+                      
+                      <div className="flex justify-between items-start w-full relative z-10">
+                        <span 
+                          className="w-3.5 h-3.5 rounded-full shrink-0 border border-white"
+                          style={{ backgroundColor: preset.settings.primaryColor }}
+                        />
+                        {isSelected && (
+                          <span className="text-blue-600 bg-blue-100 text-[10px] px-1.5 py-0.5 rounded font-bold">
+                            نشط
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="relative z-10 w-full col-span-2">
+                        <h4 
+                          className="font-bold text-sm truncate"
+                          style={{ 
+                            color: isSelected ? '#1e293b' : preset.settings.textColor === '#f3e8ff' || preset.settings.textColor === '#f8fafc' ? '#ffffff' : preset.settings.textColor 
+                          }}
+                        >
+                          {preset.label}
+                        </h4>
+                        <p className="text-[10px] text-gray-400 font-medium truncate mt-0.5">{preset.name}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {designerTab === 'colors' && (
+            <div className="space-y-4">
+              {/* Page Background */}
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3">
+                <label className="block text-sm font-bold text-gray-700">لون خلفية الصفحة</label>
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="color" 
+                    value={theme?.pageColor?.startsWith('#') ? theme.pageColor : '#f8fafc'} 
+                    onChange={(e) => updateThemeSettings({ pageColor: e.target.value, themeName: 'Custom' })}
+                    className="w-10 h-10 rounded-lg cursor-pointer border border-gray-200 p-0"
+                  />
+                  <input 
+                    type="text" 
+                    value={theme?.pageColor || ''} 
+                    onChange={(e) => updateThemeSettings({ pageColor: e.target.value, themeName: 'Custom' })}
+                    placeholder="#f8fafc أو gradient..."
+                    className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {['#f8fafc', '#f1f5f9', '#eff6ff', '#f5f3ff', '#fff7ed', '#0f172a', '#1e293b'].map(c => (
+                    <button 
+                      key={c} 
+                      onClick={() => updateThemeSettings({ pageColor: c, themeName: 'Custom' })}
+                      className="w-6 h-6 rounded-full border border-gray-200 cursor-pointer hover:scale-110 transition-transform"
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Card Background */}
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3">
+                <label className="block text-sm font-bold text-gray-700">خلفية بطاقات الأسئلة</label>
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="color" 
+                    value={theme?.formBgColor?.startsWith('#') ? theme.formBgColor : '#ffffff'} 
+                    onChange={(e) => updateThemeSettings({ formBgColor: e.target.value, themeName: 'Custom' })}
+                    className="w-10 h-10 rounded-lg cursor-pointer border border-gray-200 p-0"
+                  />
+                  <input 
+                    type="text" 
+                    value={theme?.formBgColor || ''} 
+                    onChange={(e) => updateThemeSettings({ formBgColor: e.target.value, themeName: 'Custom' })}
+                    placeholder="#ffffff أو rgba..."
+                    className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {['#ffffff', '#f8fafc', '#f1f5f9', '#1e293b', '#0f172a', '#ffffff10', '#ffffff30'].map(c => (
+                    <button 
+                      key={c} 
+                      onClick={() => updateThemeSettings({ formBgColor: c, themeName: 'Custom' })}
+                      className="w-6 h-6 rounded-full border border-gray-200 cursor-pointer hover:scale-110 transition-transform"
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Primary Theme Color */}
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3">
+                <label className="block text-sm font-bold text-gray-700">اللون الأساسي (الأزرار والتركيز)</label>
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="color" 
+                    value={theme?.primaryColor || '#2563eb'} 
+                    onChange={(e) => updateThemeSettings({ primaryColor: e.target.value, themeName: 'Custom' })}
+                    className="w-10 h-10 rounded-lg cursor-pointer border border-gray-200 p-0"
+                  />
+                  <input 
+                    type="text" 
+                    value={theme?.primaryColor || ''} 
+                    onChange={(e) => updateThemeSettings({ primaryColor: e.target.value, themeName: 'Custom' })}
+                    placeholder="#2563eb"
+                    className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {['#2563eb', '#7c3aed', '#ec4899', '#f97316', '#10b981', '#06b6d4', '#e11d48'].map(c => (
+                    <button 
+                      key={c} 
+                      onClick={() => updateThemeSettings({ primaryColor: c, themeName: 'Custom' })}
+                      className="w-6 h-6 rounded-full border border-gray-200 cursor-pointer hover:scale-110 transition-transform"
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Text Color */}
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3">
+                <label className="block text-sm font-bold text-gray-700">لون النصوص</label>
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="color" 
+                    value={theme?.textColor || '#1e293b'} 
+                    onChange={(e) => updateThemeSettings({ textColor: e.target.value, themeName: 'Custom' })}
+                    className="w-10 h-10 rounded-lg cursor-pointer border border-gray-200 p-0"
+                  />
+                  <input 
+                    type="text" 
+                    value={theme?.textColor || ''} 
+                    onChange={(e) => updateThemeSettings({ textColor: e.target.value, themeName: 'Custom' })}
+                    placeholder="#1e293b"
+                    className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {['#0f172a', '#1e293b', '#475569', '#f8fafc', '#f3e8ff', '#ffe4e6'].map(c => (
+                    <button 
+                      key={c} 
+                      onClick={() => updateThemeSettings({ textColor: c, themeName: 'Custom' })}
+                      className="w-6 h-6 rounded-full border border-gray-200 cursor-pointer hover:scale-110 transition-transform"
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {designerTab === 'styles' && (
+            <div className="space-y-4">
+              {/* Form Width */}
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-sm font-bold text-gray-700">عرض النموذج</label>
+                  <span className="text-xs bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded">
+                    {theme?.formWidth || 768}px
+                  </span>
+                </div>
+                <input 
+                  type="range" 
+                  min="600" 
+                  max="1200" 
+                  step="10"
+                  value={theme?.formWidth || 768} 
+                  onChange={(e) => updateThemeSettings({ formWidth: Number(e.target.value) })}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+                <div className="flex justify-between text-[10px] text-gray-400 font-semibold">
+                  <span>ضيق (600px)</span>
+                  <span>افتراضي (768px)</span>
+                  <span>عريض (1200px)</span>
+                </div>
+              </div>
+
+              {/* Spacing Selection */}
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2">
+                <label className="block text-sm font-bold text-gray-700">المسافات والتباعد</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'compact', label: 'مدمج / ضيق', desc: 'compact' },
+                    { id: 'normal', label: 'طبيعي', desc: 'normal' },
+                    { id: 'cozy', label: 'مريح / واسع', desc: 'cozy' },
+                  ].map(item => (
+                    <button
+                      key={item.id}
+                      onClick={() => updateThemeSettings({ spacing: item.id as any })}
+                      className={`py-2 px-1 text-center font-bold text-xs border rounded-lg transition-colors cursor-pointer ${
+                        theme?.spacing === item.id || (!theme?.spacing && item.id === 'normal')
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                          : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Border Radius */}
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2">
+                <label className="block text-sm font-bold text-gray-700">انحناء الزوايا</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { id: '0px', label: 'حاد' },
+                    { id: '8px', label: 'خفيف' },
+                    { id: '16px', label: 'متوسط' },
+                    { id: '28px', label: 'دائري' },
+                  ].map(item => (
+                    <button
+                      key={item.id}
+                      onClick={() => updateThemeSettings({ borderRadius: item.id })}
+                      className={`py-2 px-1 text-center font-bold text-xs border rounded-lg transition-colors cursor-pointer ${
+                        theme?.borderRadius === item.id || (!theme?.borderRadius && item.id === '16px')
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                          : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Font Family */}
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2">
+                <label className="block text-sm font-bold text-gray-700">خط الاستبيان</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'Cairo', label: 'خط القاهرة (Cairo)', family: "'Cairo', sans-serif" },
+                    { id: 'Tajawal', label: 'خط تجول (Tajawal)', family: "'Tajawal', sans-serif" },
+                    { id: 'Inter', label: 'Inter (إنجليزي)', family: "'Inter', sans-serif" },
+                    { id: 'Outfit', label: 'Outfit (إنجليزي)', family: "'Outfit', sans-serif" },
+                  ].map(item => (
+                    <button
+                      key={item.id}
+                      onClick={() => updateThemeSettings({ fontFamily: item.id })}
+                      className={`p-3 text-center border rounded-lg transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                        theme?.fontFamily === item.id || (!theme?.fontFamily && item.id === 'Cairo')
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                          : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}
+                      style={{ fontFamily: item.family }}
+                    >
+                      <span className="text-sm font-bold">{item.label}</span>
+                      <span className="text-xs opacity-85">أبجد هوز 123</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {designerTab === 'layout' && (
+            <div className="space-y-4">
+              {/* Shadow Layout */}
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex items-center justify-between">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700">تصميم مسطح بدون ظلال</label>
+                  <p className="text-xs text-gray-400 mt-0.5">إلغاء تفعيل الظلال ثلاثية الأبعاد للبطاقات</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer select-none">
+                  <input 
+                    type="checkbox" 
+                    checked={theme?.flatLayout || false} 
+                    onChange={(e) => updateThemeSettings({ flatLayout: e.target.checked })}
+                    className="sr-only peer" 
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
+              {/* Border Style */}
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3">
+                <label className="block text-sm font-bold text-gray-700">شكل حدود البطاقات</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'none', label: 'بدون إطار' },
+                    { id: 'solid', label: 'خط متصل' },
+                    { id: 'dashed', label: 'خط متقطع' },
+                  ].map(item => (
+                    <button
+                      key={item.id}
+                      onClick={() => updateThemeSettings({ borderStyle: item.id as any })}
+                      className={`py-2 px-1 text-center font-bold text-xs border rounded-lg transition-colors cursor-pointer ${
+                        theme?.borderStyle === item.id || (!theme?.borderStyle && item.id === 'none')
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                          : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Border Width */}
+              {theme?.borderStyle && theme.borderStyle !== 'none' && (
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-sm font-bold text-gray-700">سمك الإطار</label>
+                    <span className="text-xs bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded">
+                      {theme?.borderWidth || 1}px
+                    </span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="1" 
+                    max="5" 
+                    step="1"
+                    value={theme?.borderWidth || 1} 
+                    onChange={(e) => updateThemeSettings({ borderWidth: Number(e.target.value) })}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  />
+                  <div className="flex justify-between text-[10px] text-gray-400 font-semibold">
+                    <span>نحيف (1px)</span>
+                    <span>سميك (5px)</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer with Reset */}
+        <div className="p-4 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
+          <button
+            onClick={() => {
+              if (confirm('هل أنت متأكد من رغبتك في إعادة تعيين كافة التنسيقات للقالب الافتراضي؟')) {
+                updateThemeSettings(PRESET_THEMES[0].settings);
+              }
+            }}
+            className="text-xs text-red-600 hover:text-red-700 font-bold flex items-center gap-1.5 cursor-pointer bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg transition-colors border-0"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            إعادة تعيين الافتراضي
+          </button>
+          <button
+            onClick={() => setIsDesignerOpen(false)}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-all shadow-sm cursor-pointer border-0"
+          >
+            تم وتطبيق التغييرات
+          </button>
+        </div>
+      </div>
     </div>
 
   )

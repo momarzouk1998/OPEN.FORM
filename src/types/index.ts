@@ -104,12 +104,30 @@ export type QuestionType =
   | 'date'
   | 'time'
   | 'file_upload'
+  | 'static_text'
+  | 'static_image'
+  | 'divider'
+  | 'signature'
+  | 'star_rating'
+  | 'terms'
+  | 'date_range'
+  | 'slider'
+  | 'button_choice'
+  | 'email_confirm'
+  | 'youtube'
+  | 'match_items'
+
 
 export interface QuestionOption {
   id: string
   text: string
   points: number
   counter_target?: number | null
+  validation_type?: string
+  validation_category?: string
+  validation_value?: string
+  validation_min?: string
+  validation_max?: string
 }
 
 export interface Question {
@@ -123,6 +141,7 @@ export interface Question {
   options?: QuestionOption[]
   has_counter?: boolean
   row_group?: number | null
+  page?: number
 }
 
 export interface Form {
@@ -138,7 +157,11 @@ export interface Form {
   allow_delete_responses?: boolean
   randomize_questions?: boolean
   allow_multiple?: boolean
+  enable_auto_save?: boolean
+  redirect_rules?: any[]
+  default_redirect_url?: string
   questions?: Question[]
+  page_titles?: Record<string, string>
 }
 
 // Response types
@@ -192,4 +215,21 @@ export interface DashboardStats {
   pending_approvals: number
   average_score: number
 }
+
+// Form Theme Settings
+export interface ThemeSettings {
+  pageColor?: string
+  formBgColor?: string
+  textColor?: string
+  primaryColor?: string
+  borderRadius?: string
+  spacing?: 'compact' | 'normal' | 'cozy'
+  fontFamily?: string
+  themeName?: string
+  formWidth?: number
+  flatLayout?: boolean
+  borderStyle?: 'none' | 'solid' | 'dashed'
+  borderWidth?: number
+}
+
 

@@ -372,6 +372,52 @@ export default function ResultsPage() {
     return result
   }, [formResponses, responseSearch, sortColumn, sortDirection, formQuestions])
 
+  const exportToCSV = () => {
+    if (processedResponses.length === 0) return
+
+    // 1. Prepare Headers
+    const headers = ['المستخدم', 'البريد الإلكتروني', 'الجنس', 'تاريخ التقديم', 'الدرجة', 'النسبة']
+    formQuestions.forEach(q => {
+      // Escape headers
+      const text = (q.text || '').replace(/"/g, '""')
+      headers.push(`"${text}"`)
+    })
+
+    // 2. Prepare Rows
+    const rows = processedResponses.map(r => {
+      const row = [
+        `"${(r.profiles?.name || 'مجهول').replace(/"/g, '""')}"`,
+        `"${(r.profiles?.email || 'لا يوجد').replace(/"/g, '""')}"`,
+        `"${(r.profiles?.gender === 'male' ? 'ذكر' : r.profiles?.gender === 'female' ? 'أنثى' : '').replace(/"/g, '""')}"`,
+        `"${formatDate(r.submitted_at).replace(/"/g, '""')}"`,
+        r.score,
+        `"${getPercentageScore(Number(r.score), Number(r.max_score))}%"`
+      ]
+      formQuestions.forEach(q => {
+        let answer = getDisplayAnswer(q, r.answers?.[q.id])
+        if (typeof answer === 'string') {
+          answer = `"${answer.replace(/"/g, '""').replace(/\n/g, ' - ')}"`
+        }
+        row.push(answer)
+      })
+      return row.join(',')
+    })
+
+    // 3. Create CSV content with BOM for UTF-8 Arabic support in Excel
+    const csvContent = '\uFEFF' + headers.join(',') + '\n' + rows.join('\n')
+    
+    // 4. Download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `ردود_${activeForm?.name}_${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   // Analytics computation
   const analyticsData = useMemo(() => {
     if (!showAnalytics || formQuestions.length === 0) return []
@@ -723,6 +769,16 @@ export default function ResultsPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                     {showAnalytics ? 'إخفاء التحليل' : 'عرض التحليل'}
+                  </button>
+
+                  <button
+                    onClick={exportToCSV}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    تصدير Excel
                   </button>
                 </div>
 

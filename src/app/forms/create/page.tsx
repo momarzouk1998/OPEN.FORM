@@ -5,7 +5,8 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ImageUpload from '@/components/ImageUpload'
-import type { QuestionType, QuestionOption } from '@/types'
+import type { QuestionType, QuestionOption, FormTemplate } from '@/types'
+import { TEMPLATE_CATEGORIES } from '@/types'
 import { generateShortCode } from '@/lib/shortCode'
 
 // Question type definitions with detailed explanations
@@ -22,6 +23,18 @@ const QUESTION_TYPES = {
   date: { label: 'تاريخ', icon: '📅', description: 'إدخال تاريخ', explanation: 'مثال: "تاريخ الميلاد"' },
   time: { label: 'وقت', icon: '⏰', description: 'إدخال وقت', explanation: 'مثال: "وقت الحضور"' },
   file_upload: { label: 'رفع ملف', icon: '📎', description: 'إرفاق ملف أو صورة', explanation: 'مثال: رفع السيرة الذاتية أو صورة' }
+  ,static_text: { label: 'فقرة (نص ثابت)', icon: '📝', description: 'نص للقراءة فقط', explanation: 'لعرض تعليمات أو معلومات' },
+  static_image: { label: 'صورة ثابتة', icon: '🖼️', description: 'عرض صورة', explanation: 'لعرض شعار أو توضيح' },
+  divider: { label: 'فاصل', icon: '➖', description: 'خط فاصل', explanation: 'للفصل بين الأقسام' },
+  signature: { label: 'التوقيع', icon: '✍️', description: 'حقل توقيع', explanation: 'للحصول على توقيع رقمي' },
+  star_rating: { label: 'تقييم بالنجوم', icon: '⭐', description: 'تقييم باستخدام النجوم', explanation: 'بديل مرئي للتقييم الرقمي' },
+  terms: { label: 'الشروط والأحكام', icon: '📋', description: 'موافقة على الشروط', explanation: 'المستخدم يقرأ ويوافق على نص' },
+  date_range: { label: 'نطاق تاريخ', icon: '📆', description: 'من تاريخ إلى تاريخ', explanation: 'مثال: فترة الإجازة' },
+  slider: { label: 'شريط رقمي', icon: '🎚️', description: 'اختيار قيمة بالسحب', explanation: 'مثال: تحديد ميزانية أو عمر' },
+  button_choice: { label: 'اختيار بأزرار', icon: '🔘', description: 'خيارات كأزرار مرئية', explanation: 'بديل جميل للاختيار الواحد' },
+  email_confirm: { label: 'تأكيد البريد', icon: '✉️', description: 'إدخال الإيميل مرتين', explanation: 'للتأكد من صحة البريد الإلكتروني' },
+  youtube: { label: 'فيديو يوتيوب', icon: '▶️', description: 'تضمين فيديو يوتيوب', explanation: 'لعرض فيديو توضيحي داخل النموذج' },
+  match_items: { label: 'توصيل العناصر', icon: '🔗', description: 'مطابقة عمودين', explanation: 'مثال: وصّل الكلمة بمعناها' }
 } as const
 
 interface MatrixRow {
@@ -53,6 +66,7 @@ interface Question {
   dropdown_type?: 'single' | 'multiple'
   correct_option_ids?: string[]
   row_group?: number | null
+  page?: number
 }
 
 interface FormData {
@@ -80,6 +94,8 @@ function CreateFormContent() {
   const [existingForms, setExistingForms] = useState<ExistingForm[]>([])
   const [showQuestionPicker, setShowQuestionPicker] = useState(false)
   const [questionMenuOpen, setQuestionMenuOpen] = useState(false)
+  const [templates, setTemplates] = useState<FormTemplate[]>([])
+  const [templatesLoading, setTemplatesLoading] = useState(true)
   
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -143,6 +159,14 @@ const supabase = createClient()
         .order('created_at', { ascending: false })
 
       setExistingForms(forms || [])
+
+      // Fetch templates
+      const { data: templateData } = await supabase
+        .from('form_templates')
+        .select('*')
+        .order('sort_order')
+      setTemplates(templateData || [])
+      setTemplatesLoading(false)
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
@@ -184,6 +208,24 @@ const supabase = createClient()
     } else if (type === 'dropdown') {
       newQuestion.dropdown_type = 'single'
       newQuestion.correct_option_ids = []
+    } else if (type === 'button_choice') {
+      newQuestion.options = [
+        { id: `opt_${Date.now()}_1`, text: '', points: 0 },
+        { id: `opt_${Date.now()}_2`, text: '', points: 0 }
+      ]
+    } else if (type === 'slider') {
+      newQuestion.options = [{ id: `opt_${Date.now()}_1`, text: '0|100|1', points: 0 }] as any
+    } else if (type === 'star_rating') {
+      newQuestion.options = Array.from({ length: 5 }).map((_, i) => ({ id: `opt_${Date.now()}_${i}`, text: String(i+1), points: i+1 }))
+    } else if (type === 'match_items') {
+      newQuestion.matrix_rows = [
+        { id: `left_${Date.now()}_1`, text: 'عنصر 1', required: true },
+        { id: `left_${Date.now()}_2`, text: 'عنصر 2', required: true }
+      ]
+      newQuestion.matrix_columns = [
+        { id: `right_${Date.now()}_1`, text: 'إجابة 1', points: 0 },
+        { id: `right_${Date.now()}_2`, text: 'إجابة 2', points: 0 }
+      ]
     }
 
     setFormData(prev => ({
@@ -316,6 +358,57 @@ const supabase = createClient()
     setShowQuestionPicker(false)
   }
 
+  const useTemplate = (template: FormTemplate) => {
+    const importedQuestions: Question[] = (template.questions_data || []).map((q: any, index: number) => {
+      let options: QuestionOption[] = []
+      let matrix_rows: any = undefined
+      let matrix_columns: any = undefined
+      let dropdown_type: 'single' | 'multiple' | undefined = undefined
+      let correct_option_ids: string[] | undefined = undefined
+
+      if (q.type === 'matrix' && q.options?.matrix_rows) {
+        matrix_rows = q.options.matrix_rows
+        matrix_columns = q.options.matrix_columns || []
+      } else if (q.type === 'dropdown' && q.options?.dropdown_type) {
+        dropdown_type = q.options.dropdown_type
+        correct_option_ids = q.options.correct_option_ids || []
+        options = q.options.options || []
+      } else if (q.type === 'single_choice' || q.type === 'multiple_choice') {
+        options = q.options || []
+      } else if (q.type === 'scale') {
+        options = q.options || []
+      } else if (q.type === 'ranking') {
+        options = q.options || []
+      } else {
+        options = q.options || []
+      }
+
+      return {
+        id: `q_${Date.now()}_${index}`,
+        text: q.text || '',
+        type: q.type || 'text',
+        required: q.required ?? true,
+        points: q.points || 0,
+        has_counter: q.has_counter || false,
+        options,
+        matrix_rows,
+        matrix_columns,
+        dropdown_type,
+        correct_option_ids,
+        correct_option_id: correct_option_ids?.[0],
+        row_group: q.row_group || null
+      }
+    })
+
+    setFormData(prev => ({
+      ...prev,
+      name: template.name,
+      description: template.description || '',
+      questions: importedQuestions,
+      ...(template.form_settings || {})
+    }))
+  }
+
   const saveForm = async () => {
     if (!formData.name.trim()) {
       alert('يرجن إدخال اسم الفورم')
@@ -378,6 +471,11 @@ const supabase = createClient()
             correct_option_ids: q.dropdown_type === 'multiple' ? (q.correct_option_ids || []) : (q.correct_option_id ? [q.correct_option_id] : []),
             options: items
           }
+        } else if (q.type === 'match_items') {
+          optionsData = {
+            left_items: (q.matrix_rows || []).map((row: any) => ({ id: row.id, text: row.text })),
+            right_items: (q.matrix_columns || []).map((col: any) => ({ id: col.id, text: col.text }))
+          }
         } else {
           optionsData = parseOptions(q.options)
         }
@@ -400,7 +498,7 @@ const supabase = createClient()
 
       if (questionsError) throw questionsError
 
-      router.push(`/forms/${form.id}/edit`)
+      router.push(`/forms/${form.serial_number}/edit`)
     } catch (error) {
       console.error('Error saving form:', error)
       alert('حدث خطأ أثناء حفظ الفورم')
@@ -664,6 +762,55 @@ const supabase = createClient()
           </div>
         </div>
 
+        {/* Templates Section */}
+        {!templatesLoading && templates.length > 0 && (
+          <div className={`bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 ${(formData.questions || []).length > 0 ? 'hidden' : ''}`}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">ابدأ من قالب جاهز</h2>
+              <Link
+                href="/templates"
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+              >
+                تصفح الكل
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {templates.slice(0, 6).map((template) => (
+                <button
+                  key={template.id}
+                  onClick={() => useTemplate(template)}
+                  className="text-right p-4 bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all group"
+                >
+                  <div className="flex items-start gap-3">
+                    {template.image_url ? (
+                      <img src={template.image_url} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                    ) : (
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center shrink-0">
+                        <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-gray-900 text-sm group-hover:text-blue-700 transition-colors">{template.name}</h3>
+                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{template.description}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">
+                          {TEMPLATE_CATEGORIES[template.category] || template.category}
+                        </span>
+                        <span className="text-xs text-gray-400">{(template.questions_data || []).length} سؤال</span>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Questions Section */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
           <div className="flex items-center justify-between mb-6">
@@ -682,13 +829,23 @@ const supabase = createClient()
                     {qIndex + 1}
                   </span>
                   <div className="flex-1">
-                    <input
-                      type="text"
-                      value={question.text}
-                      onChange={(e) => updateQuestion(qIndex, { text: e.target.value })}
-                      placeholder="اكتب السؤال هنا..."
-                      className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                    {['terms', 'static_text'].includes(question.type) ? (
+                      <textarea
+                        value={question.text}
+                        onChange={(e) => updateQuestion(qIndex, { text: e.target.value })}
+                        placeholder="اكتب النص هنا..."
+                        rows={4}
+                        className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        value={question.text}
+                        onChange={(e) => updateQuestion(qIndex, { text: e.target.value })}
+                        placeholder="اكتب السؤال هنا..."
+                        className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
                     <button
@@ -732,7 +889,7 @@ const supabase = createClient()
                     <span className="text-sm text-gray-700">مطلوب</span>
                   </label>
                   
-                  {!['single_choice', 'multiple_choice', 'dropdown', 'ranking', 'matrix'].includes(question.type) && (
+                  {!['single_choice', 'multiple_choice', 'dropdown', 'ranking', 'matrix', 'button_choice', 'match_items', 'static_text', 'static_image', 'divider', 'terms', 'youtube'].includes(question.type) && (
                   <div className="flex items-center gap-2">
                     <label className="text-sm text-gray-700">النقاط:</label>
                     <input
@@ -1133,7 +1290,7 @@ const supabase = createClient()
                 )}
 
                 {/* Options for other choice questions */}
-                {(question.type === 'single_choice' || question.type === 'multiple_choice' || question.type === 'ranking') && (
+                {(question.type === 'single_choice' || question.type === 'multiple_choice' || question.type === 'ranking' || question.type === 'button_choice') && (
                   <div className="ms-2 sm:ms-11 space-y-3">
                     {question.type === 'single_choice' && (
                       <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
@@ -1201,6 +1358,69 @@ const supabase = createClient()
                       </svg>
                       إضافة خيار
                     </button>
+                  </div>
+                )}
+
+                {question.type === 'match_items' && (
+                  <div className="ms-2 sm:ms-11 space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-3">العمود الأيمن (الخيارات):</p>
+                      <div className="space-y-2">
+                        {(question.matrix_rows || []).map((row: any, ri: number) => (
+                          <div key={ri} className="flex items-center gap-2">
+                            <input type="text" value={row.text} onChange={(e) => updateMatrixRow(qIndex, ri, { text: e.target.value })} placeholder={`عنصر ${ri + 1}`} className="flex-1 px-3 py-2 border border-gray-200 rounded-lg" />
+                            <button onClick={() => removeMatrixRow(qIndex, ri)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                          </div>
+                        ))}
+                      </div>
+                      <button onClick={() => addMatrixRow(qIndex)} className="mt-2 text-sm text-blue-600 hover:text-blue-700">+ إضافة عنصر</button>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-3">العمود الأيسر (الإجابات):</p>
+                      <div className="space-y-2">
+                        {(question.matrix_columns || []).map((col: any, ci: number) => (
+                          <div key={ci} className="flex items-center gap-2">
+                            <input type="text" value={col.text} onChange={(e) => updateMatrixColumn(qIndex, ci, { text: e.target.value })} placeholder={`إجابة ${ci + 1}`} className="flex-1 px-3 py-2 border border-gray-200 rounded-lg" />
+                            <input type="number" min="0" value={col.points} onChange={(e) => updateMatrixColumn(qIndex, ci, { points: Number(e.target.value) })} className="w-16 px-2 py-2 border border-gray-200 rounded-lg text-center" placeholder="نقاط" />
+                            <button onClick={() => removeMatrixColumn(qIndex, ci)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                          </div>
+                        ))}
+                      </div>
+                      <button onClick={() => addMatrixColumn(qIndex)} className="mt-2 text-sm text-blue-600 hover:text-blue-700">+ إضافة إجابة</button>
+                    </div>
+                  </div>
+                )}
+
+                {question.type === 'slider' && (
+                  <div className="ms-2 sm:ms-11">
+                    <p className="text-sm font-medium text-gray-700 mb-3">إعدادات الشريط الرقمي (Min|Max|Step):</p>
+                    <input type="text" value={(parseOptions(question.options)[0] || {}).text || '0|100|1'} onChange={(e) => { if(parseOptions(question.options).length===0) addOption(qIndex); updateOption(qIndex, 0, { text: e.target.value }) }} className="w-full px-3 py-2 border border-gray-200 rounded-lg" dir="ltr" placeholder="0|100|1" />
+                    <p className="text-xs text-gray-500 mt-1">أدخل الحد الأدنى | الحد الأقصى | مقدار الزيادة</p>
+                  </div>
+                )}
+
+                {question.type === 'youtube' && (
+                  <div className="ms-2 sm:ms-11">
+                    <p className="text-sm font-medium text-gray-700 mb-3">رابط يوتيوب:</p>
+                    <input type="text" value={(parseOptions(question.options)[0] || {}).text || ''} onChange={(e) => { if(parseOptions(question.options).length===0) addOption(qIndex); updateOption(qIndex, 0, { text: e.target.value }) }} className="w-full px-3 py-2 border border-gray-200 rounded-lg" dir="ltr" placeholder="https://youtube.com/watch?v=..." />
+                  </div>
+                )}
+
+                {question.type === 'star_rating' && (
+                  <div className="ms-2 sm:ms-11">
+                    <p className="text-sm font-medium text-gray-700 mb-3">عدد النجوم:</p>
+                    <input type="number" min="1" max="10" value={parseOptions(question.options).length} onChange={(e) => {
+                      const count = parseInt(e.target.value) || 5;
+                      updateQuestion(qIndex, { options: Array.from({ length: count }).map((_, i) => ({ id: `opt_${Date.now()}_${i}`, text: String(i+1), points: i+1 })) });
+                    }} className="w-full px-3 py-2 border border-gray-200 rounded-lg" />
+                  </div>
+                )}
+
+                {question.type === 'static_image' && (
+                  <div className="ms-2 sm:ms-11">
+                    <p className="text-sm font-medium text-gray-700 mb-3">رابط الصورة (URL):</p>
+                    <input type="text" value={(parseOptions(question.options)[0] || {}).validation_value || ''} onChange={(e) => { if(parseOptions(question.options).length===0) addOption(qIndex); updateOption(qIndex, 0, { validation_value: e.target.value }) }} className="w-full px-3 py-2 border border-gray-200 rounded-lg" dir="ltr" placeholder="https://..." />
+                    <p className="text-xs text-gray-500 mt-1">انسخ رابط الصورة وضعه هنا</p>
                   </div>
                 )}
 

@@ -24,9 +24,10 @@ export default function ImageUpload({ onImageUploaded, currentImage, className =
 
       const file = event.target.files[0]
       
-      // التحقق من نوع الملف
-      if (!file.type.startsWith('image/')) {
-        throw new Error('يجب اختيار ملف صورة')
+      // التحقق من نوع الملف (مسموح: JPG, PNG, GIF)
+      const allowed = ['image/jpeg', 'image/png', 'image/gif']
+      if (!allowed.includes(file.type)) {
+        throw new Error('يجب اختيار صورة من نوع JPG أو PNG أو GIF')
       }
 
       // التحقق من حجم الملف (أقل من 5 ميجا)
@@ -104,7 +105,7 @@ export default function ImageUpload({ onImageUploaded, currentImage, className =
           </div>
           <input
             type="file"
-            accept="image/*"
+            accept=".jpg,.jpeg,.png,.gif"
             onChange={uploadImage}
             disabled={uploading}
             className="hidden"

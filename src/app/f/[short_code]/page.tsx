@@ -7,7 +7,7 @@ export default async function ShortCodePage({ params }: { params: Promise<{ shor
 
   const { data: form } = await supabase
     .from('forms')
-    .select('id')
+    .select('id, serial_number')
     .eq('short_code', short_code.toUpperCase())
     .maybeSingle()
 
@@ -15,5 +15,5 @@ export default async function ShortCodePage({ params }: { params: Promise<{ shor
     redirect('/404')
   }
 
-  redirect(`/forms/${form.id}`)
+  redirect(`/forms/${form.serial_number || form.id}`)
 }

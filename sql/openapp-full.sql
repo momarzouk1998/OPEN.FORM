@@ -89,8 +89,29 @@ CREATE TABLE IF NOT EXISTS forms (
     show_results BOOLEAN DEFAULT true,
     pass_score DECIMAL(5,2) DEFAULT 0.00,
     image_url TEXT,
-    short_code TEXT UNIQUE
+    short_code TEXT UNIQUE,
+    serial_number BIGINT UNIQUE,
+    page_titles JSONB DEFAULT '{}'::jsonb
 );
+
+-- Serial number sequence for forms (starts at 1000)
+CREATE SEQUENCE IF NOT EXISTS forms_serial_number_seq START 1000;
+
+CREATE OR REPLACE FUNCTION assign_serial_number()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.serial_number IS NULL THEN
+    NEW.serial_number := nextval('forms_serial_number_seq');
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_forms_serial_number ON forms;
+CREATE TRIGGER trg_forms_serial_number
+  BEFORE INSERT ON forms
+  FOR EACH ROW
+  EXECUTE FUNCTION assign_serial_number();
 
 -- ==================== questions ====================
 CREATE TABLE IF NOT EXISTS questions (
@@ -104,6 +125,7 @@ CREATE TABLE IF NOT EXISTS questions (
     options JSONB DEFAULT '[]'::jsonb,
     has_counter BOOLEAN DEFAULT false,
     row_group INTEGER,
+    page INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

@@ -75,8 +75,8 @@ export default function AdminFormsPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <table className="w-full text-right">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
+          <table className="w-full text-right min-w-[600px]">
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="px-6 py-4 text-sm font-medium text-gray-700">اسم الفورم</th>
@@ -100,7 +100,8 @@ export default function AdminFormsPage() {
                       <button
                         onClick={() => {
                           const code = (form as any).short_code
-                          const link = code ? `${window.location.origin}/f/${code}` : `${window.location.origin}/forms/${form.id}`
+                          const serial = (form as any).serial_number || form.id
+                          const link = code ? `${window.location.origin}/f/${code}` : `${window.location.origin}/forms/${serial}`
                           navigator.clipboard.writeText(link)
                           alert('تم نسخ الرابط')
                         }}
@@ -110,14 +111,14 @@ export default function AdminFormsPage() {
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
                       </button>
                       <Link
-                        href={`/forms/${form.id}`}
+                        href={`/forms/${(form as any).serial_number || form.id}`}
                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         title="عرض الفورم"
                       >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                       </Link>
                       <Link
-                        href={`/forms/${form.id}/edit`}
+                        href={`/forms/${(form as any).serial_number || form.id}/edit`}
                         className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                         title="تعديل والتحكم بالأسئلة"
                       >

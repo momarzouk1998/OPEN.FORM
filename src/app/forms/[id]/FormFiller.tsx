@@ -1,15 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useFormAutoSave, useConditionalRedirect, type RedirectRule } from '@/hooks/useFormFeatures'
 
 interface QuestionOption {
   id: string
   text: string
   points: number
   counter_target?: number | null
+  validation_type?: string
+  validation_category?: string
+  validation_value?: string
+  validation_min?: string
+  validation_max?: string
 }
 
 interface Question {
@@ -22,6 +28,7 @@ interface Question {
   options: any
   order_index: number
   row_group?: number | null
+  page?: number
 }
 
 interface Form {
@@ -34,6 +41,10 @@ interface Form {
   expires_at?: string | null
   allow_delete_responses?: boolean
   randomize_questions?: boolean
+  redirect_rules?: RedirectRule[]
+  default_redirect_url?: string
+  enable_auto_save?: boolean
+  page_titles?: Record<string, string>
 }
 
 interface Project {
@@ -49,6 +60,7 @@ interface FormFillerProps {
   allUserResponses: any[]
   project: Project | null
   userId: string | null
+  isPreview?: boolean
 }
 
 function getRespondentId(): string {
@@ -62,12 +74,90 @@ function getRespondentId(): string {
   return id
 }
 
-export default function FormFiller({ form, questions, existingResponse: propExistingResponse, allUserResponses: propAllUserResponses, project, userId }: FormFillerProps) {
+const getThemeSettings = (form: any) => {
+  const ts = form?.page_titles?.theme_settings
+  if (!ts) return null
+  if (typeof ts === 'string') {
+    try { return JSON.parse(ts) } catch { return null }
+  }
+  return ts
+}
+
+export default function FormFiller({ form, questions, existingResponse: propExistingResponse, allUserResponses: propAllUserResponses, project, userId, isPreview = false }: FormFillerProps) {
+  const theme = getThemeSettings(form)
   const [answers, setAnswers] = useState<Record<string, any>>({})
+
+  const renderThemeStyles = () => {
+    if (!theme) return null
+    return (
+      <style dangerouslySetInnerHTML={{ __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700;800&display=swap');
+        
+        .form-themed-container {
+          ${theme.pageColor ? `background: ${theme.pageColor} !important;` : ''}
+          ${theme.fontFamily ? `font-family: '${theme.fontFamily}', sans-serif !important;` : ''}
+        }
+        .form-themed-card {
+          ${theme.formBgColor ? `background-color: ${theme.formBgColor} !important;` : ''}
+          ${theme.borderRadius ? `border-radius: ${theme.borderRadius} !important;` : ''}
+          ${theme.textColor ? `color: ${theme.textColor} !important;` : ''}
+          ${theme.flatLayout ? `box-shadow: none !important;` : ''}
+          ${theme.borderStyle && theme.borderStyle !== 'none' ? `border: ${theme.borderWidth || 1}px ${theme.borderStyle} ${theme.textColor || '#d1d5db'} !important;` : ''}
+        }
+        .form-themed-text {
+          ${theme.textColor ? `color: ${theme.textColor} !important;` : ''}
+        }
+        .form-themed-description {
+          ${theme.textColor ? `color: ${theme.textColor}cc !important;` : ''}
+        }
+        .form-themed-primary-bg {
+          ${theme.primaryColor ? `background: ${theme.primaryColor} !important; background-color: ${theme.primaryColor} !important;` : ''}
+          color: #ffffff !important;
+        }
+        .form-themed-primary-text {
+          ${theme.primaryColor ? `color: ${theme.primaryColor} !important;` : ''}
+        }
+        .form-themed-primary-border {
+          ${theme.primaryColor ? `border-color: ${theme.primaryColor} !important;` : ''}
+        }
+        .form-themed-spacing {
+          ${theme.spacing === 'compact' ? 'margin-bottom: 0.5rem !important;' : theme.spacing === 'cozy' ? 'margin-bottom: 2rem !important;' : 'margin-bottom: 1.5rem !important;'}
+        }
+        .form-themed-width {
+          ${theme.formWidth ? `max-width: ${theme.formWidth}px !important; width: 100% !important;` : ''}
+        }
+        .form-themed-container input[type="text"],
+        .form-themed-container input[type="email"],
+        .form-themed-container input[type="tel"],
+        .form-themed-container input[type="number"],
+        .form-themed-container input[type="date"],
+        .form-themed-container input[type="time"],
+        .form-themed-container textarea,
+        .form-themed-container select {
+          ${theme.borderRadius ? `border-radius: calc(${theme.borderRadius} * 0.75) !important;` : ''}
+        }
+        .form-themed-container input[type="text"]:focus,
+        .form-themed-container input[type="email"]:focus,
+        .form-themed-container input[type="tel"]:focus,
+        .form-themed-container input[type="number"]:focus,
+        .form-themed-container input[type="date"]:focus,
+        .form-themed-container input[type="time"]:focus,
+        .form-themed-container textarea:focus,
+        .form-themed-container select:focus {
+          ${theme.primaryColor ? `border-color: ${theme.primaryColor} !important; --tw-ring-color: ${theme.primaryColor} !important; box-shadow: 0 0 0 2px ${theme.primaryColor}33 !important;` : ''}
+        }
+        .form-themed-container input[type="checkbox"],
+        .form-themed-container input[type="radio"] {
+          ${theme.primaryColor ? `color: ${theme.primaryColor} !important; --tw-ring-color: ${theme.primaryColor} !important;` : ''}
+        }
+      `}} />
+    )
+  }
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
   const [showRetryConfirm, setShowRetryConfirm] = useState(false)
   const [deletingResponse, setDeletingResponse] = useState(false)
   const [dropdownSearch, setDropdownSearch] = useState<Record<string, string>>({})
@@ -75,12 +165,38 @@ export default function FormFiller({ form, questions, existingResponse: propExis
   const [existingResponse, setExistingResponse] = useState(propExistingResponse)
   const [allUserResponses, setAllUserResponses] = useState(propAllUserResponses)
   const [loadingExisting, setLoadingExisting] = useState(false)
+  const [draftRestored, setDraftRestored] = useState(false)
+  const [draftDismissed, setDraftDismissed] = useState(false)
+  const [redirectMessage, setRedirectMessage] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
+
+  const scrollToTop = () => {
+    if (isPreview) {
+      const container = document.getElementById('preview-device-content')
+      if (container) {
+        container.scrollTo({ top: 0, behavior: 'smooth' })
+        return
+      }
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // Auto-Save & Conditional Redirect hooks
+  const autoSave = useFormAutoSave(form.id)
+  const { evaluate: evaluateRedirect } = useConditionalRedirect()
 
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [displayQuestions, setDisplayQuestions] = useState<Question[]>([]);
   const [isExpired, setIsExpired] = useState(false);
+
+  // Multi-page computation
+  const pages = Array.from(new Set(displayQuestions.map(q => q.page || 1))).sort((a, b) => a - b)
+  const totalPages = pages.length
+  const pageQuestions = displayQuestions.filter(q => (q.page || 1) === currentPage)
+  const pageIndex = pages.indexOf(currentPage)
+  const isFirstPage = pageIndex <= 0
+  const isLastPage = pageIndex >= totalPages - 1
 
   useEffect(() => {
     // Check expiration
@@ -103,11 +219,20 @@ export default function FormFiller({ form, questions, existingResponse: propExis
     } else {
       setDisplayQuestions(questions);
     }
+
+    // Load draft from localStorage if auto-save is enabled
+    if (!isPreview && form.enable_auto_save !== false && autoSave.hasDraft()) {
+      const draft = autoSave.loadDraft()
+      if (Object.keys(draft).length > 0) {
+        setAnswers(draft)
+        setDraftRestored(true)
+      }
+    }
   }, [form, questions]);
 
   // For anonymous users: load existing responses by respondent_id
   useEffect(() => {
-    if (userId || existingResponse || !form.allow_multiple === undefined) return
+    if (isPreview || userId || existingResponse || !form.allow_multiple === undefined) return
 
     const loadAnonymousResponses = async () => {
       setLoadingExisting(true)
@@ -156,6 +281,51 @@ export default function FormFiller({ form, questions, existingResponse: propExis
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  const goToNextPage = () => {
+    const currentQs = displayQuestions.filter(q => (q.page || 1) === currentPage)
+    for (const q of currentQs) {
+      if (q.type === 'matrix') {
+        const matrixData = parseMatrixData(q)
+        if (matrixData) {
+          const rows = matrixData.matrix_rows || []
+          const rowAnswers = answers[q.id] || {}
+          for (const row of rows) {
+            if (row.required) {
+              const rowVal = rowAnswers[row.id]
+              if (!rowVal || (Array.isArray(rowVal) && rowVal.length === 0)) {
+                setError(`يرجى الإجابة على الصف "${row.text}" في السؤال: ${q.text}`)
+                return
+              }
+            }
+          }
+        }
+      } else if (q.required) {
+        const answer = answers[q.id]
+        if (answer === undefined || answer === null || answer === '' || 
+            (Array.isArray(answer) && answer.length === 0)) {
+          setError(`يرجى الإجابة على السؤال: ${q.text}`)
+          return
+        }
+      }
+    }
+    setError('')
+    const pgs = Array.from(new Set(displayQuestions.map(q => q.page || 1))).sort((a, b) => a - b)
+    const idx = pgs.indexOf(currentPage)
+    if (idx < pgs.length - 1) {
+      setCurrentPage(pgs[idx + 1])
+      scrollToTop()
+    }
+  }
+
+  const goToPrevPage = () => {
+    setError('')
+    const pgs = Array.from(new Set(displayQuestions.map(q => q.page || 1))).sort((a, b) => a - b)
+    const idx = pgs.indexOf(currentPage)
+    if (idx > 0) {
+      setCurrentPage(pgs[idx - 1])
+      scrollToTop()
+    }
+  }
 
   // Parse options if they're stringified JSON
   const parseOptions = (options: any) => {
@@ -337,6 +507,14 @@ export default function FormFiller({ form, questions, existingResponse: propExis
     return { score, maxScore }
   }
 
+  // Auto-save answers on every change
+  useEffect(() => {
+    if (isPreview) return
+    if (form.enable_auto_save === false) return
+    if (Object.keys(answers).length === 0) return
+    autoSave.saveDraft(answers)
+  }, [answers])
+
   const handleSubmit = async () => {
     setSubmitting(true)
     setError('')
@@ -359,18 +537,84 @@ export default function FormFiller({ form, questions, existingResponse: propExis
             }
           }
         }
-      } else if (q.required) {
+      } else {
         const answer = answers[q.id]
-        if (answer === undefined || answer === null || answer === '' || 
-            (Array.isArray(answer) && answer.length === 0)) {
+        if (q.required && (answer === undefined || answer === null || answer === '' || 
+            (Array.isArray(answer) && answer.length === 0))) {
           setError(`يرجى الإجابة على السؤال: ${q.text}`)
           setSubmitting(false)
           return
+        }
+
+        // Text Validation
+        if (q.type === 'text' && answer !== undefined && answer !== null && answer !== '') {
+          const opts: any[] = parseOptions(q.options)
+          const meta = opts[0] || {}
+          const vcat = meta.validation_category || ''
+          const vt = meta.validation_type || ''
+          const val = String(answer).trim()
+          const vValue = meta.validation_value || ''
+          const vMin = meta.validation_min || ''
+          const vMax = meta.validation_max || ''
+
+          if (vcat === 'name' || vt === 'name') {
+             const requiredWords = parseInt(vValue) || 2;
+             const words = val.split(/\s+/).filter(w => w.length > 0);
+             if (words.length < requiredWords) {
+               setError(`⚠️ "${q.text}" يجب أن يتكون من ${requiredWords} كلمات على الأقل (اسم ${vValue === '2' ? 'ثنائي' : vValue === '3' ? 'ثلاثي' : 'رباعي'}). مثال: "محمد أحمد"`);
+               setSubmitting(false); return;
+             }
+          } else if (vt === 'email') {
+             if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+               setError(`📧 "${q.text}" يرجى إدخال بريد إلكتروني صحيح. مثال: user@example.com`);
+               setSubmitting(false); return;
+             }
+          } else if (vt === 'phone') {
+             if (!/^[0-9\+\-\(\)\s]{8,20}$/.test(val)) {
+               setError(`📞 "${q.text}" يرجى إدخال رقم هاتف صحيح. مثال: 0512345678`);
+               setSubmitting(false); return;
+             }
+          } else if (vcat === 'number' || vt === 'is_number' || vt === 'whole_number' || vt === 'equal_to' || vt === 'not_equal_to' || vt === 'less_than' || vt === 'less_than_or_equal' || vt === 'greater_than' || vt === 'greater_than_or_equal' || vt === 'between' || vt === 'not_between') {
+             if (vcat === 'number' || ['whole_number','is_number','equal_to','not_equal_to','less_than','less_than_or_equal','greater_than','greater_than_or_equal','between','not_between'].includes(vt)) {
+               const num = Number(val);
+               if (isNaN(num)) {
+                 setError(`🔢 "${q.text}" يرجى إدخال أرقام فقط (مثال: 25)`);
+                 setSubmitting(false); return;
+               }
+               if (vt === 'whole_number' && !Number.isInteger(num)) {
+                 setError(`🔢 "${q.text}" يرجى إدخال رقم صحيح بدون كسور عشرية. مثال: 25`);
+                 setSubmitting(false); return;
+               }
+               const numTarget = Number(vValue);
+               if (vt === 'equal_to' && num !== numTarget) { setError(`🔢 "${q.text}" يجب أن يساوي ${numTarget}`); setSubmitting(false); return; }
+               if (vt === 'not_equal_to' && num === numTarget) { setError(`🔢 "${q.text}" يجب ألا يساوي ${numTarget}`); setSubmitting(false); return; }
+               if (vt === 'less_than' && num >= numTarget) { setError(`🔢 "${q.text}" يجب أن يكون أقل من ${numTarget}`); setSubmitting(false); return; }
+               if (vt === 'less_than_or_equal' && num > numTarget) { setError(`🔢 "${q.text}" يجب أن يكون أقل من أو يساوي ${numTarget}`); setSubmitting(false); return; }
+               if (vt === 'greater_than' && num <= numTarget) { setError(`🔢 "${q.text}" يجب أن يكون أكبر من ${numTarget}`); setSubmitting(false); return; }
+               if (vt === 'greater_than_or_equal' && num < numTarget) { setError(`🔢 "${q.text}" يجب أن يكون أكبر من أو يساوي ${numTarget}`); setSubmitting(false); return; }
+               if (vt === 'between' && (num < Number(vMin) || num > Number(vMax))) { setError(`🔢 "${q.text}" يجب أن يكون بين ${vMin} و ${vMax}`); setSubmitting(false); return; }
+               if (vt === 'not_between' && (num >= Number(vMin) && num <= Number(vMax))) { setError(`🔢 "${q.text}" يجب ألا يكون بين ${vMin} و ${vMax}`); setSubmitting(false); return; }
+             }
+          }
+          if (vcat === 'text_check') {
+             if (vt === 'contains_word' && !val.includes(vValue)) { setError(`📝 "${q.text}" يجب أن يحتوي على "${vValue}"`); setSubmitting(false); return; }
+             if (vt === 'does_not_contain' && val.includes(vValue)) { setError(`📝 "${q.text}" يجب ألا يحتوي على "${vValue}"`); setSubmitting(false); return; }
+             if (vt === 'equal_to' && val !== vValue) { setError(`📝 "${q.text}" يجب أن يطابق "${vValue}" بالكامل`); setSubmitting(false); return; }
+             if (vt === 'not_equal_to' && val === vValue) { setError(`📝 "${q.text}" يجب ألا يطابق "${vValue}"`); setSubmitting(false); return; }
+          }
         }
       }
     }
 
     const { score, maxScore } = calculateScore()
+
+    if (isPreview) {
+      setTimeout(() => {
+        setSubmitted(true)
+        setSubmitting(false)
+      }, 1000)
+      return
+    }
 
     try {
       // If allow_multiple is false and there's existing response, update it
@@ -409,6 +653,25 @@ export default function FormFiller({ form, questions, existingResponse: propExis
         if (insertError) throw insertError
       }
 
+      // Clear draft after successful submit
+      autoSave.clearDraft()
+
+      // Evaluate conditional redirect rules
+      if (form.redirect_rules && form.redirect_rules.length > 0) {
+        const { url, message } = evaluateRedirect(
+          answers,
+          form.redirect_rules,
+          form.default_redirect_url
+        )
+        if (message) setRedirectMessage(message)
+        if (url) {
+          // Delay redirect briefly to let confetti / thank-you show
+          setTimeout(() => { window.location.href = url }, 2500)
+        }
+      } else if (form.default_redirect_url) {
+        setTimeout(() => { window.location.href = form.default_redirect_url! }, 2500)
+      }
+
       setSubmitted(true)
     } catch (err: any) {
       setError(err.message || 'حدث خطأ أثناء حفظ الإجابات')
@@ -422,21 +685,56 @@ export default function FormFiller({ form, questions, existingResponse: propExis
     const options = parseOptions(question.options)
 
     switch (question.type) {
-      case 'text':
-        return (
-          <input
-            type="text"
-            value={currentAnswer || ''}
-            onChange={(e) => setAnswers({ ...answers, [question.id]: e.target.value })}
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="اكتب إجابتك هنا..."
-            onFocus={() => setCurrentQuestionIndex(index)}
-          />
-        )
+      case 'text': {
+        const textOpts = (Array.isArray(options) && options.length === 0) ? {} : (Array.isArray(options) ? options[0] || {} : options || {});
+        const vt = textOpts.validation_type || ''
+        const vcat = textOpts.validation_category || ''
+        const vval = textOpts.validation_value || ''
+        const vmin = textOpts.validation_min || ''
+        const vmax = textOpts.validation_max || ''
 
-      case 'textarea':
+        const placeholderText = vcat === 'name'
+          ? `الاسم ${vval === '2' ? 'ثنائي' : vval === '3' ? 'ثلاثي' : 'رباعي'} (${vval} كلمات)`
+          : vt === 'email' ? 'example@domain.com'
+          : vt === 'phone' ? '05X XXX XXXX'
+          : vcat === 'number' ? 'أدخل رقماً'
+          : vcat === 'text_check' ? `يجب ${vt === 'contains_word' ? 'أن يحتوي على' : vt === 'does_not_contain' ? 'ألا يحتوي على' : vt === 'equal_to' ? 'أن يساوي' : 'ألا يساوي'} "${vval}"`
+          : 'اكتب إجابتك هنا...'
+
+        const hintText = vcat === 'name'
+          ? `يجب إدخال ${vval} كلمات على الأقل (اسم ${vval === '2' ? 'ثنائي' : vval === '3' ? 'ثلاثي' : 'رباعي'})`
+          : vt === 'email' ? 'أدخل بريداً إلكترونياً صحيحاً'
+          : vt === 'phone' ? 'أدخل رقم هاتف صحيح (مثال: 0512345678)'
+          : vcat === 'number' && vt === 'whole_number' ? 'أرقام صحيحة فقط (بدون كسور)'
+          : vcat === 'number' && vt === 'is_number' ? 'أرقام عشرية أو صحيحة'
+          : vcat === 'number' && (vt === 'equal_to' || vt === 'not_equal_to' || vt === 'less_than' || vt === 'less_than_or_equal' || vt === 'greater_than' || vt === 'greater_than_or_equal') ? `يجب أن يكون ${vt === 'equal_to' ? 'مساوياً لـ' : vt === 'not_equal_to' ? 'غير مساوٍ لـ' : vt === 'less_than' ? 'أقل من' : vt === 'less_than_or_equal' ? 'أقل من أو يساوي' : vt === 'greater_than' ? 'أكبر من' : 'أكبر من أو يساوي'} ${vval}`
+          : vcat === 'number' && (vt === 'between' || vt === 'not_between') ? `يجب أن ${vt === 'between' ? 'يكون بين' : 'لا يكون بين'} ${vmin} و ${vmax}`
+          : vcat === 'text_check' ? `النص يجب ${vt === 'contains_word' ? 'أن يحتوي على' : vt === 'does_not_contain' ? 'ألا يحتوي على' : vt === 'equal_to' ? 'أن يساوي' : 'ألا يساوي'} "${vval}"`
+          : ''
+
+        return (
+          <div>
+            <input
+              type={vt === 'email' ? 'email' : (vt === 'phone' ? 'tel' : (vcat === 'number' || vt === 'number' ? 'number' : 'text'))}
+              maxLength={textOpts.validation_max ? parseInt(textOpts.validation_max) : undefined}
+              value={currentAnswer || ''}
+              onChange={(e) => setAnswers({ ...answers, [question.id]: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder={placeholderText}
+              onFocus={() => setCurrentQuestionIndex(index)}
+            />
+            {hintText && (
+              <p className="text-xs text-gray-500 mt-1.5 mr-1">{hintText}</p>
+            )}
+          </div>
+        )
+      }
+
+      case 'textarea': {
+        const textOpts = (Array.isArray(options) && options.length === 0) ? {} : (Array.isArray(options) ? options[0] || {} : options || {});
         return (
           <textarea
+            maxLength={textOpts.maxLength || undefined}
             value={currentAnswer || ''}
             onChange={(e) => setAnswers({ ...answers, [question.id]: e.target.value })}
             className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[120px]"
@@ -444,6 +742,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
             onFocus={() => setCurrentQuestionIndex(index)}
           />
         )
+      }
 
       case 'single_choice':
         const answerObj = typeof currentAnswer === 'object' && currentAnswer !== null ? currentAnswer as any : null
@@ -457,10 +756,10 @@ export default function FormFiller({ form, questions, existingResponse: propExis
               return (
                 <div key={optionId}>
                   <label
-                    className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
+                    className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all form-themed-option ${
                       isSelected
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-blue-300'
+                        ? 'border-blue-500 bg-blue-50 form-themed-option-selected'
+                        : 'border-gray-200 hover:border-blue-300 form-themed-option-unselected'
                     }`}
                   >
                     <input
@@ -531,10 +830,10 @@ export default function FormFiller({ form, questions, existingResponse: propExis
               return (
                 <div key={optionId}>
                   <label
-                    className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
+                    className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all form-themed-option ${
                       isSelected
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-blue-300'
+                        ? 'border-blue-500 bg-blue-50 form-themed-option-selected'
+                        : 'border-gray-200 hover:border-blue-300 form-themed-option-unselected'
                     }`}
                   >
                     <input
@@ -578,10 +877,10 @@ export default function FormFiller({ form, questions, existingResponse: propExis
                       setAnswers({ ...answers, [question.id]: points })
                       setCurrentQuestionIndex(index)
                     }}
-                    className={`w-12 h-12 rounded-xl font-bold transition-all ${
+                    className={`w-12 h-12 rounded-xl font-bold transition-all form-themed-option ${
                       currentAnswer === points
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-blue-100'
+                        ? 'bg-blue-600 text-white form-themed-primary-bg'
+                        : 'bg-gray-100 text-gray-600 hover:bg-blue-100 form-themed-option-unselected'
                     }`}
                   >
                     {num}
@@ -851,6 +1150,258 @@ export default function FormFiller({ form, questions, existingResponse: propExis
             <p className="text-amber-600 text-sm mt-1">سيتم تفعيل رفع الملفات قريباً</p>
           </div>
         )
+      case 'static_text':
+        return (
+          <div className="bg-gray-50 border border-gray-100 rounded-xl p-6 text-gray-700 whitespace-pre-wrap">
+            {question.text || 'نص توضيحي'}
+          </div>
+        )
+
+      case 'static_image':
+        const imageUrl = parseOptions(question.options)[0]?.validation_value || ''
+        return (
+          <div className="flex justify-center rounded-xl overflow-hidden bg-gray-50 border border-gray-100 p-2">
+            {imageUrl ? (
+              <img src={imageUrl} alt={question.text} className="max-w-full h-auto rounded-lg" />
+            ) : (
+              <div className="w-full py-12 flex flex-col items-center justify-center text-gray-400">
+                <svg className="w-12 h-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p>لم يتم تحديد صورة</p>
+              </div>
+            )}
+          </div>
+        )
+
+      case 'divider':
+        return (
+          <div className="py-2">
+            <hr className="border-t-2 border-gray-100" />
+          </div>
+        )
+
+      case 'signature':
+        return (
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
+            <input
+              type="text"
+              value={currentAnswer || ''}
+              onChange={(e) => setAnswers({ ...answers, [question.id]: e.target.value })}
+              className="w-full bg-transparent text-center font-['Brush_Script_MT',_cursive] text-2xl outline-none"
+              placeholder="اكتب توقيعك هنا..."
+            />
+            <div className="w-full h-px bg-gray-300 mt-2"></div>
+            <p className="text-xs text-gray-400 mt-2">قم بكتابة اسمك للتوقيع</p>
+          </div>
+        )
+
+      case 'star_rating':
+        const stars = Array.isArray(options) && options.length > 0 ? options.length : 5
+        return (
+          <div className="flex items-center justify-center gap-2" dir="ltr">
+            {Array.from({ length: stars }).map((_, i) => {
+              const num = i + 1
+              const isSelected = currentAnswer && Number(currentAnswer) >= num
+              return (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => setAnswers({ ...answers, [question.id]: num })}
+                  className={`p-2 transition-transform hover:scale-110 focus:outline-none ${isSelected ? 'text-yellow-400' : 'text-gray-200 hover:text-yellow-200'}`}
+                >
+                  <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                </button>
+              )
+            })}
+          </div>
+        )
+
+      case 'terms':
+        return (
+          <div className="space-y-3">
+            <div className="max-h-40 overflow-y-auto bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {question.text || 'نص الشروط والأحكام'}
+            </div>
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={!!currentAnswer}
+                onChange={(e) => setAnswers({ ...answers, [question.id]: e.target.checked ? 'agreed' : '' })}
+                className="w-5 h-5 text-blue-600 rounded cursor-pointer"
+              />
+              <span className="text-sm text-gray-700 group-hover:text-blue-600 transition-colors">
+                أوافق على الشروط والأحكام المذكورة أعلاه
+              </span>
+            </label>
+          </div>
+        )
+
+      case 'date_range': {
+        const rangeVal = currentAnswer || {}
+        const rangeObj = typeof rangeVal === 'object' ? rangeVal as any : {}
+        return (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">من تاريخ</label>
+              <input
+                type="date"
+                value={rangeObj.from || ''}
+                onChange={(e) => setAnswers({ ...answers, [question.id]: { ...rangeObj, from: e.target.value } })}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">إلى تاريخ</label>
+              <input
+                type="date"
+                value={rangeObj.to || ''}
+                min={rangeObj.from || ''}
+                onChange={(e) => setAnswers({ ...answers, [question.id]: { ...rangeObj, to: e.target.value } })}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              />
+            </div>
+          </div>
+        )
+      }
+
+      case 'slider': {
+        const sliderConfig = (parseOptions(question.options)[0]?.text || '0|100|1').split('|')
+        const sliderMin = Number(sliderConfig[0]) || 0
+        const sliderMax = Number(sliderConfig[1]) || 100
+        const sliderStep = Number(sliderConfig[2]) || 1
+        const sliderVal = Number(currentAnswer) || sliderMin
+        return (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <span>{sliderMin}</span>
+              <span className="text-xl font-bold text-blue-600">{sliderVal}</span>
+              <span>{sliderMax}</span>
+            </div>
+            <input
+              type="range"
+              min={sliderMin}
+              max={sliderMax}
+              step={sliderStep}
+              value={sliderVal}
+              onChange={(e) => setAnswers({ ...answers, [question.id]: Number(e.target.value) })}
+              className="w-full accent-blue-600 cursor-pointer"
+            />
+          </div>
+        )
+      }
+
+      case 'button_choice': {
+        const btnOptions = parseOptions(question.options)
+        return (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {btnOptions.map((opt: any) => {
+              const isSelected = currentAnswer === opt.id
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setAnswers({ ...answers, [question.id]: isSelected ? '' : opt.id })}
+                  className={`px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all duration-200 ${
+                    isSelected
+                      ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm scale-[1.02]'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+                  }`}
+                >
+                  {opt.text}
+                </button>
+              )
+            })}
+          </div>
+        )
+      }
+
+      case 'email_confirm': {
+        const emailVal = typeof currentAnswer === 'object' ? currentAnswer as any : {}
+        const emailMatch = emailVal.email && emailVal.confirm && emailVal.email === emailVal.confirm
+        const emailMismatch = emailVal.email && emailVal.confirm && emailVal.email !== emailVal.confirm
+        return (
+          <div className="space-y-3">
+            <input
+              type="email"
+              value={emailVal.email || ''}
+              onChange={(e) => setAnswers({ ...answers, [question.id]: { ...emailVal, email: e.target.value } })}
+              placeholder="أدخل بريدك الإلكتروني"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              dir="ltr"
+            />
+            <input
+              type="email"
+              value={emailVal.confirm || ''}
+              onChange={(e) => setAnswers({ ...answers, [question.id]: { ...emailVal, confirm: e.target.value } })}
+              placeholder="أعد إدخال البريد الإلكتروني للتأكيد"
+              className={`w-full px-4 py-3 bg-gray-50 border rounded-xl focus:ring-2 focus:border-blue-500 text-sm ${emailMismatch ? 'border-red-400 focus:ring-red-300' : emailMatch ? 'border-green-400 focus:ring-green-300' : 'border-gray-200 focus:ring-blue-500'}`}
+              dir="ltr"
+            />
+            {emailMismatch && <p className="text-xs text-red-500">البريد الإلكتروني غير متطابق</p>}
+            {emailMatch && <p className="text-xs text-green-600">✓ البريد الإلكتروني متطابق</p>}
+          </div>
+        )
+      }
+
+      case 'youtube': {
+        const ytUrl = parseOptions(question.options)[0]?.text || ''
+        const getYouTubeId = (url: string) => {
+          const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?/\s]+)/)
+          return match ? match[1] : null
+        }
+        const ytId = getYouTubeId(ytUrl)
+        return (
+          <div className="rounded-xl overflow-hidden bg-gray-100 aspect-video">
+            {ytId ? (
+              <iframe
+                src={`https://www.youtube.com/embed/${ytId}`}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                <svg className="w-16 h-16 mb-2" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
+                <p className="text-sm">أضف رابط يوتيوب في الإعدادات</p>
+              </div>
+            )}
+          </div>
+        )
+      }
+
+      case 'match_items': {
+        const parsedOpts = parseOptions(question.options) || {}
+        const leftItems = parsedOpts.left_items || []
+        const rightItems = parsedOpts.right_items || []
+        const matchAnswers = typeof currentAnswer === 'object' ? currentAnswer as Record<string, string> : {}
+        return (
+          <div className="space-y-3">
+            {leftItems.map((leftItem: any) => (
+              <div key={leftItem.id} className="flex items-center gap-3">
+                <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 text-sm font-medium text-blue-800">
+                  {leftItem.text}
+                </div>
+                <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+                <select
+                  value={matchAnswers[leftItem.id] || ''}
+                  onChange={(e) => setAnswers({ ...answers, [question.id]: { ...matchAnswers, [leftItem.id]: e.target.value } })}
+                  className="flex-1 px-3 py-2.5 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800 focus:ring-2 focus:ring-green-400 cursor-pointer"
+                >
+                  <option value="">اختر الإجابة...</option>
+                  {rightItems.map((right: any) => (
+                    <option key={right.id} value={right.id}>{right.text}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        )
+      }
 
       default:
         return (
@@ -875,15 +1426,19 @@ export default function FormFiller({ form, questions, existingResponse: propExis
     else resultMessage = 'يحتاج تحسين'
 
     return (
-      <div dir="rtl" className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-xl shadow-blue-900/5 border border-gray-100 p-8 max-w-md w-full text-center">
+      <div dir="rtl" className={`${isPreview ? 'min-h-full' : 'min-h-screen'} bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4 form-themed-container`}>
+        {renderThemeStyles()}
+        <div className="bg-white rounded-3xl shadow-xl shadow-blue-900/5 border border-gray-100 p-8 max-w-md w-full text-center form-themed-card">
           <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-emerald-100 to-green-100 rounded-full flex items-center justify-center">
             <svg className="w-12 h-12 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">تم الحفظ بنجاح!</h2>
-          <p className="text-gray-500 mb-6">{resultMessage}</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2 form-themed-text">تم الحفظ بنجاح!</h2>
+          <p className="text-gray-500 mb-6 form-themed-description">{redirectMessage || resultMessage}</p>
+          {form.default_redirect_url || (form.redirect_rules && form.redirect_rules.length > 0) ? (
+            <p className="text-xs text-gray-400 mb-4 animate-pulse">سيتم توجيهك خلال لحظات...</p>
+          ) : null}
 
           <div className={`rounded-2xl p-6 mb-6 border ${
             percentage >= 70 ? 'bg-emerald-50 border-emerald-100' : percentage >= 50 ? 'bg-amber-50 border-amber-100' : 'bg-red-50 border-red-100'
@@ -937,16 +1492,17 @@ export default function FormFiller({ form, questions, existingResponse: propExis
   // Confirmation Modal for retry
   if (showRetryConfirm) {
     return (
-      <div dir="rtl" className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-xl shadow-blue-900/5 border border-gray-100 p-8 max-w-md w-full">
+      <div dir="rtl" className={`${isPreview ? 'min-h-full' : 'min-h-screen'} bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4 form-themed-container`}>
+        {renderThemeStyles()}
+        <div className="bg-white rounded-3xl shadow-xl shadow-blue-900/5 border border-gray-100 p-8 max-w-md w-full form-themed-card">
           <div className="text-center mb-6">
             <div className="w-16 h-16 mx-auto mb-4 bg-amber-100 rounded-full flex items-center justify-center">
               <svg className="w-8 h-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">تأكيد إعادة المحاولة</h2>
-            <p className="text-gray-500">
+            <h2 className="text-xl font-bold text-gray-900 mb-2 form-themed-text">تأكيد إعادة المحاولة</h2>
+            <p className="text-gray-500 form-themed-description">
               هل أنت متأكد من حذف إجابتك السابقة وإعادة المحاولة؟
             </p>
             <p className="text-red-500 text-sm mt-2">
@@ -976,13 +1532,23 @@ export default function FormFiller({ form, questions, existingResponse: propExis
   }
 
   return (
-    <div dir="rtl" className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50/30">
+    <div dir="rtl" className={`${isPreview ? 'min-h-full' : 'min-h-screen'} bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50/30 form-themed-container`}>
+      {renderThemeStyles()}
       {/* Header */}
       <header className="bg-white/95 backdrop-blur-md border-b border-gray-100/80 sticky top-0 z-10">
+        {isPreview && (
+          <div className="bg-orange-500 text-white text-xs py-1.5 text-center font-bold tracking-wide">
+            وضع المعاينة: يمكنك تجربة تعبئة النموذج، لن يتم حفظ الإجابات
+          </div>
+        )}
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors text-sm"
+            onClick={() => {
+              if (isPreview) return
+              router.back()
+            }}
+            disabled={isPreview}
+            className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors text-sm disabled:opacity-50"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -1009,22 +1575,55 @@ export default function FormFiller({ form, questions, existingResponse: propExis
           </div>
         </div>
         
+        {/* Page Info */}
+        <div className="px-4 py-1.5 bg-white/50 border-b border-gray-100/80">
+          <div className="max-w-3xl mx-auto flex items-center justify-between">
+            {totalPages > 1 && (
+              <span className="text-xs text-gray-500">
+                صفحة {pageIndex + 1} من {totalPages}
+              </span>
+            )}
+            <span className={`text-xs ${totalPages > 1 ? '' : 'mr-auto'} text-gray-400`}>
+              {Object.keys(answers).length} / {displayQuestions.length} إجابة
+            </span>
+          </div>
+        </div>
         {/* Progress Bar */}
         <div className="h-1 bg-gray-50">
           <div 
             className="h-full bg-gradient-to-l from-blue-500 to-indigo-500 transition-all duration-500 rounded-full"
             style={{ 
-              width: `${(Object.keys(answers).length / questions.length) * 100}%` 
+              width: `${(Object.keys(answers).length / (displayQuestions.length || 1)) * 100}%` 
             }}
           />
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-8">
+      <main className="max-w-3xl mx-auto px-4 py-8 form-themed-width">
+        {/* Draft Restored Banner */}
+        {draftRestored && !draftDismissed && (
+          <div className="mb-4 flex items-center justify-between bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm">
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>
+                تم استعادة مسودتك المحفوظة ({autoSave.getDraftAge()}) — يمكنك المتابعة من حيث توقفت.
+              </span>
+            </div>
+            <button
+              onClick={() => { setDraftDismissed(true); setAnswers({}); autoSave.clearDraft() }}
+              className="mr-3 text-amber-600 hover:text-amber-900 font-medium whitespace-nowrap"
+            >
+              بدء من جديد
+            </button>
+          </div>
+        )}
+
         {/* Form Header */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">{form.name}</h2>
-          <p className="text-gray-500 text-sm">{form.description || 'أجب على الأسئلة التالية'}</p>
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 form-themed-card">
+          <h2 className="text-xl font-bold text-gray-900 mb-2 form-themed-text">{form.name}</h2>
+          <p className="text-gray-500 text-sm form-themed-description">{form.description || 'أجب على الأسئلة التالية'}</p>
           {project && (
             <div className="mt-3 flex items-center gap-2">
               <span
@@ -1049,7 +1648,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
         {/* Questions */}
         <div className="space-y-4">
           {(() => {
-            const qs = displayQuestions
+            const qs = pageQuestions
             const groups: { group: number | null; questions: Question[]; startIndex: number }[] = []
             let currentGroup: number | null = null
             let currentItems: Question[] = []
@@ -1069,16 +1668,16 @@ export default function FormFiller({ form, questions, existingResponse: propExis
 
             const renderCard = (question: Question, idx: number) => (
               <div className="flex items-start gap-3 mb-4">
-                <span className="w-7 h-7 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg flex items-center justify-center font-bold text-xs shrink-0">
+                <span className="w-7 h-7 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg flex items-center justify-center font-bold text-xs shrink-0 form-themed-primary-bg">
                   {idx + 1}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-semibold text-gray-900">
+                  <h3 className="text-base font-semibold text-gray-900 form-themed-text">
                     {question.text}
                     {question.required && <span className="text-red-500 mr-1">*</span>}
                   </h3>
                   {question.type !== 'file_upload' && (
-                    <p className="text-blue-500 text-xs mt-1 font-medium">
+                    <p className="text-blue-500 text-xs mt-1 font-medium form-themed-primary-text">
                       {getQuestionMaxScore(question)} نقطة
                     </p>
                   )}
@@ -1093,7 +1692,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
                     {grp.questions.map((question, gi) => {
                       const idx = grp.startIndex + gi
                       return (
-                        <div key={question.id} className="flex-1 min-w-0 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                        <div key={question.id} className="flex-1 min-w-0 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 form-themed-card form-themed-spacing">
                           {renderCard(question, idx)}
                           {renderQuestion(question, idx)}
                         </div>
@@ -1105,7 +1704,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
               return grp.questions.map((question, gi) => {
                 const idx = grp.startIndex + gi
                 return (
-                  <div key={question.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 transition-all hover:shadow-md">
+                  <div key={question.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 transition-all hover:shadow-md form-themed-card form-themed-spacing">
                     {renderCard(question, idx)}
                     {renderQuestion(question, idx)}
                   </div>
@@ -1115,30 +1714,69 @@ export default function FormFiller({ form, questions, existingResponse: propExis
           })()}
         </div>
 
-        {/* Submit Button */}
-        {questions.length > 0 && (
-          <div className="mt-6">
-            <button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="w-full py-4 bg-gradient-to-l from-blue-600 to-indigo-600 text-white font-semibold rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25"
-            >
-              {submitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  جاري الحفظ...
-                </span>
-              ) : (
-                'حفظ الإجابات'
+        {/* Navigation & Submit */}
+        {pageQuestions.length > 0 && (
+          <div className="mt-6 space-y-3">
+            <div className="flex gap-3">
+              {!isFirstPage && (
+                <button
+                  onClick={goToPrevPage}
+                  className="flex-1 py-3.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                >
+                  السابق
+                </button>
               )}
-            </button>
+              {!isLastPage && (
+                <button
+                  onClick={goToNextPage}
+                  className="flex-1 py-3.5 bg-gradient-to-l from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/25 form-themed-primary-bg"
+                >
+                  التالي
+                </button>
+              )}
+              {isLastPage && (
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  className="flex-1 py-4 bg-gradient-to-l from-emerald-600 to-green-600 text-white font-semibold rounded-2xl hover:from-emerald-700 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/25 form-themed-primary-bg"
+                >
+                  {submitting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      جاري الحفظ...
+                    </span>
+                  ) : (
+                    'حفظ الإجابات'
+                  )}
+                </button>
+              )}
+            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-2">
+                {pages.map(p => (
+                  <button
+                    key={p}
+                    onClick={() => {
+                      setCurrentPage(p)
+                      scrollToTop()
+                    }}
+                    className={`w-2.5 h-2.5 rounded-full transition-all ${
+                      p === currentPage
+                        ? 'bg-blue-600 w-6 form-themed-primary-bg'
+                        : 'bg-gray-300 hover:bg-gray-400'
+                    }`}
+                    title={`صفحة ${p}`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-        {questions.length === 0 && (
+        {displayQuestions.length === 0 && (
           <div className="text-center py-12 bg-white rounded-2xl border border-gray-100 shadow-sm">
             <div className="w-16 h-16 mx-auto mb-4 bg-gray-50 rounded-full flex items-center justify-center">
               <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

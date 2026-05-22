@@ -15,6 +15,11 @@ function RegisterForm() {
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [emailVerified, setEmailVerified] = useState(false)
+  const [codeSent, setCodeSent] = useState(false)
+  const [verificationCode, setVerificationCode] = useState('')
+  const [codeLoading, setCodeLoading] = useState(false)
+  const [emailProvider, setEmailProvider] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
   const inviteToken = searchParams.get('invite')
@@ -32,6 +37,10 @@ function RegisterForm() {
     }
     if (!formData.email.trim() || !formData.email.includes('@')) {
       setError('يرجى إدخال بريد إلكتروني صحيح')
+      return false
+    }
+    if (!emailVerified) {
+      setError('يرجى التحقق من البريد الإلكتروني أولاً')
       return false
     }
     if (!formData.phone.trim() || formData.phone.length < 10) {
@@ -154,15 +163,130 @@ function RegisterForm() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">البريد الإلكتروني</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                placeholder="example@email.com"
-                required
-              />
+              <div className="relative">
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={(e) => {
+                    handleChange(e)
+                    setCodeSent(false)
+                    setEmailVerified(false)
+                    setVerificationCode('')
+                    const domain = e.target.value.split('@')[1]?.toLowerCase()
+                    if (domain === 'gmail.com') setEmailProvider('📧 Gmail')
+                    else if (['outlook.com', 'hotmail.com', 'live.com'].includes(domain)) setEmailProvider('📧 Outlook/Hotmail')
+                    else if (['icloud.com', 'me.com'].includes(domain)) setEmailProvider('📧 iCloud')
+                    else if (['yahoo.com', 'ymail.com'].includes(domain)) setEmailProvider('📧 Yahoo')
+                    else setEmailProvider('')
+                  }}
+                  className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  placeholder="example@gmail.com"
+                  required
+                  disabled={emailVerified}
+                />
+                {emailProvider && !emailVerified && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-sm text-gray-600">{emailProvider}</span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!formData.email.includes('@')) { setError('يرجى إدخال بريد إلكتروني صحيح'); return }
+                        setCodeLoading(true)
+                        setError('')
+                        try {
+                          const res = await fetch('/api/auth/send-code', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: formData.email })
+                          })
+                          const data = await res.json()
+                          if (!res.ok) throw new Error(data.error)
+                          setCodeSent(true)
+                        } catch (err: any) {
+                          setError(err.message)
+                        } finally {
+                          setCodeLoading(false)
+                        }
+                      }}
+                      disabled={codeLoading}
+                      className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-200 transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      {codeLoading ? 'جاري الإرسال...' : 'إرسال كود التحقق'}
+                    </button>
+                  </div>
+                )}
+                {codeSent && !emailVerified && (
+                  <div className="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                    <p className="text-xs text-blue-700 mb-2">تم إرسال كود من 6 أرقام إلى بريدك. أدخله أدناه:</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        className="flex-1 px-3 py-2 bg-white border border-blue-200 rounded-lg text-center text-lg font-bold tracking-widest focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="000000"
+                      />
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (verificationCode.length !== 6) { setError('يرجى إدخال الكود كاملاً'); return }
+                          setCodeLoading(true)
+                          setError('')
+                          try {
+                            const res = await fetch('/api/auth/verify-code', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ email: formData.email, code: verificationCode })
+                            })
+                            const data = await res.json()
+                            if (!res.ok) throw new Error(data.error)
+                            setEmailVerified(true)
+                          } catch (err: any) {
+                            setError(err.message)
+                          } finally {
+                            setCodeLoading(false)
+                          }
+                        }}
+                        disabled={codeLoading || verificationCode.length !== 6}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 cursor-pointer"
+                      >
+                        {codeLoading ? '...' : 'تأكيد'}
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setCodeLoading(true)
+                        setError('')
+                        try {
+                          const res = await fetch('/api/auth/send-code', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: formData.email })
+                          })
+                          const data = await res.json()
+                          if (!res.ok) throw new Error(data.error)
+                        } catch (err: any) {
+                          setError(err.message)
+                        } finally {
+                          setCodeLoading(false)
+                        }
+                      }}
+                      className="text-xs text-blue-600 hover:underline mt-2 inline-block"
+                    >
+                      إعادة إرسال الكود
+                    </button>
+                  </div>
+                )}
+                {emailVerified && (
+                  <div className="mt-2 flex items-center gap-1.5 text-green-700 text-sm">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    تم التحقق من البريد الإلكتروني
+                  </div>
+                )}
+              </div>
             </div>
 
             <div>

@@ -154,7 +154,7 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
@@ -202,7 +202,7 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
                   key={form.id}
                   className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all group"
                 >
-                  <Link href={`/forms/${form.id}/edit`} className="block p-5">
+                  <Link href={`/forms/${form.serial_number || form.id}/edit`} className="block p-5">
                     <div className="flex items-start gap-3 mb-3">
                       <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shrink-0">
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
@@ -216,14 +216,14 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
                       <span>{new Date(form.created_at).toLocaleDateString('ar-SA')}</span>
                       <div className="flex gap-2">
                         <Link
-                          href={`/forms/${form.id}`}
+                          href={`/forms/${form.serial_number || form.id}`}
                           onClick={(e) => e.stopPropagation()}
                           className="text-blue-600 hover:text-blue-700 font-medium transition-colors px-2 py-1 hover:bg-blue-50 rounded-lg"
                         >
                           معاينة
                         </Link>
                         <Link
-                          href={`/forms/${form.id}/edit`}
+                          href={`/forms/${form.serial_number || form.id}/edit`}
                           onClick={(e) => e.stopPropagation()}
                           className="text-blue-600 hover:text-blue-700 font-medium transition-colors px-2 py-1 hover:bg-blue-50 rounded-lg"
                         >

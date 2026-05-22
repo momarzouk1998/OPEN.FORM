@@ -1,205 +1,143 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { createClient } from '@/utils/supabase/client'
-import { useRouter, useParams } from 'next/navigation'
-import { TEMPLATE_CATEGORIES } from '@/types'
-import type { FormTemplate } from '@/types'
-import type { QuestionType } from '@/types'
+import { useParams } from "next/navigation";
+import { motion } from "framer-motion";
+import { useState } from "react";
+import { ConfettiButton } from "@/components/ConfettiButton";
+import Link from "next/link";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 
-const QUESTION_TYPE_LABELS: Record<string, string> = {
-  text: 'نص',
-  textarea: 'نص طويل',
-  single_choice: 'اختيار واحد',
-  multiple_choice: 'اختيار متعدد',
-  dropdown: 'قائمة منسدلة',
-  scale: 'تقييم',
-  ranking: 'ترتيب',
-  matrix: 'مصفوفة',
-  date: 'تاريخ',
-  time: 'وقت',
-  file_upload: 'رفع ملف',
-}
+export default function TemplatePreviewPage() {
+  const params = useParams();
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
-export default function TemplateDetailPage() {
-  const [template, setTemplate] = useState<FormTemplate | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [cloning, setCloning] = useState(false)
-  const router = useRouter()
-  const params = useParams()
-  const supabase = createClient()
-
-  useEffect(() => {
-    const id = params.id as string
-    fetchTemplate(id)
-  }, [params.id])
-
-  const fetchTemplate = async (id: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('form_templates')
-        .select('*')
-        .eq('id', id)
-        .single()
-      if (error) throw error
-      setTemplate(data)
-    } catch (e) {
-      console.error('Error fetching template:', e)
-      router.push('/templates')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const cloneTemplate = async () => {
-    if (!template) return
-    setCloning(true)
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login'); return }
-
-      const { data: form, error: formError } = await supabase
-        .from('forms')
-        .insert({
-          name: template.name,
-          description: template.description || '',
-          created_by: user.id,
-          is_active: true,
-          ...template.form_settings,
-        })
-        .select()
-        .single()
-      if (formError) throw formError
-
-      // Create questions
-      const questions = (template.questions_data || []).map((q: any, idx: number) => ({
-        form_id: form.id,
-        text: q.text,
-        type: q.type,
-        required: q.required || false,
-        points: q.points || 0,
-        has_counter: q.has_counter || false,
-        order_index: idx,
-        options: JSON.stringify(q.options || []),
-      }))
-
-      const { error: questionsError } = await supabase
-        .from('questions')
-        .insert(questions)
-      if (questionsError) throw questionsError
-
-      router.push(`/forms/${form.id}/edit`)
-    } catch (e) {
-      console.error('Error cloning template:', e)
-      alert('حدث خطأ أثناء إنشاء النموذج')
-    } finally {
-      setCloning(false)
-    }
-  }
-
-  if (loading || !template) {
+  // In a real app, fetch template data based on params.id
+  
+  if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent" />
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <motion.div 
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="glass-panel max-w-md w-full p-10 rounded-3xl text-center"
+        >
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", delay: 0.2 }}
+            className="w-24 h-24 bg-brand-50 text-brand-500 rounded-full flex items-center justify-center mx-auto mb-6"
+          >
+            <CheckCircle2 className="w-12 h-12" />
+          </motion.div>
+          
+          <h2 className="text-3xl font-bold mb-4">شكراً لك!</h2>
+          <p className="text-slate-500 mb-8 leading-relaxed">
+            تم استلام ردك بنجاح. هذا مثال على تجربة المكافأة النفسية (Gamification) بعد تعبئة النموذج، حيث يرى المستخدم قصاصات الورق الملونة 🎉
+          </p>
+          
+          <Link href="/templates" className="text-brand-500 font-bold hover:underline">
+            العودة لمكتبة القوالب
+          </Link>
+        </motion.div>
       </div>
-    )
+    );
   }
 
   return (
-    <div dir="rtl" className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            رجوع
-          </button>
-          <h1 className="text-lg font-bold text-blue-700">{template.name}</h1>
-          <div className="w-16" />
-        </div>
-      </header>
+    <div className="min-h-screen max-w-3xl mx-auto p-6 md:py-12">
+      <Link href="/templates" className="inline-flex items-center gap-2 text-slate-500 hover:text-brand-500 mb-8 font-medium transition-colors">
+        <ArrowRight className="w-4 h-4" />
+        العودة للقوالب
+      </Link>
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        {/* Template Info */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
-          <div className="flex items-start gap-4">
-            <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center shrink-0">
-              <svg className="w-10 h-10 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <h2 className="text-2xl font-bold text-gray-900">{template.name}</h2>
-                <span className="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-1 rounded-lg">
-                  {TEMPLATE_CATEGORIES[template.category] || template.category}
-                </span>
-              </div>
-              <p className="text-gray-500 mb-4">{template.description}</p>
-              <div className="flex items-center gap-4 text-sm text-gray-500">
-                <span>{template.questions_data?.length || 0} أسئلة</span>
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={cloneTemplate}
-            disabled={cloning}
-            className="mt-6 w-full py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {cloning ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
-                جاري الإنشاء...
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                إنشاء نموذج من هذا القالب
-              </>
-            )}
-          </button>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass-panel p-8 md:p-12 rounded-[2rem]"
+      >
+        <div className="mb-10 text-center">
+          <h1 className="text-3xl font-black mb-4">نموذج تجريبي ({params.id})</h1>
+          <p className="text-slate-500">هذا تصميم يحاكي (Typeform) بانتقالات سلسة وواجهة حيوية (Glassmorphism).</p>
         </div>
 
-        {/* Questions Preview */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-900 mb-6">معاينة الأسئلة</h3>
-          <div className="space-y-4">
-            {(template.questions_data || []).map((q: any, idx: number) => (
-              <div key={q.id || idx} className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
-                <span className="w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold shrink-0 mt-0.5">
-                  {idx + 1}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-medium text-gray-900">{q.text || '(بدون نص)'}</p>
-                    {q.required && <span className="text-red-500 text-sm shrink-0">*</span>}
+        <div className="space-y-8">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="space-y-3"
+          >
+            <label className="block text-lg font-semibold text-slate-800 dark:text-slate-200">
+              1. ما هو اسمك الكريم؟
+            </label>
+            <input 
+              type="text" 
+              placeholder="اكتب اسمك هنا..." 
+              className="glass-input w-full p-4 rounded-xl text-lg"
+            />
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.25 }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          >
+            <div className="space-y-3">
+              <label className="block text-lg font-semibold text-slate-800 dark:text-slate-200">
+                2. البريد الإلكتروني
+              </label>
+              <input 
+                type="email" 
+                placeholder="example@mail.com" 
+                className="glass-input w-full p-4 rounded-xl text-lg text-left" dir="ltr"
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="block text-lg font-semibold text-slate-800 dark:text-slate-200">
+                3. رقم الجوال
+              </label>
+              <input 
+                type="tel" 
+                placeholder="05X XXX XXXX" 
+                className="glass-input w-full p-4 rounded-xl text-lg text-left" dir="ltr"
+              />
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+            className="space-y-3"
+          >
+            <label className="block text-lg font-semibold text-slate-800 dark:text-slate-200">
+              4. كيف تقيم تجربتك حتى الآن؟
+            </label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {['ممتاز', 'جيد جداً', 'مقبول', 'ضعيف'].map((option, i) => (
+                <label key={i} className="cursor-pointer">
+                  <input type="radio" name="rating" className="peer sr-only" />
+                  <div className="glass-input text-center p-4 rounded-xl peer-checked:bg-brand-500 peer-checked:text-white peer-checked:border-brand-500 transition-all font-medium">
+                    {option}
                   </div>
-                  <span className="text-xs text-gray-500 mt-1 inline-block">
-                    {QUESTION_TYPE_LABELS[q.type] || q.type}
-                  </span>
-                  {q.options && q.options.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {(q.options as any[]).map((opt: any, oi: number) => (
-                        <span key={oi} className="text-xs bg-white border border-gray-200 text-gray-600 px-2 py-0.5 rounded-lg">
-                          {opt.text || '(خيار)'}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+                </label>
+              ))}
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="pt-8 mt-8 border-t border-slate-100 dark:border-slate-800/50 flex justify-center"
+          >
+            <ConfettiButton onClick={() => setIsSubmitted(true)}>
+              إرسال النموذج والتجربة 🎉
+            </ConfettiButton>
+          </motion.div>
         </div>
-      </main>
+      </motion.div>
     </div>
-  )
+  );
 }
