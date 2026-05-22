@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { createServiceClient } from '@/utils/supabase/server'
 import { sendEmail } from '@/utils/resend'
 
 export async function POST(request: Request) {
@@ -24,8 +24,8 @@ export async function POST(request: Request) {
     const code = Math.floor(100000 + Math.random() * 900000).toString()
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
 
-    // Store code in Supabase
-    const supabase = await createClient()
+    // Store code in Supabase (service role bypasses RLS)
+    const supabase = createServiceClient()
     const { error: dbError } = await supabase
       .from('verification_codes')
       .upsert(

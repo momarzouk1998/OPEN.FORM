@@ -6,6 +6,9 @@ CREATE TABLE IF NOT EXISTS verification_codes (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Disable RLS so public registration can insert codes
+ALTER TABLE verification_codes DISABLE ROW LEVEL SECURITY;
+
 -- Auto-delete expired codes
 CREATE OR REPLACE FUNCTION delete_expired_verification_codes()
 RETURNS TRIGGER AS $$
