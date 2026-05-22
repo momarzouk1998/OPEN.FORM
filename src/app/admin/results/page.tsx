@@ -233,7 +233,7 @@ export default function ResultsPage() {
           max_score,
           submitted_at,
           answers,
-          profiles!inner(name, email, gender)
+          profiles(name, email, gender)
         `)
         .eq('form_id', form.id)
         .order('submitted_at', { ascending: false })
