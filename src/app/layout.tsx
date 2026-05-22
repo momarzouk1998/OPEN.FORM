@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Cairo, Reem_Kufi } from "next/font/google";
 import "./globals.css";
 
+export const dynamic = 'force-dynamic'
+
 const cairo = Cairo({
   subsets: ["arabic", "latin"],
   weight: ["300", "400", "500", "600", "700", "800"],
