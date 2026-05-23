@@ -174,7 +174,7 @@ export interface Form {
   redirect_rules?: any[]
   default_redirect_url?: string
   questions?: Question[]
-  page_titles?: Record<string, string>
+  page_titles?: Record<string, any>
 }
 
 // Response types

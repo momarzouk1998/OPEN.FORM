@@ -51,7 +51,7 @@ interface Form {
   redirect_rules?: RedirectRule[]
   default_redirect_url?: string
   enable_auto_save?: boolean
-  page_titles?: Record<string, string>
+  page_titles?: Record<string, any>
 }
 
 interface Project {

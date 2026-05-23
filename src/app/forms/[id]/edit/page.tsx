@@ -131,7 +131,7 @@ interface FormData {
   image_url: string
   short_code?: string
   serial_number?: number
-  page_titles?: Record<string, string>
+  page_titles?: Record<string, any>
   enable_auto_save?: boolean
   redirect_rules?: Array<{ question_id: string; operator: string; value: string; redirect_url: string; message?: string }>
   default_redirect_url?: string
