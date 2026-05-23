@@ -52,6 +52,10 @@ const QUESTION_TYPES: Record<string, { label: string; icon: string; description:
   divider: { label: 'فاصل', icon: '➖', description: 'خط فاصل', explanation: 'للفصل بين الأقسام' },
   terms: { label: 'الشروط والأحكام', icon: '📋', description: 'موافقة على الشروط', explanation: 'المستخدم يقرأ ويوافق على نص' },
   appointment: { label: 'حجز موعد', icon: '📅', description: 'اختيار تاريخ ووقت للحجز', explanation: 'مثال: حجز موعد استشارة' },
+  // إضافات
+  countdown_timer: { label: 'العد التنازلي', icon: '⏳', description: 'عرض العد التنازلي', explanation: 'مؤقت لانتهاء العرض' },
+  products_block: { label: 'المنتجات', icon: '📦', description: 'قائمة منتجات', explanation: 'عرض منتجات للاختيار والطلب' },
+  payment_info_block: { label: 'بيانات الدفع', icon: '💳', description: 'عرض طرق الدفع', explanation: 'عرض معلومات الدفع' },
 } as const;
 
 
@@ -142,22 +146,6 @@ interface FormData {
 
 
 
-function Tooltip({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="relative group">
-      {children}
-      <div className="absolute -top-1 -left-1 z-50">
-        <svg className="w-3.5 h-3.5 text-gray-400 hover:text-blue-500 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1.5 bg-gray-900 text-white text-[10px] rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg max-w-[180px] text-center">
-          {label}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function EditFormContent() {
 
   const [formData, setFormData] = useState<FormData | null>(null)
@@ -179,7 +167,7 @@ function EditFormContent() {
   const [responseCount, setResponseCount] = useState(0)
 
   const [isDesignerOpen, setIsDesignerOpen] = useState(false)
-  const [designerTab, setDesignerTab] = useState<'colors' | 'styles' | 'themes' | 'layout'>('colors')
+  const [designerTab, setDesignerTab] = useState<'colors' | 'styles' | 'themes' | 'layout' | 'button'>('colors')
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
 
@@ -542,7 +530,15 @@ function EditFormContent() {
         return []
       }
     }
-    return Array.isArray(options) ? options : []
+    if (Array.isArray(options)) {
+      if (options.length > 0 && options[options.length - 1]?._visibility_rules !== undefined) {
+        const arr = [...options]
+        arr.pop()
+        return arr
+      }
+      return options
+    }
+    return []
   }
 
   const prepareQuestionsForPreview = (qs: any[]): any[] => {
@@ -582,6 +578,9 @@ function EditFormContent() {
         optionsData = parseOptions(q.options)
       }
 
+      const previewStored = Array.isArray(optionsData)
+        ? [...optionsData, { _visibility_rules: q.visibility_rules || [] }]
+        : { ...optionsData, _visibility_rules: q.visibility_rules || [] }
       return {
         id: q.id,
         text: q.text,
@@ -593,7 +592,7 @@ function EditFormContent() {
         row_group: q.row_group || null,
         page: q.page || 1,
         visibility_rules: q.visibility_rules,
-        options: JSON.stringify({ ...optionsData, _visibility_rules: q.visibility_rules || [] })
+        options: JSON.stringify(previewStored)
       }
     })
   }
@@ -726,23 +725,30 @@ const params = useParams()
         let matrix_columns: MatrixColumn[] | undefined
         let dropdown_type: 'single' | 'multiple' | undefined
         let correct_option_ids: string[] | undefined
-        const visibility_rules: VisibilityRule[] | undefined = parsedOpts._visibility_rules?.length > 0 ? parsedOpts._visibility_rules : undefined
-        // Strip _visibility_rules from parsed options for rendering
-        if (parsedOpts._visibility_rules) {
-          const { _visibility_rules, ...cleanOpts } = parsedOpts
-          if (cleanOpts.matrix_rows || cleanOpts.options) {
-            // Keep the full structure for matrix/dropdown
+        let visibility_rules: VisibilityRule[] | undefined
+        let optionsValue: any
+
+        if (Array.isArray(parsedOpts)) {
+          const last = parsedOpts[parsedOpts.length - 1]
+          if (last && last._visibility_rules !== undefined) {
+            visibility_rules = last._visibility_rules?.length > 0 ? last._visibility_rules : undefined
+            parsedOpts.pop()
           }
-        }
-
-        if (q.type === 'matrix' && parsedOpts.matrix_rows) {
-          matrix_rows = parsedOpts.matrix_rows
-          matrix_columns = parsedOpts.matrix_columns || []
-        }
-
-        if (q.type === 'dropdown' && parsedOpts.dropdown_type) {
-          dropdown_type = parsedOpts.dropdown_type
-          correct_option_ids = parsedOpts.correct_option_ids || []
+          optionsValue = parsedOpts
+        } else {
+          visibility_rules = parsedOpts._visibility_rules?.length > 0 ? parsedOpts._visibility_rules : undefined
+          if (parsedOpts._visibility_rules) {
+            const { _visibility_rules, ...cleanOpts } = parsedOpts
+          }
+          if (q.type === 'matrix' && parsedOpts.matrix_rows) {
+            matrix_rows = parsedOpts.matrix_rows
+            matrix_columns = parsedOpts.matrix_columns || []
+          }
+          if (q.type === 'dropdown' && parsedOpts.dropdown_type) {
+            dropdown_type = parsedOpts.dropdown_type
+            correct_option_ids = parsedOpts.correct_option_ids || []
+          }
+          optionsValue = parsedOpts.matrix_rows ? [] : (parsedOpts.options || parsedOpts)
         }
 
         return {
@@ -752,7 +758,7 @@ const params = useParams()
           required: q.required || false,
           points: q.points || 0,
           has_counter: q.has_counter || false,
-          options: parsedOpts.matrix_rows ? [] : (parsedOpts.options || parsedOpts),
+          options: optionsValue,
           order_index: q.order_index,
           row_group: q.row_group || null,
           matrix_rows,
@@ -1229,6 +1235,9 @@ const params = useParams()
           optionsData = parseOptions(q.options)
         }
 
+        const storedOpts = Array.isArray(optionsData)
+          ? [...optionsData, { _visibility_rules: q.visibility_rules || [] }]
+          : { ...optionsData, _visibility_rules: q.visibility_rules || [] }
         return {
           form_id: formData.id,
           text: q.text,
@@ -1239,7 +1248,7 @@ const params = useParams()
           order_index: index,
           row_group: q.row_group || null,
           page: q.page || 1,
-          options: JSON.stringify({ ...optionsData, _visibility_rules: q.visibility_rules || [] })
+          options: JSON.stringify(storedOpts)
         }
       })
 
@@ -1682,9 +1691,7 @@ const params = useParams()
                   return (
                     <div className="flex items-center gap-3 mt-3 p-2.5 bg-gradient-to-l from-blue-50 to-purple-50 rounded-xl border border-blue-100 text-sm">
                       <span className="text-gray-600">الأسئلة: <strong className="text-gray-900">{qs.length}</strong></span>
-                      {!!(formData?.page_titles as any)?._is_test && (
-                        <span className="text-gray-600">النقاط: <strong className="text-blue-700">{totalPts}</strong></span>
-                      )}
+                      <span className="text-gray-600">النقاط: <strong className="text-blue-700">{totalPts}</strong></span>
                     </div>
                   )
                 })()}
@@ -1696,44 +1703,53 @@ const params = useParams()
                 <div className="grid grid-cols-2 gap-2">
                   <label className="flex items-start gap-2 p-2 bg-cyan-50 rounded-lg cursor-pointer text-sm">
                     <input type="checkbox" checked={!!(formData?.page_titles as any)?._is_test} onChange={(e) => setFormData(prev => prev ? ({ ...prev, page_titles: { ...prev.page_titles, _is_test: e.target.checked } }) : null)} className="w-4 h-4 mt-0.5 text-cyan-600 rounded" />
-                    <span className="text-gray-700 font-medium">اختبار</span>
+                    <div>
+                      <span className="text-gray-700 font-medium">اختبار</span>
+                      <p className="text-xs text-gray-500 mt-0.5">إظهار حقول النقاط والدرجات</p>
+                    </div>
                   </label>
-                  <Tooltip label="السماح للمستخدم بإعادة ملء النموذج عدة مرات">
-                    <label className="flex items-start gap-2 p-2 bg-amber-50 rounded-lg cursor-pointer text-sm">
-                      <input type="checkbox" checked={formData?.allow_multiple || false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, allow_multiple: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-blue-600 rounded" />
+                  <label className="flex items-start gap-2 p-2 bg-amber-50 rounded-lg cursor-pointer text-sm">
+                    <input type="checkbox" checked={formData?.allow_multiple || false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, allow_multiple: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-blue-600 rounded" />
+                    <div>
                       <span className="text-gray-700 font-medium">تسجيل متعدد</span>
-                    </label>
-                  </Tooltip>
-                  <Tooltip label="عداد تنازلي لإكمال النموذج خلال مدة محددة">
-                    <label className="flex items-start gap-2 p-2 bg-green-50 rounded-lg cursor-pointer text-sm">
-                      <input type="checkbox" checked={formData?.time_limit !== null && formData?.time_limit !== undefined} onChange={(e) => setFormData(prev => prev ? ({ ...prev, time_limit: e.target.checked ? 10 : null }) : null)} className="w-4 h-4 mt-0.5 text-green-600 rounded" />
+                      <p className="text-xs text-gray-500 mt-0.5">السماح للمستخدم بإعادة ملء النموذج عدة مرات</p>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-2 p-2 bg-green-50 rounded-lg cursor-pointer text-sm">
+                    <input type="checkbox" checked={formData?.time_limit !== null && formData?.time_limit !== undefined} onChange={(e) => setFormData(prev => prev ? ({ ...prev, time_limit: e.target.checked ? 10 : null }) : null)} className="w-4 h-4 mt-0.5 text-green-600 rounded" />
+                    <div>
                       <span className="text-gray-700 font-medium">مؤقت</span>
-                    </label>
-                  </Tooltip>
-                  <Tooltip label="إغلاق النموذج تلقائياً في تاريخ محدد">
-                    <label className="flex items-start gap-2 p-2 bg-red-50 rounded-lg cursor-pointer text-sm">
-                      <input type="checkbox" checked={!!formData?.expires_at} onChange={(e) => setFormData(prev => prev ? ({ ...prev, expires_at: e.target.checked ? new Date(Date.now() + 86400000).toISOString().slice(0, 16) : '' }) : null)} className="w-4 h-4 mt-0.5 text-red-600 rounded" />
+                      <p className="text-xs text-gray-500 mt-0.5">عداد تنازلي لإكمال النموذج خلال مدة محددة</p>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-2 p-2 bg-red-50 rounded-lg cursor-pointer text-sm">
+                    <input type="checkbox" checked={!!formData?.expires_at} onChange={(e) => setFormData(prev => prev ? ({ ...prev, expires_at: e.target.checked ? new Date(Date.now() + 86400000).toISOString().slice(0, 16) : '' }) : null)} className="w-4 h-4 mt-0.5 text-red-600 rounded" />
+                    <div>
                       <span className="text-gray-700 font-medium">تاريخ إغلاق</span>
-                    </label>
-                  </Tooltip>
-                  <Tooltip label="إظهار زر حذف لكل تسجيل ليحذفه المستخدم بنفسه">
-                    <label className="flex items-start gap-2 p-2 bg-orange-50 rounded-lg cursor-pointer text-sm">
-                      <input type="checkbox" checked={formData?.allow_delete_responses || false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, allow_delete_responses: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-orange-600 rounded" />
+                      <p className="text-xs text-gray-500 mt-0.5">إغلاق النموذج تلقائياً في تاريخ محدد</p>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-2 p-2 bg-orange-50 rounded-lg cursor-pointer text-sm">
+                    <input type="checkbox" checked={formData?.allow_delete_responses || false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, allow_delete_responses: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-orange-600 rounded" />
+                    <div>
                       <span className="text-gray-700 font-medium">حذف الردود</span>
-                    </label>
-                  </Tooltip>
-                  <Tooltip label="عرض الأسئلة بترتيب مختلف لكل مستخدم">
-                    <label className="flex items-start gap-2 p-2 bg-purple-50 rounded-lg cursor-pointer text-sm">
-                      <input type="checkbox" checked={formData?.randomize_questions || false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, randomize_questions: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-purple-600 rounded" />
+                      <p className="text-xs text-gray-500 mt-0.5">إظهار زر حذف لكل تسجيل ليحذفه المستخدم بنفسه</p>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-2 p-2 bg-purple-50 rounded-lg cursor-pointer text-sm">
+                    <input type="checkbox" checked={formData?.randomize_questions || false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, randomize_questions: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-purple-600 rounded" />
+                    <div>
                       <span className="text-gray-700 font-medium">ترتيب عشوائي للأسئلة</span>
-                    </label>
-                  </Tooltip>
-                  <Tooltip label="حفظ إجابات المستخدم محلياً للعودة لها لاحقاً">
-                    <label className="flex items-start gap-2 p-2 bg-indigo-50 rounded-lg cursor-pointer text-sm">
-                      <input type="checkbox" checked={formData?.enable_auto_save !== false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, enable_auto_save: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-indigo-600 rounded" />
-                      <span className="text-gray-700 font-medium">الحفظ التلقائي</span>
-                    </label>
-                  </Tooltip>
+                      <p className="text-xs text-gray-500 mt-0.5">عرض الأسئلة بترتيب مختلف لكل مستخدم</p>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-2 p-2 bg-indigo-50 rounded-lg cursor-pointer text-sm">
+                    <input type="checkbox" checked={formData?.enable_auto_save !== false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, enable_auto_save: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-indigo-600 rounded" />
+                    <div>
+                      <span className="text-gray-700 font-medium">الحفظ التلقائي (Auto Save)</span>
+                      <p className="text-xs text-gray-500 mt-0.5">حفظ إجابات المستخدم محلياً للعودة لها لاحقاً</p>
+                    </div>
+                  </label>
                 </div>
 
                 {formData?.time_limit !== null && formData?.time_limit !== undefined && (
@@ -1817,79 +1833,6 @@ const params = useParams()
                       <p className="text-xs text-red-500 mt-1">سيظهر للمستخدم "العرض ينتهي خلال: HH:MM:SS"</p>
                     </div>
                   )}
-                </div>
-              </div>
-
-              {/* Submit Button Customization */}
-              <div>
-                <h4 className="text-sm font-bold text-gray-900 mb-3">زر الإرسال</h4>
-                <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 space-y-3">
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">نص الزر</label>
-                    <div className="flex gap-2">
-                      {['إرسال', 'تسجيل', 'حجز', 'تأكيد الطلب', 'Submission'].map((t) => {
-                        const currentText = (formData?.page_titles as any)?._submit_button?.text
-                        return (
-                          <button
-                            key={t}
-                            type="button"
-                            onClick={() => setFormData(prev => prev ? ({
-                              ...prev,
-                              page_titles: { ...prev.page_titles, _submit_button: { ...((prev.page_titles as any)?._submit_button || {}), text: t } }
-                            }) : null)}
-                            className={`px-2 py-1 text-xs rounded-md border transition-colors ${
-                              currentText === t
-                                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                            }`}
-                          >
-                            {t}
-                          </button>
-                        )
-                      })}
-                    </div>
-                    <input
-                      type="text"
-                      value={(formData?.page_titles as any)?._submit_button?.text || ''}
-                      onChange={(e) => setFormData(prev => prev ? ({
-                        ...prev,
-                        page_titles: { ...prev.page_titles, _submit_button: { ...((prev.page_titles as any)?._submit_button || {}), text: e.target.value } }
-                      }) : null)}
-                      placeholder="نص مخصص..."
-                      className="mt-2 w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">لون الزر</label>
-                    <div className="flex gap-2 items-center">
-                      {['#059669', '#2563eb', '#dc2626', '#7c3aed', '#d97706', '#0891b2'].map((c) => {
-                        const currentColor = (formData?.page_titles as any)?._submit_button?.color
-                        return (
-                          <button
-                            key={c}
-                            type="button"
-                            onClick={() => setFormData(prev => prev ? ({
-                              ...prev,
-                              page_titles: { ...prev.page_titles, _submit_button: { ...((prev.page_titles as any)?._submit_button || {}), color: c } }
-                            }) : null)}
-                            className={`w-7 h-7 rounded-full border-2 transition-all ${
-                              currentColor === c ? 'border-gray-900 scale-110' : 'border-transparent'
-                            }`}
-                            style={{ backgroundColor: c }}
-                          />
-                        )
-                      })}
-                      <input
-                        type="color"
-                        value={(formData?.page_titles as any)?._submit_button?.color || '#059669'}
-                        onChange={(e) => setFormData(prev => prev ? ({
-                          ...prev,
-                          page_titles: { ...prev.page_titles, _submit_button: { ...((prev.page_titles as any)?._submit_button || {}), color: e.target.value } }
-                        }) : null)}
-                        className="w-7 h-7 rounded cursor-pointer border border-gray-200"
-                      />
-                    </div>
-                  </div>
                 </div>
               </div>
 
@@ -2234,7 +2177,7 @@ const params = useParams()
                                       <input type="checkbox" checked={question.required} onChange={(e) => updateQuestion(qIndex, { required: e.target.checked })} className="w-4 h-4 text-blue-600 rounded" />
                                       <span className="text-sm text-gray-700 font-medium">مطلوب</span>
                                     </label>
-                                    {!!(formData?.page_titles as any)?._is_test && !['single_choice', 'multiple_choice', 'dropdown', 'ranking', 'matrix', 'button_choice', 'match_items', 'static_text', 'static_image', 'divider', 'terms', 'youtube'].includes(question.type) && (
+                                    {!!(formData?.page_titles as any)?._is_test && !['single_choice', 'multiple_choice', 'dropdown', 'ranking', 'matrix', 'button_choice', 'match_items', 'static_text', 'static_image', 'divider', 'terms', 'youtube', 'countdown_timer', 'products_block', 'payment_info_block'].includes(question.type) && (
                                       <div className="flex-1">
                                         <input type="number" min="0" value={question.points} onChange={(e) => updateQuestion(qIndex, { points: Number(e.target.value) })} placeholder="النقاط" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" />
                                       </div>
@@ -2357,6 +2300,53 @@ const params = useParams()
                                     <div>
                                       <label className="block text-xs font-medium text-gray-600 mb-1.5">رابط يوتيوب</label>
                                       <input type="text" value={(parseOptions(question.options)[0] || {}).text || ''} onChange={(e) => { if(parseOptions(question.options).length===0) addOption(qIndex); updateOption(qIndex, 0, { text: e.target.value }) }} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" dir="ltr" placeholder="https://youtube.com/watch?v=..." />
+                                    </div>
+                                  )}
+
+                                  {question.type === 'countdown_timer' && (
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-600 mb-1.5">وقت انتهاء العرض</label>
+                                      <input type="datetime-local" value={parseOptions(question.options)[0]?.text || ''} onChange={(e) => {
+                                        if (parseOptions(question.options).length === 0) addOption(qIndex)
+                                        updateOption(qIndex, 0, { text: e.target.value })
+                                      }} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                                    </div>
+                                  )}
+
+                                  {question.type === 'products_block' && (
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-600 mb-1.5">المنتجات</label>
+                                      {(parseOptions(question.options) as any[]).map((prod: any, pi: number) => (
+                                        <div key={pi} className="flex items-center gap-1.5 mb-1.5">
+                                          <input type="text" value={prod.text || ''} onChange={(e) => updateOption(qIndex, pi, { text: e.target.value })} placeholder="اسم المنتج" className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
+                                          <input type="number" min="0" value={prod.points || 0} onChange={(e) => updateOption(qIndex, pi, { points: Number(e.target.value) })} placeholder="السعر" className="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center" />
+                                          <button onClick={() => removeOption(qIndex, pi)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                        </div>
+                                      ))}
+                                      <button onClick={() => addOption(qIndex)} className="w-full mt-1 py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors text-sm flex items-center justify-center gap-1">
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> إضافة منتج
+                                      </button>
+                                    </div>
+                                  )}
+
+                                  {question.type === 'payment_info_block' && (
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-600 mb-1.5">طرق الدفع</label>
+                                      {(parseOptions(question.options) as any[]).map((pm: any, pi: number) => (
+                                        <div key={pi} className="flex items-center gap-1.5 mb-1.5">
+                                          <select value={pm.validation_type || 'bank'} onChange={(e) => updateOption(qIndex, pi, { validation_type: e.target.value })} className="w-24 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-sm">
+                                            <option value="bank">بنكي</option>
+                                            <option value="instapay">إنستاباي</option>
+                                            <option value="vodafone">فودافون كاش</option>
+                                          </select>
+                                          <input type="text" value={pm.text || ''} onChange={(e) => updateOption(qIndex, pi, { text: e.target.value })} placeholder="الاسم" className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
+                                          <input type="text" value={pm.validation_value || ''} onChange={(e) => updateOption(qIndex, pi, { validation_value: e.target.value })} placeholder="الرقم" className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
+                                          <button onClick={() => removeOption(qIndex, pi)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                        </div>
+                                      ))}
+                                      <button onClick={() => addOption(qIndex)} className="w-full mt-1 py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors text-sm flex items-center justify-center gap-1">
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> إضافة طريقة دفع
+                                      </button>
                                     </div>
                                   )}
 
@@ -2816,6 +2806,7 @@ const params = useParams()
             { id: 'colors', label: 'الألوان', icon: '✨' },
             { id: 'styles', label: 'الأنماط', icon: '📏' },
             { id: 'layout', label: 'التخطيط', icon: '🖼️' },
+            { id: 'button', label: 'الزر', icon: '🔘' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -3114,6 +3105,72 @@ const params = useParams()
                       <span className="text-xs opacity-85">أبجد هوز 123</span>
                     </button>
                   ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {designerTab === 'button' && (
+            <div className="space-y-5">
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3.5 text-xs text-blue-700 font-medium">
+                🔘 تخصيص شكل ونص زر الإرسال في الفورم
+              </div>
+
+              {/* Button Text */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">نص الزر</label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {['إرسال', 'تسجيل', 'حجز', 'تأكيد الطلب', 'Submission'].map(t => {
+                    const currentText = (formData?.page_titles as any)?._submit_button?.text
+                    return (
+                      <button key={t} type="button" onClick={() => setFormData(prev => prev ? ({ ...prev, page_titles: { ...prev.page_titles, _submit_button: { ...((prev.page_titles as any)?._submit_button || {}), text: t } } }) : null)}
+                        className={`px-2.5 py-1 text-xs rounded-lg border transition-colors ${
+                          currentText === t ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                        }`}
+                      >{t}</button>
+                    )
+                  })}
+                </div>
+                <input type="text" value={(formData?.page_titles as any)?._submit_button?.text || ''} onChange={(e) => setFormData(prev => prev ? ({ ...prev, page_titles: { ...prev.page_titles, _submit_button: { ...((prev.page_titles as any)?._submit_button || {}), text: e.target.value } } }) : null)}
+                  placeholder="نص مخصص..." className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+              </div>
+
+              {/* Button Background Color */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">لون خلفية الزر</label>
+                <div className="flex gap-2 items-center">
+                  {['#059669', '#2563eb', '#dc2626', '#7c3aed', '#d97706', '#0891b2'].map(c => {
+                    const currentColor = (formData?.page_titles as any)?._submit_button?.color || '#059669'
+                    return <button key={c} type="button" onClick={() => setFormData(prev => prev ? ({ ...prev, page_titles: { ...prev.page_titles, _submit_button: { ...((prev.page_titles as any)?._submit_button || {}), color: c } } }) : null)}
+                      className={`w-7 h-7 rounded-full border-2 transition-all ${currentColor === c ? 'border-gray-900 scale-110' : 'border-transparent'}`} style={{ backgroundColor: c }} />
+                  })}
+                  <input type="color" value={(formData?.page_titles as any)?._submit_button?.color || '#059669'}
+                    onChange={(e) => setFormData(prev => prev ? ({ ...prev, page_titles: { ...prev.page_titles, _submit_button: { ...((prev.page_titles as any)?._submit_button || {}), color: e.target.value } } }) : null)}
+                    className="w-7 h-7 rounded cursor-pointer border border-gray-200" />
+                </div>
+              </div>
+
+              {/* Button Text Color */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">لون نص الزر</label>
+                <input type="color" value={(formData?.page_titles as any)?._submit_button?.textColor || '#ffffff'}
+                  onChange={(e) => setFormData(prev => prev ? ({ ...prev, page_titles: { ...prev.page_titles, _submit_button: { ...((prev.page_titles as any)?._submit_button || {}), textColor: e.target.value } } }) : null)}
+                  className="w-10 h-10 rounded cursor-pointer border border-gray-200" />
+              </div>
+
+              {/* Live Preview */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-2">معاينة حية</label>
+                <div className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-xl p-6 border border-gray-200 flex items-center justify-center">
+                  <button
+                    className="px-8 py-3.5 rounded-2xl font-bold text-sm shadow-lg transition-all"
+                    style={{
+                      backgroundColor: (formData?.page_titles as any)?._submit_button?.color || '#059669',
+                      color: (formData?.page_titles as any)?._submit_button?.textColor || '#ffffff',
+                    }}
+                  >
+                    {(formData?.page_titles as any)?._submit_button?.text || 'إرسال'}
+                  </button>
                 </div>
               </div>
             </div>

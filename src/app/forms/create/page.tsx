@@ -36,7 +36,11 @@ const QUESTION_TYPES = {
   email_confirm: { label: 'تأكيد البريد', icon: '✉️', description: 'إدخال الإيميل مرتين', explanation: 'للتأكد من صحة البريد الإلكتروني' },
   youtube: { label: 'فيديو يوتيوب', icon: '▶️', description: 'تضمين فيديو يوتيوب', explanation: 'لعرض فيديو توضيحي داخل النموذج' },
   match_items: { label: 'توصيل العناصر', icon: '🔗', description: 'مطابقة عمودين', explanation: 'مثال: وصّل الكلمة بمعناها' },
-  appointment: { label: 'حجز موعد', icon: '📅', description: 'اختيار تاريخ ووقت للحجز', explanation: 'مثال: حجز موعد استشارة' }
+  appointment: { label: 'حجز موعد', icon: '📅', description: 'اختيار تاريخ ووقت للحجز', explanation: 'مثال: حجز موعد استشارة' },
+  // إضافات
+  countdown_timer: { label: 'العد التنازلي', icon: '⏳', description: 'عرض العد التنازلي', explanation: 'مؤقت لانتهاء العرض' },
+  products_block: { label: 'المنتجات', icon: '📦', description: 'قائمة منتجات', explanation: 'عرض منتجات للاختيار والطلب' },
+  payment_info_block: { label: 'بيانات الدفع', icon: '💳', description: 'عرض طرق الدفع', explanation: 'عرض معلومات الدفع' }
 } as const
 
 interface MatrixRow {
@@ -123,7 +127,15 @@ function CreateFormContent() {
         return []
       }
     }
-    return Array.isArray(options) ? options : []
+    if (Array.isArray(options)) {
+      if (options.length > 0 && options[options.length - 1]?._visibility_rules !== undefined) {
+        const arr = [...options]
+        arr.pop()
+        return arr
+      }
+      return options
+    }
+    return []
   }
 
 const supabase = createClient()
@@ -501,6 +513,9 @@ const supabase = createClient()
           optionsData = parseOptions(q.options)
         }
 
+        const storedOpts = Array.isArray(optionsData)
+          ? [...optionsData, { _visibility_rules: q.visibility_rules || [] }]
+          : { ...optionsData, _visibility_rules: q.visibility_rules || [] }
         return {
           form_id: form.id,
           text: q.text,
@@ -511,7 +526,7 @@ const supabase = createClient()
           order_index: index,
           row_group: q.row_group || null,
           page: q.page || 1,
-          options: JSON.stringify({ ...optionsData, _visibility_rules: q.visibility_rules || [] })
+          options: JSON.stringify(storedOpts)
         }
       })
 

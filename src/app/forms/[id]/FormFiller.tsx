@@ -463,6 +463,11 @@ export default function FormFiller({ form, questions, existingResponse: propExis
         return options
       }
     }
+    if (Array.isArray(options) && options.length > 0 && options[options.length - 1]?._visibility_rules !== undefined) {
+      const arr = [...options]
+      arr.pop()
+      return arr
+    }
     return options
   }
 
@@ -1624,6 +1629,94 @@ export default function FormFiller({ form, questions, existingResponse: propExis
           </div>
         )
 
+      // إضافات
+      case 'countdown_timer': {
+        const ctOpts = Array.isArray(options) ? options : []
+        const endTime = ctOpts[0]?.text || (form.page_titles as any)?._offer_countdown
+        if (!endTime) return null
+        const diff = Math.floor((new Date(endTime).getTime() - Date.now()) / 1000)
+        if (diff <= 0) return null
+        const h = Math.floor(diff / 3600)
+        const m = Math.floor((diff % 3600) / 60)
+        const s = diff % 60
+        return (
+          <div className="bg-gradient-to-l from-red-500 to-orange-500 rounded-2xl p-4 shadow-lg text-center">
+            <p className="text-white/80 text-xs mb-1">العرض ينتهي خلال</p>
+            <p className="text-white text-3xl font-mono font-bold tracking-widest" dir="ltr">
+              {`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`}
+            </p>
+          </div>
+        )
+      }
+
+      case 'products_block': {
+        const pbOpts = Array.isArray(options) ? options : []
+        const inlineProds = pbOpts.map((o: any) => ({
+          id: o.id,
+          name: o.text || '',
+          price: o.points || 0,
+          image_url: o.validation_value || ''
+        }))
+        const prods: Array<{ id: string; name: string; price: number; image_url?: string }> =
+          inlineProds.length > 0 ? inlineProds : (form.page_titles as any)?._products || []
+        if (prods.length === 0) return null
+        return (
+          <div className="bg-gradient-to-l from-blue-50 to-indigo-50 rounded-2xl p-5 border border-blue-100">
+            <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+              <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+              المنتجات المتاحة
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              {prods.map((prod) => (
+                <div key={prod.id} className="bg-white rounded-xl border border-blue-100 overflow-hidden">
+                  {prod.image_url && <div className="h-24 bg-gray-50"><img src={prod.image_url} alt={prod.name} className="w-full h-full object-cover" /></div>}
+                  <div className="p-2.5">
+                    <h4 className="font-bold text-gray-900 text-xs">{prod.name}</h4>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-sm font-bold text-blue-700">{prod.price.toLocaleString()} <span className="text-[10px] font-normal">EGP</span></span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      }
+
+      case 'payment_info_block': {
+        const piOpts = Array.isArray(options) ? options : []
+        const inlinePayments = piOpts.map((o: any) => ({
+          method: o.validation_type || 'bank',
+          label: o.text || '',
+          value: o.validation_value || ''
+        }))
+        const paymentMethods: Array<{ method: string; label: string; value: string }> =
+          inlinePayments.length > 0 ? inlinePayments : (form.page_titles as any)?._payment || []
+        if (paymentMethods.length === 0) return null
+        const icons: Record<string, string> = { bank: '🏦', instapay: '📱', vodafone: '📞' }
+        const methodNames: Record<string, string> = { bank: 'حساب بنكي', instapay: 'إنستاباي', vodafone: 'فودافون كاش' }
+        return (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+            <h4 className="text-sm font-bold text-amber-800 mb-3 flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+              طرق الدفع المتاحة
+            </h4>
+            <div className="space-y-2">
+              {paymentMethods.map((pm, pi) => (
+                <div key={pi} className="flex items-center gap-3 bg-white rounded-xl px-4 py-3 border border-amber-100">
+                  <span className="text-xl">{icons[pm.method] || '💳'}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-800">{methodNames[pm.method] || pm.method}</p>
+                    {pm.label && <p className="text-xs text-gray-500">{pm.label}</p>}
+                    <p className="text-sm font-mono font-bold text-amber-700 mt-0.5" dir="ltr">{pm.value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      }
+
       case 'static_image':
         const imageUrl = parseOptions(question.options)[0]?.validation_value || ''
         return (
@@ -2275,8 +2368,8 @@ export default function FormFiller({ form, questions, existingResponse: propExis
           )}
         </div>
 
-        {/* Products */}
-        {products.length > 0 && !submitted && (
+        {/* Products (only if no products_block question type) */}
+        {!form.questions?.some(q => q.type === 'products_block') && products.length > 0 && !submitted && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-6 form-themed-card">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
               <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
@@ -2324,8 +2417,8 @@ export default function FormFiller({ form, questions, existingResponse: propExis
           </div>
         )}
 
-        {/* Offer Countdown */}
-        {offerEndStr && offerCountdown > 0 && !submitted && (
+        {/* Offer Countdown (only if no countdown_timer question type) */}
+        {!form.questions?.some(q => q.type === 'countdown_timer') && offerEndStr && offerCountdown > 0 && !submitted && (
           <div className="bg-gradient-to-l from-red-500 to-orange-500 rounded-2xl p-4 mb-6 shadow-lg text-center">
             <p className="text-white/80 text-xs mb-1">العرض ينتهي خلال</p>
             <p className="text-white text-3xl font-mono font-bold tracking-widest" dir="ltr">
@@ -2413,8 +2506,8 @@ export default function FormFiller({ form, questions, existingResponse: propExis
           })()}
         </div>
 
-        {/* Payment Info Display */}
-        {isLastPage && form.page_titles?._payment && (() => {
+        {/* Payment Info Display (only if no payment_info_block question type) */}
+        {isLastPage && !form.questions?.some(q => q.type === 'payment_info_block') && form.page_titles?._payment && (() => {
           const rawPayment = form.page_titles._payment
           const paymentMethods = typeof rawPayment === 'string' ? JSON.parse(rawPayment) : rawPayment
           if (!paymentMethods || paymentMethods.length === 0) return null
@@ -2471,11 +2564,12 @@ export default function FormFiller({ form, questions, existingResponse: propExis
                 <button
                   onClick={handleSubmit}
                   disabled={submitting}
-                  className="flex-1 py-4 text-white font-semibold rounded-2xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg form-themed-primary-bg"
+                  className="flex-1 py-4 font-semibold rounded-2xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg form-themed-primary-bg"
                   style={{
                     background: (form.page_titles as any)?._submit_button?.color
                       ? (form.page_titles as any)._submit_button.color
                       : 'linear-gradient(to left, #059669, #16a34a)',
+                    color: (form.page_titles as any)?._submit_button?.textColor || '#ffffff',
                   }}
                 >
                   {submitting ? (

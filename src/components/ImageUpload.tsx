@@ -46,9 +46,6 @@ export default function ImageUpload({ onImageUploaded, currentImage, className =
         .upload(filePath, file)
 
       if (uploadError) {
-        if (uploadError.message?.includes('bucket') || uploadError.statusCode === 404) {
-          throw new Error('لم يتم إنشاء Bucket التخزين. الرجاء إنشاء Bucket اسمه "project-images" من لوحة Supabase → Storage → Create bucket (Public)')
-        }
         throw uploadError
       }
 

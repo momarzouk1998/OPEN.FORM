@@ -128,6 +128,10 @@ export type QuestionType =
   | 'youtube'
   | 'match_items'
   | 'appointment'
+  // إضافات (Add-ons)
+  | 'countdown_timer'
+  | 'products_block'
+  | 'payment_info_block'
 
 
 export interface QuestionOption {
