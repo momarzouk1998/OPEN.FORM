@@ -2,7 +2,7 @@
 
 
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 
 import { createClient } from '@/utils/supabase/client'
 
@@ -133,6 +133,7 @@ interface FormData {
   enable_auto_save?: boolean
   redirect_rules?: Array<{ question_id: string; operator: string; value: string; redirect_url: string; message?: string }>
   default_redirect_url?: string
+  payment_info?: Array<{ method: string; label: string; value: string }>
 
 }
 
@@ -166,6 +167,79 @@ function EditFormContent() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode)
   }, [isDarkMode])
+
+  // Collaboration state
+  const [collaborators, setCollaborators] = useState<Array<{ id: string; name: string; email: string }>>([])
+  const [collabStatus, setCollabStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected')
+  const collabChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+
+  // Setup Realtime collaboration
+  useEffect(() => {
+    if (!formData?.id || !profile?.id) return
+
+    const channelName = `form-${formData.id}`
+    const channel = supabase.channel(channelName, {
+      config: { broadcast: { self: false }, presence: { key: profile.id } },
+    })
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState()
+        const users: Array<{ id: string; name: string; email: string }> = []
+        for (const key in state) {
+          const presences = state[key] as any[]
+          presences.forEach((p: any) => {
+            if (p.id !== profile.id) {
+              users.push({ id: p.id, name: p.name || 'محرر', email: p.email || '' })
+            }
+          })
+        }
+        setCollaborators(users)
+      })
+      .on('presence', { event: 'join' }, () => {})
+      .on('presence', { event: 'leave' }, () => {})
+      .on('broadcast', { event: 'form_update' }, ({ payload }) => {
+        if (payload.userId === profile.id) return
+        setFormData(prev => {
+          if (!prev) return prev
+          return { ...prev, ...payload.data }
+        })
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          setCollabStatus('connected')
+          await channel.track({
+            id: profile.id,
+            name: profile.name || profile.email?.split('@')[0] || 'محرر',
+            email: profile.email || '',
+          })
+        } else if (status === 'CHANNEL_ERROR') {
+          setCollabStatus('disconnected')
+        }
+      })
+
+    collabChannelRef.current = channel
+
+    return () => {
+      channel.unsubscribe()
+      setCollaborators([])
+      setCollabStatus('disconnected')
+    }
+  }, [formData?.id, profile?.id])
+
+  // Debounced broadcast of form changes
+  const collabBroadcastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (!formData || !profile?.id || collabStatus !== 'connected') return
+    if (collabBroadcastRef.current) clearTimeout(collabBroadcastRef.current)
+    collabBroadcastRef.current = setTimeout(() => {
+      collabChannelRef.current?.send({
+        type: 'broadcast',
+        event: 'form_update',
+        payload: { userId: profile.id, data: { questions: formData.questions, name: formData.name, description: formData.description, is_active: formData.is_active, page_titles: formData.page_titles } },
+      })
+    }, 500)
+  }, [formData?.questions, formData?.name, formData?.description, formData?.is_active, formData?.page_titles])
 
   const PRESET_THEMES: Array<{ name: string; label: string; settings: ThemeSettings }> = [
     {
@@ -700,7 +774,8 @@ const params = useParams()
         image_url: form.image_url || '',
         short_code: form.short_code || '',
         serial_number: form.serial_number,
-        page_titles: form.page_titles || {}
+        page_titles: form.page_titles || {},
+        payment_info: form.page_titles?._payment ? (typeof form.page_titles._payment === 'string' ? JSON.parse(form.page_titles._payment) : form.page_titles._payment) : []
 
       })
 
@@ -1070,7 +1145,7 @@ const params = useParams()
           randomize_questions: formData.randomize_questions || false,
           image_url: formData.image_url || null,
           short_code: formData.short_code || generateShortCode(),
-          page_titles: formData.page_titles || {}
+          page_titles: { ...formData.page_titles, _payment: formData.payment_info || [] }
 
         })
 
@@ -1451,7 +1526,22 @@ const params = useParams()
             </svg>
             <span className="hidden sm:inline">معاينة</span>
           </button>
-          <div className="flex-1"></div>
+          {/* Collaboration indicator */}
+          <div className="flex items-center gap-1.5 px-2">
+            <span className={`w-2 h-2 rounded-full ${
+              collabStatus === 'connected' ? 'bg-green-500' : collabStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' : 'bg-gray-400'
+            }`} />
+            <span className="text-[10px] text-gray-500 hidden sm:inline">
+              {collabStatus === 'connected'
+                ? collaborators.length > 0 ? `${collaborators.length} متصل` : 'متصل'
+                : collabStatus === 'connecting' ? 'جاري الاتصال...' : 'غير متصل'}
+            </span>
+            {collaborators.map(c => (
+              <span key={c.id} className="w-6 h-6 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-[10px] font-bold" title={c.name}>
+                {c.name.charAt(0)}
+              </span>
+            ))}
+          </div>
           <button
             onClick={() => setIsDarkMode(prev => !prev)}
             className={`flex flex-col sm:flex-row items-center gap-1 px-2 sm:px-3 py-2 sm:py-1.5 rounded-xl active:scale-95 transition-all text-[10px] sm:text-xs font-medium cursor-pointer min-w-0 sm:min-w-fit ${
@@ -1653,6 +1743,47 @@ const params = useParams()
                       </div>
                     ))}
                   </div>
+                </div>
+              </div>
+
+              {/* Payment Info Section */}
+              <div>
+                <h4 className="text-sm font-bold text-gray-900 mb-3">بيانات الدفع</h4>
+                <p className="text-xs text-gray-500 mb-3">أضف طرق الدفع لعرضها للمستخدم عند ملء النموذج</p>
+                <div className="space-y-2">
+                  {(formData?.payment_info || []).map((pm: any, pi: number) => (
+                    <div key={pi} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                      <select value={pm.method} onChange={(e) => {
+                        const newPm = [...(formData?.payment_info || [])]
+                        newPm[pi] = { ...newPm[pi], method: e.target.value }
+                        setFormData(prev => prev ? ({ ...prev, payment_info: newPm }) : null)
+                      }} className="w-28 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-sm">
+                        <option value="bank">حساب بنكي</option>
+                        <option value="instapay">إنستاباي</option>
+                        <option value="vodafone">فودافون كاش</option>
+                      </select>
+                      <input type="text" value={pm.label} onChange={(e) => {
+                        const newPm = [...(formData?.payment_info || [])]
+                        newPm[pi] = { ...newPm[pi], label: e.target.value }
+                        setFormData(prev => prev ? ({ ...prev, payment_info: newPm }) : null)
+                      }} placeholder={pm.method === 'bank' ? 'اسم البك' : pm.method === 'instapay' ? 'اسم المستخدم' : 'رقم المحفظة'} className="flex-1 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
+                      <input type="text" value={pm.value} onChange={(e) => {
+                        const newPm = [...(formData?.payment_info || [])]
+                        newPm[pi] = { ...newPm[pi], value: e.target.value }
+                        setFormData(prev => prev ? ({ ...prev, payment_info: newPm }) : null)
+                      }} placeholder="رقم الحساب" className="flex-1 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
+                      <button onClick={() => {
+                        setFormData(prev => prev ? ({ ...prev, payment_info: prev.payment_info?.filter((_: any, i: number) => i !== pi) }) : null)
+                      }} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                  ))}
+                  <button onClick={() => {
+                    setFormData(prev => prev ? ({ ...prev, payment_info: [...(prev.payment_info || []), { method: 'bank', label: '', value: '' }] }) : null)
+                  }} className="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors text-sm flex items-center justify-center gap-1">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> إضافة طريقة دفع
+                  </button>
                 </div>
               </div>
 
