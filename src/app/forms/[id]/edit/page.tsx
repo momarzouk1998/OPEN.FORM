@@ -1147,7 +1147,7 @@ const params = useParams()
           randomize_questions: formData.randomize_questions || false,
           image_url: formData.image_url || null,
           short_code: formData.short_code || generateShortCode(),
-          page_titles: { ...formData.page_titles, _payment: formData.payment_info || [], _submit_button: (formData.page_titles as any)?._submit_button || {} }
+          page_titles: { ...formData.page_titles, _payment: formData.payment_info || [], _submit_button: (formData.page_titles as any)?._submit_button || {}, _offer_countdown: (formData.page_titles as any)?._offer_countdown || '' }
 
         })
 
@@ -1762,6 +1762,43 @@ const params = useParams()
                       </div>
                     ))}
                   </div>
+                </div>
+              </div>
+
+              {/* Offer Countdown */}
+              <div>
+                <h4 className="text-sm font-bold text-gray-900 mb-3">العد التنازلي للعرض</h4>
+                <div className="p-3 bg-gradient-to-l from-red-50 to-orange-50 rounded-lg border border-red-100 space-y-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!(formData?.page_titles as any)?._offer_countdown}
+                      onChange={(e) => setFormData(prev => prev ? ({
+                        ...prev,
+                        page_titles: {
+                          ...prev.page_titles,
+                          _offer_countdown: e.target.checked ? new Date(Date.now() + 86400000).toISOString().slice(0, 16) : ''
+                        }
+                      }) : null)}
+                      className="w-4 h-4 text-red-600 rounded"
+                    />
+                    <span className="text-sm text-gray-700 font-medium">تفعيل العد التنازلي</span>
+                  </label>
+                  {(formData?.page_titles as any)?._offer_countdown && (
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">وقت انتهاء العرض</label>
+                      <input
+                        type="datetime-local"
+                        value={(formData?.page_titles as any)?._offer_countdown || ''}
+                        onChange={(e) => setFormData(prev => prev ? ({
+                          ...prev,
+                          page_titles: { ...prev.page_titles, _offer_countdown: e.target.value }
+                        }) : null)}
+                        className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm"
+                      />
+                      <p className="text-xs text-red-500 mt-1">سيظهر للمستخدم "العرض ينتهي خلال: HH:MM:SS"</p>
+                    </div>
+                  )}
                 </div>
               </div>
 

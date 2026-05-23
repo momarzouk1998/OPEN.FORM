@@ -208,6 +208,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
   const { evaluate: evaluateRedirect } = useConditionalRedirect()
 
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [offerCountdown, setOfferCountdown] = useState<number>(-1);
   const [displayQuestions, setDisplayQuestions] = useState<Question[]>([]);
   const [isExpired, setIsExpired] = useState(false);
 
@@ -367,6 +368,26 @@ export default function FormFiller({ form, questions, existingResponse: propExis
 
     return () => clearInterval(timer);
   }, [timeLeft, submitted, isExpired]);
+
+  // Offer countdown
+  const offerEndStr = (form.page_titles as any)?._offer_countdown
+  useEffect(() => {
+    if (!offerEndStr || submitted) return
+    const update = () => {
+      const diff = Math.floor((new Date(offerEndStr).getTime() - Date.now()) / 1000)
+      setOfferCountdown(diff > 0 ? diff : 0)
+    }
+    update()
+    const interval = setInterval(update, 1000)
+    return () => clearInterval(interval)
+  }, [offerEndStr, submitted])
+
+  const formatCountdown = (seconds: number) => {
+    const h = Math.floor(seconds / 3600)
+    const m = Math.floor((seconds % 3600) / 60)
+    const s = seconds % 60
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  }
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -2208,6 +2229,16 @@ export default function FormFiller({ form, questions, existingResponse: propExis
             </div>
           )}
         </div>
+
+        {/* Offer Countdown */}
+        {offerEndStr && offerCountdown > 0 && !submitted && (
+          <div className="bg-gradient-to-l from-red-500 to-orange-500 rounded-2xl p-4 mb-6 shadow-lg text-center">
+            <p className="text-white/80 text-xs mb-1">العرض ينتهي خلال</p>
+            <p className="text-white text-3xl font-mono font-bold tracking-widest" dir="ltr">
+              {formatCountdown(offerCountdown)}
+            </p>
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
