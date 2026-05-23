@@ -278,7 +278,7 @@ const supabase = createClient()
     }
 
     updateQuestion(questionIndex, {
-      options: [...formData.questions[questionIndex].options, newOption]
+      options: [...(formData.questions[questionIndex].options || []), newOption]
     })
   }
 

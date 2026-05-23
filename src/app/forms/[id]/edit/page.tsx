@@ -1030,7 +1030,7 @@ const params = useParams()
 
     updateQuestion(questionIndex, {
 
-      options: [...formData.questions[questionIndex].options, newOption]
+      options: [...(formData.questions[questionIndex].options || []), newOption]
 
     })
 
