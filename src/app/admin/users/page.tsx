@@ -87,7 +87,7 @@ export default function AdminUsersPage() {
 
   const handleAction = async (
     userId: string, 
-    action: 'approve' | 'reject' | 'role' | 'delete' | 'reset_password' | 'edit', 
+    action: 'approve' | 'reject' | 'role' | 'delete' | 'reset_password' | 'edit' | 'ban' | 'unban' | 'limits', 
     newRole?: UserRole, 
     updatedData?: Partial<User>
   ) => {
