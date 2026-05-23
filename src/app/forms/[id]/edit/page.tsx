@@ -100,6 +100,7 @@ interface Question {
   row_group?: number | null
   page?: number
   visibility_rules?: VisibilityRule[]
+  hidden?: boolean
 
 }
 
@@ -148,7 +149,7 @@ function EditFormContent() {
   const [loading, setLoading] = useState(true)
 
   const [saving, setSaving] = useState(false)
-  const [questionMenuOpen, setQuestionMenuOpen] = useState(false)
+  const [questionMenuOpen, setQuestionMenuOpen] = useState<string | null>(null)
   const [showQuestionPicker, setShowQuestionPicker] = useState(false)
   const [existingForms, setExistingForms] = useState<any[]>([])
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null>(null)
@@ -527,7 +528,7 @@ function EditFormContent() {
   }
 
   const prepareQuestionsForPreview = (qs: any[]): any[] => {
-    return qs.map((q, index) => {
+    return qs.filter((q: any) => !q.hidden).map((q, index) => {
       let optionsData: any
 
       if (q.type === 'matrix') {
@@ -1268,7 +1269,24 @@ const params = useParams()
     setFormData(prev => prev ? ({ ...prev, questions: newQuestions }) : null)
   }
 
+  const moveToStart = (index: number) => {
+    if (!formData || index <= 0) return
+    const newQuestions = [...formData.questions]
+    const [item] = newQuestions.splice(index, 1)
+    newQuestions.unshift(item)
+    setFormData(prev => prev ? ({ ...prev, questions: newQuestions }) : null)
+  }
+
+  const moveToEnd = (index: number) => {
+    if (!formData || index >= formData.questions.length - 1) return
+    const newQuestions = [...formData.questions]
+    const [item] = newQuestions.splice(index, 1)
+    newQuestions.push(item)
+    setFormData(prev => prev ? ({ ...prev, questions: newQuestions }) : null)
+  }
+
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
+  const [collabConditionalOpen, setCollabConditionalOpen] = useState<number | null>(null)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   )
@@ -2435,6 +2453,120 @@ const params = useParams()
 
                               )}
 
+                                  </div>
+                                ) : null}
+                              </div>
+
+                            </div>
+                            <div className="relative flex justify-center -mt-2 mb-1">
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setQuestionMenuOpen(questionMenuOpen === question.id ? null : question.id) }}
+                                className="w-7 h-7 bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 rounded-full flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all cursor-pointer"
+                                title="إعدادات السؤال"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                                </svg>
+                              </button>
+                              {questionMenuOpen === question.id && (
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-white rounded-xl shadow-xl border border-gray-200 py-1.5 min-w-[200px] z-50" onClick={(e) => e.stopPropagation()}>
+                                  {/* Hide/Show */}
+                                  <button onClick={() => { updateQuestion(qIndex, { hidden: !question.hidden }); setQuestionMenuOpen(null) }} className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right">
+                                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      {question.hidden ? (
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                      ) : (
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                      )}
+                                    </svg>
+                                    {question.hidden ? 'إظهار' : 'إخفاء'}
+                                  </button>
+                                  <div className="h-px bg-gray-100 my-1" />
+                                  {/* Move to start */}
+                                  <button onClick={() => { moveToStart(qIndex); setQuestionMenuOpen(null) }} disabled={qIndex === 0} className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right disabled:opacity-30">
+                                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+                                    نقل إلى البداية
+                                  </button>
+                                  {/* Move to end */}
+                                  <button onClick={() => { moveToEnd(qIndex); setQuestionMenuOpen(null) }} disabled={qIndex === qs.length - 1} className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right disabled:opacity-30">
+                                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                                    نقل إلى النهاية
+                                  </button>
+                                  <div className="h-px bg-gray-100 my-1" />
+                                  {/* Page */}
+                                  <div className="px-4 py-2">
+                                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                                      <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                      <span className="shrink-0">الصفحة</span>
+                                      <select value={question.page || 1} onChange={(e) => { updateQuestion(qIndex, { page: parseInt(e.target.value) }); setQuestionMenuOpen(null) }} className="flex-1 px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs">
+                                        {Array.from({ length: Math.max(1, ...formData.questions.map((q: any) => q.page || 1)) + 1 }, (_, i) => i + 1).map(p => (
+                                          <option key={p} value={p}>{p}</option>
+                                        ))}
+                                      </select>
+                                    </label>
+                                  </div>
+                                  <div className="h-px bg-gray-100 my-1" />
+                                  {/* Next to previous */}
+                                  {qIndex > 0 && formData.questions[qIndex - 1].page === (question.page || 1) && (
+                                    <button onClick={() => {
+                                      if (!question.row_group || formData.questions[qIndex - 1].row_group !== question.row_group) {
+                                        const prevQ = formData.questions[qIndex - 1];
+                                        const newGroupId = prevQ.row_group || Date.now();
+                                        if (!prevQ.row_group) updateQuestion(qIndex - 1, { row_group: newGroupId });
+                                        updateQuestion(qIndex, { row_group: newGroupId });
+                                      } else {
+                                        updateQuestion(qIndex, { row_group: null });
+                                      }
+                                      setQuestionMenuOpen(null)
+                                    }} className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right">
+                                      <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                                      <span className={`${!!question.row_group && formData.questions[qIndex - 1].row_group === question.row_group ? 'text-blue-600 font-bold' : ''}`}>
+                                        {!!question.row_group && formData.questions[qIndex - 1].row_group === question.row_group ? '✓ ' : ''}عرض بجوار السؤال السابق
+                                      </span>
+                                    </button>
+                                  )}
+                                  <div className="h-px bg-gray-100 my-1" />
+                                  {/* Conditional Logic */}
+                                  <div className="px-4 py-2">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <label className="flex items-center gap-2 text-sm text-gray-700">
+                                        <svg className="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        المنطق الشرطي
+                                      </label>
+                                      <button onClick={() => {
+                                        const firstQ = (formData?.questions || []).find((q: any) => q.id !== question.id)
+                                        if (firstQ) {
+                                          updateQuestion(qIndex, { visibility_rules: [{ question_id: firstQ.id, operator: 'equals', value: '' }] })
+                                        }
+                                      }} className="text-xs text-indigo-600 hover:underline shrink-0">+ إضافة شرط</button>
+                                    </div>
+                                    {(question.visibility_rules || []).length > 0 ? (
+                                      <div className="space-y-1.5 mt-1">
+                                        {(question.visibility_rules || []).map((rule: any, ri: number) => (
+                                          <div key={ri} className="flex items-center gap-1 text-xs">
+                                            <span className="text-indigo-600 font-medium shrink-0">إذا</span>
+                                            <select value={rule.question_id} onChange={(e) => { const r = [...(question.visibility_rules || [])]; r[ri] = { ...r[ri], question_id: e.target.value }; updateQuestion(qIndex, { visibility_rules: r }) }} className="flex-1 min-w-0 px-1.5 py-1 bg-white border border-indigo-200 rounded text-xs">
+                                              {(formData?.questions || []).filter((q: any) => q.id !== question.id).map((q: any) => (
+                                                <option key={q.id} value={q.id}>{q.text ? q.text.slice(0, 15) : 'سؤال'}</option>
+                                              ))}
+                                            </select>
+                                            <select value={rule.operator || 'equals'} onChange={(e) => { const r = [...(question.visibility_rules || [])]; r[ri] = { ...r[ri], operator: e.target.value }; updateQuestion(qIndex, { visibility_rules: r }) }} className="px-1.5 py-1 bg-white border border-indigo-200 rounded text-xs">
+                                              <option value="equals">=</option>
+                                              <option value="not_equals">≠</option>
+                                              <option value="contains">يحتوي</option>
+                                            </select>
+                                            <input type="text" value={rule.value || ''} onChange={(e) => { const r = [...(question.visibility_rules || [])]; r[ri] = { ...r[ri], value: e.target.value }; updateQuestion(qIndex, { visibility_rules: r }) }} placeholder="قيمة" className="w-14 px-1.5 py-1 bg-white border border-indigo-200 rounded text-xs" />
+                                            <button onClick={() => { const r = (question.visibility_rules || []).filter((_: any, i: number) => i !== ri); updateQuestion(qIndex, { visibility_rules: r.length > 0 ? r : undefined }) }} className="p-0.5 text-red-400 hover:text-red-600"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <p className="text-xs text-indigo-400 mt-0.5">بدون شروط — يظهر دائماً</p>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                             </SortableQuestionItem>
                           )
