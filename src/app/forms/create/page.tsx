@@ -152,6 +152,24 @@ const supabase = createClient()
 
       setProfile(profileData)
 
+      // Check if user is banned
+      if (profileData.banned) {
+        router.push('/dashboard?error=banned')
+        return
+      }
+
+      // Check form limit
+      if (profileData.form_limit !== -1 && profileData.form_limit !== null && profileData.form_limit !== undefined) {
+        const { data: userForms, count } = await supabase
+          .from('forms')
+          .select('id', { count: 'exact', head: true })
+          .eq('created_by', user.id)
+        if (count !== null && count >= profileData.form_limit) {
+          router.push('/dashboard?error=form_limit')
+          return
+        }
+      }
+
       // Get user's existing forms for question reuse
       const { data: forms } = await supabase
         .from('forms')

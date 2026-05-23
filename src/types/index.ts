@@ -19,6 +19,9 @@ export interface User {
   allow_delete_responses?: boolean
   randomize_questions?: boolean
   allow_multiple?: boolean
+  banned?: boolean
+  form_limit?: number | null
+  submission_limit?: number | null
 }
 
 // Project types

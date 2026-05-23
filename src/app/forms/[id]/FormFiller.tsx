@@ -753,6 +753,33 @@ export default function FormFiller({ form, questions, existingResponse: propExis
     }
 
     try {
+      // Check user limits if authenticated
+      if (userId) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('banned, submission_limit')
+          .eq('id', userId)
+          .single()
+
+        if (profile?.banned) {
+          setError('تم حظر حسابك. لا يمكنك إرسال الردود.')
+          setSubmitting(false)
+          return
+        }
+
+        if (profile?.submission_limit !== -1 && profile?.submission_limit !== null && profile?.submission_limit !== undefined) {
+          const { count } = await supabase
+            .from('form_responses')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', userId)
+          if (count !== null && count >= profile.submission_limit) {
+            setError(`لقد وصلت إلى الحد الأقصى لعدد الردود المسموح بها (${profile.submission_limit}).`)
+            setSubmitting(false)
+            return
+          }
+        }
+      }
+
       // If allow_multiple is false and there's existing response, update it
       // Otherwise always insert a new response
       if (!form.allow_multiple && existingResponse) {

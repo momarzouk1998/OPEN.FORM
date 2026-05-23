@@ -32,6 +32,11 @@ export default async function DashboardPage() {
     redirect('/login?rejected=true')
   }
 
+  if (profile.banned) {
+    await supabase.auth.signOut()
+    redirect('/login?banned=true')
+  }
+
   // Get stats for admins
   let stats = null
   if (profile.role === 'admin') {

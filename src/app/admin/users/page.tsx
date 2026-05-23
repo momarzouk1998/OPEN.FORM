@@ -9,6 +9,7 @@ import type { User, UserRole, AccountStatus, Gender, Project, UserProject } from
 type FilterStatus = 'all' | 'pending' | 'approved' | 'rejected'
 type FilterRole = 'all' | UserRole
 type FilterGender = 'all' | Gender
+type FilterBanned = 'all' | 'banned' | 'active'
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([])
@@ -17,6 +18,7 @@ export default function AdminUsersPage() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
   const [filterRole, setFilterRole] = useState<FilterRole>('all')
   const [filterGender, setFilterGender] = useState<FilterGender>('all')
+  const [filterBanned, setFilterBanned] = useState<FilterBanned>('all')
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
@@ -27,6 +29,8 @@ export default function AdminUsersPage() {
     phone: '',
     gender: '' as Gender | ''
   })
+  const [formLimit, setFormLimit] = useState('')
+  const [submissionLimit, setSubmissionLimit] = useState('')
 
   // Projects modal state
   const [showProjectsModal, setShowProjectsModal] = useState(false)
@@ -132,6 +136,38 @@ export default function AdminUsersPage() {
         if (resetError) throw resetError
         
         alert('تم إعادة تعيين الباسورد بنجاح. الباسورد الجديد: 123456')
+        setActionLoading(false)
+        return
+      }
+
+      if (action === 'ban' || action === 'unban') {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ banned: action === 'ban' })
+          .eq('id', userId)
+        if (error) throw error
+        const { data: updatedUsers } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false })
+        setUsers(updatedUsers || [])
+        setSelectedUser(prev => prev ? { ...prev, banned: action === 'ban' } : null)
+        setActionLoading(false)
+        return
+      }
+
+      if (action === 'limits') {
+        const updateFields: Record<string, any> = {}
+        if (formLimit !== '') updateFields.form_limit = formLimit === '-1' ? -1 : parseInt(formLimit)
+        if (submissionLimit !== '') updateFields.submission_limit = submissionLimit === '-1' ? -1 : parseInt(submissionLimit)
+        const { error } = await supabase.from('profiles').update(updateFields).eq('id', userId)
+        if (error) throw error
+        const { data: updatedUsers } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false })
+        setUsers(updatedUsers || [])
+        setSelectedUser(prev => prev ? { ...prev, ...updateFields } : null)
         setActionLoading(false)
         return
       }
@@ -281,7 +317,10 @@ export default function AdminUsersPage() {
     // Gender filter
     const matchesGender = filterGender === 'all' || user.gender === filterGender
 
-    return matchesSearch && matchesStatus && matchesRole && matchesGender
+    // Banned filter
+    const matchesBanned = filterBanned === 'all' || (filterBanned === 'banned' ? user.banned : !user.banned)
+
+    return matchesSearch && matchesStatus && matchesRole && matchesGender && matchesBanned
   })
 
   const getStatusBadge = (status: AccountStatus) => {
@@ -441,6 +480,17 @@ export default function AdminUsersPage() {
               <option value="male">ذكور</option>
               <option value="female">إناث</option>
             </select>
+
+            {/* Banned Filter */}
+            <select
+              value={filterBanned}
+              onChange={(e) => setFilterBanned(e.target.value as FilterBanned)}
+              className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">الجميع</option>
+              <option value="active">نشط</option>
+              <option value="banned">محظور</option>
+            </select>
           </div>
         </div>
 
@@ -477,7 +527,14 @@ export default function AdminUsersPage() {
                     <td className="px-6 py-4 text-gray-600">{user.email}</td>
                     <td className="px-6 py-4">{getGenderBadge(user.gender)}</td>
                     <td className="px-6 py-4">{getRoleBadge(user.role)}</td>
-                    <td className="px-6 py-4">{getStatusBadge(user.status)}</td>
+                    <td className="px-6 py-4">
+                      {getStatusBadge(user.status)}
+                      {user.banned && (
+                        <span className="px-2 py-1 text-xs rounded-full font-medium bg-red-100 text-red-700 mr-1">
+                          محظور
+                        </span>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         {user.status === 'pending' && (
@@ -502,6 +559,8 @@ export default function AdminUsersPage() {
                           onClick={() => {
                             setSelectedUser(user)
                             setShowModal(true)
+                            setFormLimit('')
+                            setSubmissionLimit('')
                           }}
                           className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 transition-colors"
                         >
@@ -539,6 +598,8 @@ export default function AdminUsersPage() {
               setShowModal(false)
               setSelectedUser(null)
               setEditingUser(false)
+              setFormLimit('')
+              setSubmissionLimit('')
             }}
           />
           <div className="relative bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
@@ -645,6 +706,22 @@ export default function AdminUsersPage() {
                     المشاريع
                   </button>
 
+                  {/* Ban / Unban */}
+                  <button
+                    onClick={() => handleAction(selectedUser.id, selectedUser.banned ? 'unban' : 'ban')}
+                    disabled={actionLoading}
+                    className={`w-full py-3 rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                      selectedUser.banned
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-red-600 text-white hover:bg-red-700'
+                    } disabled:opacity-50`}
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                    {selectedUser.banned ? 'إلغاء الحظر' : 'حظر المستخدم'}
+                  </button>
+
                   {/* Reset Password */}
                   <button
                     onClick={() => handleAction(selectedUser.id, 'reset_password')}
@@ -697,6 +774,55 @@ export default function AdminUsersPage() {
                     </div>
                   </div>
 
+                  {/* Limits */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-3">الحدود</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">حد الفورمز</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            value={formLimit}
+                            onChange={(e) => setFormLimit(e.target.value)}
+                            placeholder={selectedUser.form_limit === -1 ? 'غير محدود' : String(selectedUser.form_limit ?? -1)}
+                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                            min="-1"
+                          />
+                          <button
+                            onClick={() => handleAction(selectedUser.id, 'limits')}
+                            disabled={actionLoading}
+                            className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                          >
+                            حفظ
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">-1 غير محدود</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">حد الردود</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            value={submissionLimit}
+                            onChange={(e) => setSubmissionLimit(e.target.value)}
+                            placeholder={selectedUser.submission_limit === -1 ? 'غير محدود' : String(selectedUser.submission_limit ?? -1)}
+                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                            min="-1"
+                          />
+                          <button
+                            onClick={() => handleAction(selectedUser.id, 'limits')}
+                            disabled={actionLoading}
+                            className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                          >
+                            حفظ
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">-1 غير محدود</p>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Status Change */}
                   {selectedUser.status !== 'pending' && (
                     <div>
@@ -746,6 +872,8 @@ export default function AdminUsersPage() {
                   onClick={() => {
                     setShowModal(false)
                     setSelectedUser(null)
+                    setFormLimit('')
+                    setSubmissionLimit('')
                   }}
                   className="w-full mt-6 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                 >

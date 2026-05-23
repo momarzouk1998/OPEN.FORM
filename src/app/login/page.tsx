@@ -20,6 +20,9 @@ export default function LoginPage() {
     if (urlParams.get('pending') === 'true') {
       setShowPendingMessage(true)
     }
+    if (urlParams.get('banned') === 'true') {
+      setError('تم حظر حسابك. تواصل مع الإدارة للمزيد من المعلومات.')
+    }
   }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -37,9 +40,16 @@ export default function LoginPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('status, role')
+        .select('status, role, banned')
         .eq('id', data.user.id)
         .single()
+
+      if (profile?.banned) {
+        await supabase.auth.signOut()
+        setError('تم حظر حسابك. تواصل مع الإدارة للمزيد من المعلومات.')
+        setLoading(false)
+        return
+      }
 
       if (profile?.status === 'pending') {
         await supabase.auth.signOut()
