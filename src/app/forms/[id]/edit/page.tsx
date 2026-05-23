@@ -748,7 +748,16 @@ const params = useParams()
             dropdown_type = parsedOpts.dropdown_type
             correct_option_ids = parsedOpts.correct_option_ids || []
           }
-          optionsValue = parsedOpts.matrix_rows ? [] : (parsedOpts.options || parsedOpts)
+          // Convert objects with numeric keys (old format) to arrays
+          if (parsedOpts.matrix_rows) {
+            optionsValue = []
+          } else if (parsedOpts.options) {
+            optionsValue = parsedOpts.options
+          } else if (!Array.isArray(parsedOpts) && typeof parsedOpts === 'object' && Object.keys(parsedOpts).some(k => !isNaN(Number(k)))) {
+            optionsValue = Object.values(parsedOpts).filter((v: any) => typeof v === 'object' && !Array.isArray(v) && v !== null)
+          } else {
+            optionsValue = parsedOpts
+          }
         }
 
         return {
@@ -1052,7 +1061,7 @@ const params = useParams()
 
     updateQuestion(questionIndex, {
 
-      options: [...(formData.questions[questionIndex].options || []), newOption]
+      options: [...(Array.isArray(formData.questions[questionIndex].options) ? formData.questions[questionIndex].options : []), newOption]
 
     })
 
@@ -2539,7 +2548,7 @@ const params = useParams()
                                         {(parseOptions(question.options) as any[]).map((opt: any, oi: number) => (
                                           <div key={oi} className="text-center">
                                             <div className="w-full py-1.5 bg-blue-600 text-white rounded-lg font-bold text-sm mb-1">{opt.text}</div>
-                                            <input type="number" value={opt.points} onChange={(e) => { const idx = (question.options || []).findIndex((o: any) => o.id === opt.id); if (idx >= 0) updateOption(qIndex, idx, { points: Number(e.target.value) }) }} className={`w-full px-1 py-1 border border-blue-200 rounded text-center text-sm ${!!(formData?.page_titles as any)?._is_test ? '' : 'hidden'}`} />
+                                            <input type="number" value={opt.points} onChange={(e) => { const idx = (Array.isArray(question.options) ? question.options : []).findIndex((o: any) => o.id === opt.id); if (idx >= 0) updateOption(qIndex, idx, { points: Number(e.target.value) }) }} className={`w-full px-1 py-1 border border-blue-200 rounded text-center text-sm ${!!(formData?.page_titles as any)?._is_test ? '' : 'hidden'}`} />
                                           </div>
                                         ))}
                                       </div>
