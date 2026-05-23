@@ -161,10 +161,16 @@ function EditFormContent() {
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null>(null)
   const [showLeftPanel, setShowLeftPanel] = useState(true)
   const [showRightPanel, setShowRightPanel] = useState(true)
-  const [isPreviewActive, setIsPreviewActive] = useState(false)
-  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
+   const [isPreviewActive, setIsPreviewActive] = useState(false)
+   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
 
-  const [responseCount, setResponseCount] = useState(0)
+   // Convert to template states
+   const [showConvertToTemplate, setShowConvertToTemplate] = useState(false)
+   const [convertToTemplateLoading, setConvertToTemplateLoading] = useState(false)
+   const [templateTitle, setTemplateTitle] = useState('')
+   const [templateDescription, setTemplateDescription] = useState('')
+
+   const [responseCount, setResponseCount] = useState(0)
 
   const [isDesignerOpen, setIsDesignerOpen] = useState(false)
   const [designerTab, setDesignerTab] = useState<'colors' | 'styles' | 'themes' | 'layout' | 'button'>('colors')
@@ -1570,18 +1576,28 @@ const params = useParams()
             </svg>
             <span className="hidden sm:inline">نسخ الرابط</span>
           </button>
-          <button
-            onClick={() => { setIsPreviewActive(prev => !prev); setShowSettingsModal(false) }}
-            className="flex flex-col sm:flex-row items-center gap-1 px-2 sm:px-3 py-2 sm:py-1.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 active:scale-95 transition-all text-[10px] sm:text-xs font-medium cursor-pointer min-w-0 sm:min-w-fit"
-            title="معاينة النموذج"
-          >
-            <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            <span className="hidden sm:inline">معاينة</span>
-          </button>
-          {/* Collaboration indicator */}
+           <button
+             onClick={() => { setIsPreviewActive(prev => !prev); setShowSettingsModal(false) }}
+             className="flex flex-col sm:flex-row items-center gap-1 px-2 sm:px-3 py-2 sm:py-1.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 active:scale-95 transition-all text-[10px] sm:text-xs font-medium cursor-pointer min-w-0 sm:min-w-fit"
+             title="معاينة النموذج"
+           >
+             <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+             </svg>
+             <span className="hidden sm:inline">معاينة</span>
+           </button>
+           <button
+             onClick={() => setShowConvertToTemplate(true)}
+             className="flex flex-col sm:flex-row items-center gap-1 px-2 sm:px-3 py-2 sm:py-1.5 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 active:scale-95 transition-all text-[10px] sm:text-xs font-medium cursor-pointer min-w-0 sm:min-w-fit"
+             title="تحويل إلى قالب"
+           >
+             <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+             </svg>
+             <span className="hidden sm:-inline">قالب</span>
+           </button>
+           {/* Collaboration indicator */}
           <div className="flex items-center gap-1.5 px-2">
             <span className={`w-2 h-2 rounded-full ${
               collabStatus === 'connected' ? 'bg-green-500' : collabStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' : 'bg-gray-400'
@@ -3272,16 +3288,106 @@ const params = useParams()
           <button
             onClick={() => setIsDesignerOpen(false)}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-all shadow-sm cursor-pointer border-0"
-          >
-            تم وتطبيق التغييرات
-          </button>
-        </div>
-      </div>
-    </div>
-
-  )
-
-}
+           >
+             تم وتطبيق التغييرات
+           </button>
+         </div>
+       </div>
+     </div>
+   )
+   
+   {/* Convert to Template Modal */}
+   {showConvertToTemplate && (
+     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+       <div className="bg-white rounded-2xl w-full max-w-md p-6">
+         <div className="mb-6">
+           <h2 className="text-2xl font-bold text-gray-900">تحويل النموذج إلى قالب</h2>
+           <p className="text-gray-600">
+             سيصبح هذا النموذج قالبًا يمكن للمستخدمين الآخرين استخدامه كنقطة بداية
+           </p>
+         </div>
+         
+         <div className="space-y-4">
+           <div>
+             <label className="block text-sm font-medium text-gray-700 mb-2">اسم القالب</label>
+             <input
+               type="text"
+               value={templateTitle}
+               onChange={(e) => setTemplateTitle(e.target.value)}
+               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+               placeholder="أدخل اسم القالب"
+               required
+             />
+           </div>
+           
+           <div>
+             <label className="block text-sm font-medium text-gray-700 mb-2">وصف القالب</label>
+             <textarea
+               value={templateDescription}
+               onChange={(e) => setTemplateDescription(e.target.value)}
+               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+               rows="4"
+               placeholder="صف briefly ما يحتويه هذا القالب"
+               required
+             />
+           </div>
+           
+           <div className="flex justify-end space-x-3">
+             <button
+               onClick={() => setShowConvertToTemplate(false)}
+               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300"
+             >
+               إلغاء
+             </button>
+             <button
+               onClick={async () => {
+                 if (!templateTitle.trim()) {
+                   alert('يرجى إدخال اسم القالب')
+                   return
+                 }
+                 
+                 setConvertToTemplateLoading(true)
+                 
+                 try {
+                   const supabase = createClient()
+                   
+                   // First create the template record
+                   const { data: templateData, error: templateError } = await supabase
+                     .from('user_templates')
+                     .insert({
+                       title: templateTitle,
+                       description: templateDescription,
+                       user_id: profile?.id,
+                       form_id: formData?.id,
+                       approved: false // Requires admin approval
+                     })
+                     .select()
+                     .single()
+                     
+                   if (templateError) throw templateError
+                   
+                   alert('تم إنشاء القالب بنجاح! سيظهر في القائمة بعد موافقة المشرف')
+                   setShowConvertToTemplate(false)
+                   setTemplateTitle('')
+                   setTemplateDescription('')
+                 } catch (error: any) {
+                   console.error('Template creation error:', error)
+                   alert(error.message || 'فشل إنشاء القالب')
+                 } finally {
+                   setConvertToTemplateLoading(false)
+                 }
+               }}
+               disabled={convertToTemplateLoading}
+               className={`px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50`}
+             >
+               {convertToTemplateLoading ? 'جاري الإنشاء...' : 'إنشاء القالب'}
+             </button>
+           </div>
+         </div>
+       </div>
+     </div>
+   )
+ }
 
 
 

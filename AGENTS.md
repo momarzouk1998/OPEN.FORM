@@ -72,6 +72,9 @@
 - Admin approval required for user templates before public display
 - Avatar upload added to profile page (uploads to `project-images` bucket)
 - Admin partner management card added to admin dashboard
+- Admin partner management page (`src/app/admin/partners/page.tsx`): manage partner status, approve ideas, approve user templates
+- Referral code registration on signup: handles `ref` parameter and increments referrer's count
+- User template creation flow: "تحويل إلى قالب" button in form edit page
 
 ### In Progress
 - (none)

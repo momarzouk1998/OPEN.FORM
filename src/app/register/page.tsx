@@ -79,29 +79,50 @@ function RegisterForm() {
 
       if (signUpError) throw signUpError
 
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: data.user.id,
-            email: formData.email,
-            name: formData.name,
-            phone: formData.phone,
-            gender: 'male',
-            role: 'volunteer',
-            status: 'approved'
-          })
-          .eq('id', data.user.id)
+       if (data.user) {
+         // Handle referral code from search params
+         const referralCode = searchParams.get('ref')
+         
+         const { error: profileError } = await supabase
+           .from('profiles')
+           .upsert({
+             id: data.user.id,
+             email: formData.email,
+             name: formData.name,
+             phone: formData.phone,
+             gender: 'male',
+             role: 'volunteer',
+             status: 'approved'
+           })
+           .eq('id', data.user.id)
 
-        if (profileError) console.error('Profile update error:', profileError)
+         if (profileError) console.error('Profile update error:', profileError)
 
-        await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password
-        })
+         // If referral code exists, find the referrer and increment their count
+         if (referralCode) {
+           const { data: referrer, error: referrerError } = await supabase
+             .from('profiles')
+             .select('id, referral_count')
+             .eq('referral_code', referralCode)
+             .single()
 
-        router.push(inviteToken ? `/join/${inviteToken}` : '/dashboard')
-      }
+           if (!referrerError && referrer) {
+             const { error: updateError } = await supabase
+               .from('profiles')
+               .update({ referral_count: referrer.referral_count + 1 })
+               .eq('id', referrer.id)
+
+             if (updateError) console.error('Failed to update referral count:', updateError)
+           }
+         }
+
+         await supabase.auth.signInWithPassword({
+           email: formData.email,
+           password: formData.password
+         })
+
+         router.push(inviteToken ? `/join/${inviteToken}` : '/dashboard')
+       }
     } catch (error: any) {
       console.error('Registration error:', error)
       setError(error.message || 'حدث خطأ أثناء التسجيل')

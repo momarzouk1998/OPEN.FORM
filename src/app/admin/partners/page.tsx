@@ -1,0 +1,283 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { createClient } from '@/utils/supabase/client'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { PartnerIdea, PartnerLike, Referral, UserTemplate, PartnerProfile } from '@/types'
+
+export default async function AdminPartnersPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return <div>Unauthorized</div>
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.role !== 'admin') {
+    return <div>Access denied</div>
+  }
+
+  const [partners, setPartners] = useState<PartnerProfile[]>([])
+  const [ideas, setIdeas] = useState<PartnerIdea[]>([])
+  const [templates, setTemplates] = useState<UserTemplate[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Fetch data
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  async function fetchData() {
+    setLoading(true)
+    // Fetch partners (profiles with is_partner = true)
+    const { data: partnersData, error: partnersError } = await supabase
+      .from('profiles')
+      .select('id, name, email, avatar_url, company, bio, facebook_url, linkedin_url, youtube_url, other_links, referral_code, referral_count, is_partner, created_at')
+      .eq('is_partner', true)
+      .order('referral_count', { ascending: false })
+
+    if (!partnersError) {
+      setPartners(partnersData as PartnerProfile[])
+    }
+
+    // Fetch pending ideas
+    const { data: ideasData, error: ideasError } = await supabase
+      .from('partner_ideas')
+      .select('id, user_id, title, description, implemented, created_at, profiles!inner(name, avatar_url)')
+      .order('created_at', { ascending: false })
+
+    if (!ideasError) {
+      setIdeas(ideasData as PartnerIdea[])
+    }
+
+    // Fetch pending templates (not approved)
+    const { data: templatesData, error: templatesError } = await supabase
+      .from('user_templates')
+      .select('id, user_id, title, description, approved, created_at, profiles!inner(name, avatar_url), forms!inner(id, name)')
+      .eq('approved', false)
+      .order('created_at', { ascending: false })
+
+    if (!templatesError) {
+      setTemplates(templatesData as UserTemplate[])
+    }
+
+    setLoading(false)
+  }
+
+  // Toggle partner status
+  async function togglePartner(userId: string, currentStatus: boolean) {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_partner: !currentStatus })
+      .eq('id', userId)
+
+    if (!error) {
+      await fetchData()
+    } else {
+      alert('حدث خطأ أثناء تحديث الحالة')
+    }
+  }
+
+  // Approve idea
+  async function approveIdea(ideaId: string) {
+    const { error } = await supabase
+      .from('partner_ideas')
+      .update({ implemented: true })
+      .eq('id', ideaId)
+
+    if (!error) {
+      await fetchData()
+    } else {
+      alert('حدث خطأ أثناء الموافقة على الفكرة')
+    }
+  }
+
+  // Approve template
+  async function approveTemplate(templateId: string) {
+    const { error } = await supabase
+      .from('user_templates')
+      .update({ approved: true })
+      .eq('id', templateId)
+
+    if (!error) {
+      await fetchData()
+    } else {
+      alert('حدث خطأ أثناء الموافقة على القالب')
+    }
+  }
+
+  if (loading) {
+    return <div className="p-8">جاري التحميل...</div>
+  }
+
+  return (
+    <div dir="rtl" className="min-h-screen bg-gray-50">
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold text-gray-900">إدارة شركاء النجاح</h1>
+            <Link href="/admin" className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-300">
+              terug إلى لوحة التحكم
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid gap-8 mb-8">
+          <div className="lg:col-span-3">
+            <section className="bg-white rounded-2xl shadow-sm border border-gray-100">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <h2 className="text-xl font-bold text-gray-900">قائمة الشركاء</h2>
+              </div>
+              <div className="overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">الصورة</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">الاسم</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">الشركة</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">عدد الإحالات</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">الحالة</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {partners.map(partner => (
+                      <tr key={partner.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap flex items-center">
+                          {partner.avatar_url ? (
+                            <img src={partner.avatar_url} alt={partner.name} className="h-10 w-10 rounded-full" />
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 font-medium">
+                              {partner.name?.charAt(0) || '?'}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{partner.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{partner.company || '-'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{partner.referral_count || 0}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            شريك
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => togglePartner(partner.id, partner.is_partner)}
+                            className={`px-3 py-1 text-sm font-medium rounded border ${partner.is_partner ? 'bg-red-100 text-red-800 hover:bg-red-200' : 'bg-green-100 text-green-800 hover:bg-green-200'}`}
+                          >
+                            {partner.is_partner ? 'إزالة' : 'جعل شريك'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {partners.length === 0 && (
+                      <tr>
+                        <td colspan="6" className="px-6 py-4 text-center text-gray-500">
+                          لا يوجد شركاء بعد
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <div className="lg:col-span-1">
+            <section className="bg-white rounded-2xl shadow-sm border border-gray-100">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <h2 className="text-xl font-bold text-gray-900">الأفكار والمقترحات</h2>
+              </div>
+              <div className="space-y-4 p-4">
+                {ideas.map(idea => (
+                  <div key={idea.id} className="border rounded-xl p-4 bg-gray-50">
+                    <div className="flex items-start space-x-3">
+                      {idea.profiles?.avatar_url ? (
+                        <img src={idea.profiles.avatar_url} alt={idea.profiles.name} className="h-10 w-10 rounded-full" />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 font-medium">
+                          {idea.profiles?.name?.charAt(0) || '?'}
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900">{idea.title}</h3>
+                        <p className="mt-1 text-sm text-gray-600 line-clamp-2">{idea.description}</p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${idea.implemented ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                            {idea.implemented ? 'منفذ' : 'قيد المراجعة'}
+                          </span>
+                          <button
+                            onClick={() => approveIdea(idea.id)}
+                            disabled={idea.implemented}
+                            className={`ml-2 px-3 py-1 text-sm font-medium rounded border ${idea.implemented ? 'bg-gray-200 text-gray-400' : 'bg-blue-100 text-blue-800 hover:bg-blue-200'}`}
+                          >
+                            {idea.implemented ? 'تم التنفيذ' : 'موافق'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {ideas.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    لا توجد أفكار جديدة
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-100">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h2 className="text-xl font-bold text-gray-900">القوالب في انتظار الموافقة</h2>
+          </div>
+          <div className="space-y-4 p-4">
+            {templates.map(template => (
+              <div key={template.id} className="border rounded-xl p-4 bg-gray-50">
+                <div className="flex items-start space-x-3">
+                  {template.profiles?.avatar_url ? (
+                    <img src={template.profiles.avatar_url} alt={template.profiles.name} className="h-10 w-10 rounded-full" />
+                  ) : (
+                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 font-medium">
+                      {template.profiles?.name?.charAt(0) || '?'}
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-900">{template.title}</h3>
+                    <p className="mt-1 text-sm text-gray-600 line-clamp-2">{template.description}</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-sm text-gray-500">
+                        القالب بناءً على النموذج: <span className="font-medium">{template.forms?.name}</span>
+                      </span>
+                      <button
+                        onClick={() => approveTemplate(template.id)}
+                        className="px-3 py-1 text-sm font-medium rounded border bg-blue-100 text-blue-800 hover:bg-blue-200"
+                      >
+                        موافق
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {templates.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                لا توجد قوالب في انتظار الموافقة
+              </div>
+            )}
+          </div>
+        </section>
+      </main>
+    </div>
+  )
+}

@@ -499,77 +499,89 @@ export default function AdminUsersPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-right min-w-[800px]">
               <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">المستخدم</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">البريد الإلكتروني</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">النوع</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الدور</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الحالة</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الإجراءات</th>
-                </tr>
+                 <tr>
+                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">المستخدم</th>
+                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">البريد الإلكتروني</th>
+                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">النوع</th>
+                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الدور</th>
+                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الحالة</th>
+                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الشريك</th>
+                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الإجراءات</th>
+                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold">
-                          {user.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{user.name}</p>
-                          {user.phone && (
-                            <p className="text-sm text-gray-500">{user.phone}</p>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">{user.email}</td>
-                    <td className="px-6 py-4">{getGenderBadge(user.gender)}</td>
-                    <td className="px-6 py-4">{getRoleBadge(user.role)}</td>
-                    <td className="px-6 py-4">
-                      {getStatusBadge(user.status)}
-                      {user.banned && (
-                        <span className="px-2 py-1 text-xs rounded-full font-medium bg-red-100 text-red-700 mr-1">
-                          محظور
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        {user.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => handleAction(user.id, 'approve')}
-                              disabled={actionLoading}
-                              className="px-3 py-1 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-                            >
-                              قبول
-                            </button>
-                            <button
-                              onClick={() => handleAction(user.id, 'reject')}
-                              disabled={actionLoading}
-                              className="px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                            >
-                              رفض
-                            </button>
-                          </>
-                        )}
-                        <button
-                          onClick={() => {
-                            setSelectedUser(user)
-                            setShowModal(true)
-                            setFormLimit('')
-                            setSubmissionLimit('')
-                          }}
-                          className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 transition-colors"
-                        >
-                          إدارة
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                 {filteredUsers.map((user) => (
+                   <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                     <td className="px-6 py-4">
+                       <div className="flex items-center gap-3">
+                         <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold">
+                           {user.name.charAt(0)}
+                         </div>
+                         <div>
+                           <p className="font-medium text-gray-900">{user.name}</p>
+                           {user.phone && (
+                             <p className="text-sm text-gray-500">{user.phone}</p>
+                           )}
+                         </div>
+                       </div>
+                     </td>
+                     <td className="px-6 py-4 text-gray-600">{user.email}</td>
+                     <td className="px-6 py-4">{getGenderBadge(user.gender)}</td>
+                     <td className="px-6 py-4">{getRoleBadge(user.role)}</td>
+                     <td className="px-6 py-4">
+                       {getStatusBadge(user.status)}
+                       {user.banned && (
+                         <span className="px-2 py-1 text-xs rounded-full font-medium bg-red-100 text-red-700 mr-1">
+                           محظور
+                         </span>
+                       )}
+                     </td>
+                     <td className="px-6 py-4">
+                       {user.is_partner ? (
+                         <span className="px-2 py-1 text-xs rounded-full font-medium bg-indigo-100 text-indigo-800">
+                           شريك
+                         </span>
+                       ) : (
+                         <span className="px-2 py-1 text-xs rounded-full font-medium bg-gray-100 text-gray-500">
+                           عادي
+                         </span>
+                       )}
+                     </td>
+                     <td className="px-6 py-4">
+                       <div className="flex items-center gap-2">
+                         {user.status === 'pending' && (
+                           <>
+                             <button
+                               onClick={() => handleAction(user.id, 'approve')}
+                               disabled={actionLoading}
+                               className="px-3 py-1 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                             >
+                               قبول
+                             </button>
+                             <button
+                               onClick={() => handleAction(user.id, 'reject')}
+                               disabled={actionLoading}
+                               className="px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                             >
+                               رفض
+                             </button>
+                           </>
+                         )}
+                         <button
+                           onClick={() => {
+                             setSelectedUser(user)
+                             setShowModal(true)
+                             setFormLimit('')
+                             setSubmissionLimit('')
+                           }}
+                           className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 transition-colors"
+                         >
+                           إدارة
+                         </button>
+                       </div>
+                     </td>
+                   </tr>
+                 ))}
 
                 {filteredUsers.length === 0 && (
                   <tr>
