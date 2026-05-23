@@ -9,6 +9,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import ImageUpload from '@/components/ImageUpload'
+import RichTextEditor from '@/components/RichTextEditor'
 import FormFiller from '../FormFiller'
 
 import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
@@ -1146,7 +1147,7 @@ const params = useParams()
           randomize_questions: formData.randomize_questions || false,
           image_url: formData.image_url || null,
           short_code: formData.short_code || generateShortCode(),
-          page_titles: { ...formData.page_titles, _payment: formData.payment_info || [] }
+          page_titles: { ...formData.page_titles, _payment: formData.payment_info || [], _submit_button: (formData.page_titles as any)?._submit_button || {} }
 
         })
 
@@ -1764,6 +1765,79 @@ const params = useParams()
                 </div>
               </div>
 
+              {/* Submit Button Customization */}
+              <div>
+                <h4 className="text-sm font-bold text-gray-900 mb-3">زر الإرسال</h4>
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 space-y-3">
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">نص الزر</label>
+                    <div className="flex gap-2">
+                      {['إرسال', 'تسجيل', 'حجز', 'تأكيد الطلب', 'Submission'].map((t) => {
+                        const currentText = (formData?.page_titles as any)?._submit_button?.text
+                        return (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => setFormData(prev => prev ? ({
+                              ...prev,
+                              page_titles: { ...prev.page_titles, _submit_button: { ...((prev.page_titles as any)?._submit_button || {}), text: t } }
+                            }) : null)}
+                            className={`px-2 py-1 text-xs rounded-md border transition-colors ${
+                              currentText === t
+                                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                            }`}
+                          >
+                            {t}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <input
+                      type="text"
+                      value={(formData?.page_titles as any)?._submit_button?.text || ''}
+                      onChange={(e) => setFormData(prev => prev ? ({
+                        ...prev,
+                        page_titles: { ...prev.page_titles, _submit_button: { ...((prev.page_titles as any)?._submit_button || {}), text: e.target.value } }
+                      }) : null)}
+                      placeholder="نص مخصص..."
+                      className="mt-2 w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">لون الزر</label>
+                    <div className="flex gap-2 items-center">
+                      {['#059669', '#2563eb', '#dc2626', '#7c3aed', '#d97706', '#0891b2'].map((c) => {
+                        const currentColor = (formData?.page_titles as any)?._submit_button?.color
+                        return (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => setFormData(prev => prev ? ({
+                              ...prev,
+                              page_titles: { ...prev.page_titles, _submit_button: { ...((prev.page_titles as any)?._submit_button || {}), color: c } }
+                            }) : null)}
+                            className={`w-7 h-7 rounded-full border-2 transition-all ${
+                              currentColor === c ? 'border-gray-900 scale-110' : 'border-transparent'
+                            }`}
+                            style={{ backgroundColor: c }}
+                          />
+                        )
+                      })}
+                      <input
+                        type="color"
+                        value={(formData?.page_titles as any)?._submit_button?.color || '#059669'}
+                        onChange={(e) => setFormData(prev => prev ? ({
+                          ...prev,
+                          page_titles: { ...prev.page_titles, _submit_button: { ...((prev.page_titles as any)?._submit_button || {}), color: e.target.value } }
+                        }) : null)}
+                        className="w-7 h-7 rounded cursor-pointer border border-gray-200"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Payment Info Section */}
               <div>
                 <h4 className="text-sm font-bold text-gray-900 mb-3">بيانات الدفع</h4>
@@ -1999,9 +2073,21 @@ const params = useParams()
                                   {/* Question Text */}
                                   <div>
                                     <label className="block text-xs font-medium text-gray-600 mb-1.5">نص السؤال</label>
-                                    {['terms', 'static_text'].includes(question.type) ? (
-                                      <textarea value={question.text} onChange={(e) => updateQuestion(qIndex, { text: e.target.value })} rows={4} placeholder="اكتب النص هنا..." className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
-                                    ) : (
+                    {question.type === 'static_text' ? (
+                      <RichTextEditor
+                        value={question.text}
+                        onChange={(html) => updateQuestion(qIndex, { text: html })}
+                        placeholder="اكتب النص هنا..."
+                      />
+                    ) : ['terms'].includes(question.type) ? (
+                      <textarea
+                        value={question.text}
+                        onChange={(e) => updateQuestion(qIndex, { text: e.target.value })}
+                        rows={4}
+                        placeholder="اكتب النص هنا..."
+                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      />
+                    ) : (
                                       <input type="text" value={question.text} onChange={(e) => updateQuestion(qIndex, { text: e.target.value })} placeholder="اكتب السؤال هنا..." className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
                                     )}
                                   </div>

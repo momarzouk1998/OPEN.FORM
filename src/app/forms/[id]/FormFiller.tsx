@@ -1576,8 +1576,8 @@ export default function FormFiller({ form, questions, existingResponse: propExis
         )
       case 'static_text':
         return (
-          <div className="bg-gray-50 border border-gray-100 rounded-xl p-6 text-gray-700 whitespace-pre-wrap">
-            {question.text || 'نص توضيحي'}
+          <div className="bg-gray-50 border border-gray-100 rounded-xl p-6 text-gray-700 text-right leading-relaxed prose prose-sm max-w-none [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pr-5 [&_ol]:list-decimal [&_ol]:pr-5">
+            <div dangerouslySetInnerHTML={{ __html: question.text || 'نص توضيحي' }} />
           </div>
         )
 
@@ -2346,7 +2346,12 @@ export default function FormFiller({ form, questions, existingResponse: propExis
                 <button
                   onClick={handleSubmit}
                   disabled={submitting}
-                  className="flex-1 py-4 bg-gradient-to-l from-emerald-600 to-green-600 text-white font-semibold rounded-2xl hover:from-emerald-700 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/25 form-themed-primary-bg"
+                  className="flex-1 py-4 text-white font-semibold rounded-2xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg form-themed-primary-bg"
+                  style={{
+                    background: (form.page_titles as any)?._submit_button?.color
+                      ? (form.page_titles as any)._submit_button.color
+                      : 'linear-gradient(to left, #059669, #16a34a)',
+                  }}
                 >
                   {submitting ? (
                     <span className="flex items-center justify-center gap-2">
@@ -2357,7 +2362,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
                       جاري الحفظ...
                     </span>
                   ) : (
-                    'حفظ الإجابات'
+                    (form.page_titles as any)?._submit_button?.text || 'حفظ الإجابات'
                   )}
                 </button>
               )}

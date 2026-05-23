@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ImageUpload from '@/components/ImageUpload'
+import RichTextEditor from '@/components/RichTextEditor'
 import type { QuestionType, QuestionOption, FormTemplate } from '@/types'
 import { TEMPLATE_CATEGORIES } from '@/types'
 import { generateShortCode } from '@/lib/shortCode'
@@ -850,7 +851,13 @@ const supabase = createClient()
                     {qIndex + 1}
                   </span>
                   <div className="flex-1">
-                    {['terms', 'static_text'].includes(question.type) ? (
+                    {question.type === 'static_text' ? (
+                      <RichTextEditor
+                        value={question.text}
+                        onChange={(html) => updateQuestion(qIndex, { text: html })}
+                        placeholder="اكتب النص هنا..."
+                      />
+                    ) : ['terms'].includes(question.type) ? (
                       <textarea
                         value={question.text}
                         onChange={(e) => updateQuestion(qIndex, { text: e.target.value })}
