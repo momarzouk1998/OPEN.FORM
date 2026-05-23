@@ -1958,7 +1958,6 @@ const params = useParams()
                           }
 
                           return (
-                            <SortableQuestionItem key={question.id} id={question.id}>
                             <div
                               key={question.id}
                               onClick={() => setSelectedQuestionIndex(isSelected ? null : qIndex)}
@@ -2336,13 +2335,9 @@ const params = useParams()
                                       </div>
                                     </div>
                                   )}
+                                </div>
 
-
-
-
-
-                            </div>
-                          )}
+                              )}
                             <div className="relative flex justify-center -mt-2 mb-1">
                               <button
                                 type="button"
@@ -2453,7 +2448,7 @@ const params = useParams()
                                 </div>
                               )}
                             </div>
-                            </SortableQuestionItem>
+                            </div>
                           )
                         })}
                           </SortableContext>
