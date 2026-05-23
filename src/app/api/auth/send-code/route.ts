@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 
     // Send email via Resend
     await sendEmail({
-      from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+      from: process.env.RESEND_FROM_EMAIL || 'noreply@openappo.com',
       to: email,
       subject: '🔐 كود التحقق - OpenApp.Form',
       html: `
