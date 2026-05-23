@@ -463,12 +463,19 @@ export default function FormFiller({ form, questions, existingResponse: propExis
         return options
       }
     }
-    if (Array.isArray(options) && options.length > 0 && options[options.length - 1]?._visibility_rules !== undefined) {
-      const arr = [...options]
-      arr.pop()
-      return arr
+    if (Array.isArray(options)) {
+      if (options.length > 0 && options[options.length - 1]?._visibility_rules !== undefined) {
+        const arr = [...options]
+        arr.pop()
+        return arr
+      }
+      return options
     }
-    return options
+    // Convert objects with numeric keys (old format) to arrays
+    if (typeof options === 'object' && Object.keys(options).some(k => !isNaN(Number(k)))) {
+      return Object.values(options).filter((v: any) => typeof v === 'object' && !Array.isArray(v) && v !== null) as any[]
+    }
+    return options as any
   }
 
   // Delete old response to allow re-submission
