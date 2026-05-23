@@ -2990,7 +2990,7 @@ const params = useParams()
 
 
 
-export function SortableQuestionItem({
+function SortableQuestionItem({
   id,
   children,
   className,
