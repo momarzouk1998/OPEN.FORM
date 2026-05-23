@@ -1578,9 +1578,7 @@ const params = useParams()
               collabStatus === 'connected' ? 'bg-green-500' : collabStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' : 'bg-gray-400'
             }`} />
             <span className="text-[10px] text-gray-500 hidden sm:inline">
-              {collabStatus === 'connected'
-                ? collaborators.length > 0 ? `${collaborators.length} متصل` : 'متصل'
-                : collabStatus === 'connecting' ? 'جاري الاتصال...' : 'غير متصل'}
+              {collabStatus === 'connecting' ? 'جاري الاتصال...' : ''}
             </span>
             {collaborators.map(c => (
               <span key={c.id} className="w-6 h-6 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-[10px] font-bold" title={c.name}>
@@ -1616,7 +1614,7 @@ const params = useParams()
               <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent"></div>
             ) : (
               <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
               </svg>
             )}
             <span className="hidden sm:inline">{saving ? 'جاري الحفظ...' : 'حفظ'}</span>
