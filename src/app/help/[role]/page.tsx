@@ -925,7 +925,7 @@ export default function HelpPage({ params }: RolePageProps) {
               )}
             </div>
             <div>
-              <p className="text-sm font-bold text-gray-700">{settings?.app_name || 'OpenApp.Form'}</p>
+              <p className="text-sm font-bold text-gray-700">{settings?.app_name || 'Forms.OpenappO'}</p>
               <p className="text-xs text-gray-400">دليل المستخدم الشامل</p>
             </div>
           </div>

@@ -20,7 +20,7 @@ export default function AdminSettingsPage() {
 
     app_logo: '',
 
-    app_name: 'OpenApp.Form',
+    app_name: 'Forms.OpenappO',
 
     app_description: 'منصة النماذج والاستبيانات الاحترافية'
 

@@ -21,7 +21,7 @@ import ServiceWorker from '@/components/ServiceWorker';
 import FooterBar from '@/components/FooterBar';
 
 export async function generateMetadata(): Promise<Metadata> {
-  let appName = "OpenApp.Form";
+  let appName = "Forms.OpenappO";
   let appDesc = "منصة النماذج والاستبيانات الاحترافية";
   let appLogo = "/icon.svg";
 

@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     await sendEmail({
       from: process.env.RESEND_FROM_EMAIL || 'noreply@openappo.com',
       to: email,
-      subject: '🔐 كود التحقق - OpenApp.Form',
+      subject: '🔐 كود التحقق - Forms.OpenappO',
       html: `
         <div dir="rtl" style="font-family: 'Cairo', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; background: #f8fafc; border-radius: 16px;">
           <div style="text-align: center; margin-bottom: 24px;">
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
             <p style="font-size: 13px; color: #94a3b8; margin: 0;">هذا الكود صالح لمدة <strong>10 دقائق</strong> فقط.</p>
             <p style="font-size: 13px; color: #94a3b8; margin: 8px 0 0;">إذا لم تطلب هذا الكود، يمكنك تجاهل هذه الرسالة.</p>
           </div>
-          <p style="text-align: center; font-size: 12px; color: #cbd5e1; margin-top: 20px;">© ${new Date().getFullYear()} OpenApp.Form - جميع الحقوق محفوظة</p>
+          <p style="text-align: center; font-size: 12px; color: #cbd5e1; margin-top: 20px;">© ${new Date().getFullYear()} Forms.OpenappO - جميع الحقوق محفوظة</p>
         </div>
       `
     })

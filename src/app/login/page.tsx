@@ -205,7 +205,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-gray-400 text-xs mt-6">
-          © 2026 OpenApp.Form. جميع الحقوق محفوظة
+          © 2026 Forms.OpenappO. جميع الحقوق محفوظة
         </p>
       </div>
     </div>
