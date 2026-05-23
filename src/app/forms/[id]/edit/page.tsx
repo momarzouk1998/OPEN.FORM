@@ -46,6 +46,7 @@ const QUESTION_TYPES: Record<string, { label: string; icon: string; description:
   youtube: { label: 'فيديو يوتيوب', icon: '▶️', description: 'تضمين فيديو يوتيوب', explanation: 'لعرض فيديو توضيحي داخل النموذج' },
   divider: { label: 'فاصل', icon: '➖', description: 'خط فاصل', explanation: 'للفصل بين الأقسام' },
   terms: { label: 'الشروط والأحكام', icon: '📋', description: 'موافقة على الشروط', explanation: 'المستخدم يقرأ ويوافق على نص' },
+  appointment: { label: 'حجز موعد', icon: '📅', description: 'اختيار تاريخ ووقت للحجز', explanation: 'مثال: حجز موعد استشارة' },
 } as const;
 
 
@@ -60,6 +61,12 @@ interface MatrixColumn {
   id: string
   text: string
   points: number
+}
+
+interface VisibilityRule {
+  question_id: string
+  operator: 'equals' | 'not_equals' | 'contains'
+  value: string
 }
 
 interface Question {
@@ -88,6 +95,7 @@ interface Question {
   correct_option_ids?: string[]
   row_group?: number | null
   page?: number
+  visibility_rules?: VisibilityRule[]
 
 }
 
@@ -482,7 +490,8 @@ function EditFormContent() {
         order_index: index,
         row_group: q.row_group || null,
         page: q.page || 1,
-        options: JSON.stringify(optionsData)
+        visibility_rules: q.visibility_rules,
+        options: JSON.stringify({ ...optionsData, _visibility_rules: q.visibility_rules || [] })
       }
     })
   }
@@ -590,7 +599,7 @@ const params = useParams()
       const { count } = await supabase
         .from('form_responses')
         .select('*', { count: 'exact', head: true })
-        .eq('form_id', formId)
+        .eq('form_id', form.id)
       setResponseCount(count || 0)
 
 
@@ -603,7 +612,7 @@ const params = useParams()
 
         .select('*')
 
-        .eq('form_id', formId)
+        .eq('form_id', form.id)
 
         .order('order_index')
 
@@ -615,6 +624,14 @@ const params = useParams()
         let matrix_columns: MatrixColumn[] | undefined
         let dropdown_type: 'single' | 'multiple' | undefined
         let correct_option_ids: string[] | undefined
+        const visibility_rules: VisibilityRule[] | undefined = parsedOpts._visibility_rules?.length > 0 ? parsedOpts._visibility_rules : undefined
+        // Strip _visibility_rules from parsed options for rendering
+        if (parsedOpts._visibility_rules) {
+          const { _visibility_rules, ...cleanOpts } = parsedOpts
+          if (cleanOpts.matrix_rows || cleanOpts.options) {
+            // Keep the full structure for matrix/dropdown
+          }
+        }
 
         if (q.type === 'matrix' && parsedOpts.matrix_rows) {
           matrix_rows = parsedOpts.matrix_rows
@@ -641,7 +658,8 @@ const params = useParams()
           dropdown_type,
           correct_option_ids,
           correct_option_id: correct_option_ids?.[0],
-          page: q.page || 1
+          page: q.page || 1,
+          visibility_rules
         }
       })
 
@@ -1118,7 +1136,7 @@ const params = useParams()
           order_index: index,
           row_group: q.row_group || null,
           page: q.page || 1,
-          options: JSON.stringify(optionsData)
+          options: JSON.stringify({ ...optionsData, _visibility_rules: q.visibility_rules || [] })
         }
       })
 
@@ -1905,6 +1923,24 @@ const params = useParams()
                                     </div>
                                   )}
 
+                                  {question.type === 'appointment' && (
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-600 mb-1.5">المواعيد المتاحة</label>
+                                      <p className="text-xs text-gray-500 mb-2">أضف أوقاتاً متاحة لكل خيار (مثل: 09:00, 10:00, 11:00)</p>
+                                      <div className="space-y-1.5">
+                                        {(parseOptions(question.options) as any[]).map((opt: any, oi: number) => (
+                                          <div key={oi} className="flex items-center gap-1.5">
+                                            <input type="text" value={opt.text} onChange={(e) => updateOption(qIndex, oi, { text: e.target.value })} placeholder={`مثل: 09:00`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
+                                            <button onClick={() => removeOption(qIndex, oi)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                      <button onClick={() => addOption(qIndex)} className="w-full mt-2 py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors text-sm flex items-center justify-center gap-1">
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> إضافة وقت
+                                      </button>
+                                    </div>
+                                  )}
+
                                   {question.type === 'star_rating' && (
                                     <div>
                                       <label className="block text-xs font-medium text-gray-600 mb-1.5">عدد النجوم</label>
@@ -2086,6 +2122,85 @@ const params = useParams()
                                   )}
 
 
+
+                                  {/* Conditional Logic */}
+                                  <div className="bg-indigo-50 rounded-xl p-3 border border-indigo-200">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <p className="text-xs font-bold text-indigo-700">المنطق الشرطي (إظهار/إخفاء)</p>
+                                      <button
+                                        onClick={() => {
+                                          const firstQ = (formData?.questions || []).find(q => q.id !== question.id)
+                                          if (firstQ) {
+                                            updateQuestion(qIndex, {
+                                              visibility_rules: [{ question_id: firstQ.id, operator: 'equals', value: '' }]
+                                            })
+                                          }
+                                        }}
+                                        className="text-xs text-indigo-600 hover:underline"
+                                      >
+                                        + إضافة شرط
+                                      </button>
+                                    </div>
+                                    {(question.visibility_rules || []).length > 0 ? (
+                                      <div className="space-y-2">
+                                        {(question.visibility_rules || []).map((rule: any, ri: number) => (
+                                          <div key={ri} className="flex items-center gap-1.5 text-xs">
+                                            <span className="text-indigo-600 font-medium shrink-0">أظهر إذا</span>
+                                            <select
+                                              value={rule.question_id}
+                                              onChange={(e) => {
+                                                const newRules = [...(question.visibility_rules || [])]
+                                                newRules[ri] = { ...newRules[ri], question_id: e.target.value }
+                                                updateQuestion(qIndex, { visibility_rules: newRules })
+                                              }}
+                                              className="px-2 py-1 bg-white border border-indigo-200 rounded text-xs flex-1 min-w-0"
+                                            >
+                                              {(formData?.questions || []).filter(q => q.id !== question.id).map((q: any) => (
+                                                <option key={q.id} value={q.id}>{q.text || `سؤال ${q.id.slice(0, 6)}`}</option>
+                                              ))}
+                                            </select>
+                                            <select
+                                              value={rule.operator || 'equals'}
+                                              onChange={(e) => {
+                                                const newRules = [...(question.visibility_rules || [])]
+                                                newRules[ri] = { ...newRules[ri], operator: e.target.value }
+                                                updateQuestion(qIndex, { visibility_rules: newRules })
+                                              }}
+                                              className="px-2 py-1 bg-white border border-indigo-200 rounded text-xs"
+                                            >
+                                              <option value="equals">يساوي</option>
+                                              <option value="not_equals">لا يساوي</option>
+                                              <option value="contains">يحتوي على</option>
+                                              <option value="greater_than">أكبر من</option>
+                                              <option value="less_than">أقل من</option>
+                                            </select>
+                                            <input
+                                              type="text"
+                                              value={rule.value || ''}
+                                              onChange={(e) => {
+                                                const newRules = [...(question.visibility_rules || [])]
+                                                newRules[ri] = { ...newRules[ri], value: e.target.value }
+                                                updateQuestion(qIndex, { visibility_rules: newRules })
+                                              }}
+                                              placeholder="القيمة"
+                                              className="px-2 py-1 bg-white border border-indigo-200 rounded text-xs w-20"
+                                            />
+                                            <button
+                                              onClick={() => {
+                                                const newRules = (question.visibility_rules || []).filter((_: any, i: number) => i !== ri)
+                                                updateQuestion(qIndex, { visibility_rules: newRules.length > 0 ? newRules : undefined })
+                                              }}
+                                              className="p-1 text-red-400 hover:text-red-600"
+                                            >
+                                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                            </button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <p className="text-xs text-indigo-400">بدون شروط — السؤال سيظهر دائماً</p>
+                                    )}
+                                  </div>
 
                                   {/* Page and Row Group */}
                                   <div className="flex gap-4">

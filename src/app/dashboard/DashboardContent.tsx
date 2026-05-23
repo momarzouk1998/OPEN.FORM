@@ -31,15 +31,24 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [unreadResult, responsesResult, formsResult] = await Promise.all([
+        const [unreadResult, formsResult] = await Promise.all([
           supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', profile.id).eq('is_read', false),
-          supabase.from('form_responses').select('*', { count: 'exact', head: true }),
           supabase.from('forms').select('*').eq('created_by', profile.id).order('created_at', { ascending: false }),
         ])
         setUnreadCount(unreadResult.count || 0)
-        setForms(formsResult.data || [])
-        setFormCount(formsResult.count || 0)
-        setResponseCount(responsesResult.count || 0)
+        const forms = formsResult.data || []
+        setForms(forms)
+        setFormCount(forms.length || 0)
+
+        // Count responses only for this user's forms
+        if (forms.length > 0) {
+          const formIds = forms.map(f => f.id)
+          const { count } = await supabase
+            .from('form_responses')
+            .select('*', { count: 'exact', head: true })
+            .in('form_id', formIds)
+          setResponseCount(count || 0)
+        }
       } catch (e) {
         console.error('Error fetching dashboard data:', e)
       } finally {

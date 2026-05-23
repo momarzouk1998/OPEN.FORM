@@ -92,6 +92,14 @@ export interface Notification {
 }
 
 // Form types
+export type VisibilityOperator = 'equals' | 'not_equals' | 'contains' | 'greater_than' | 'less_than'
+
+export interface VisibilityRule {
+  question_id: string
+  operator: VisibilityOperator
+  value: string
+}
+
 export type QuestionType = 
   | 'text'
   | 'textarea'
@@ -116,6 +124,7 @@ export type QuestionType =
   | 'email_confirm'
   | 'youtube'
   | 'match_items'
+  | 'appointment'
 
 
 export interface QuestionOption {
@@ -142,6 +151,7 @@ export interface Question {
   has_counter?: boolean
   row_group?: number | null
   page?: number
+  visibility_rules?: VisibilityRule[]
 }
 
 export interface Form {

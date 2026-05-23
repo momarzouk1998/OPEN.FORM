@@ -34,7 +34,8 @@ const QUESTION_TYPES = {
   button_choice: { label: 'اختيار بأزرار', icon: '🔘', description: 'خيارات كأزرار مرئية', explanation: 'بديل جميل للاختيار الواحد' },
   email_confirm: { label: 'تأكيد البريد', icon: '✉️', description: 'إدخال الإيميل مرتين', explanation: 'للتأكد من صحة البريد الإلكتروني' },
   youtube: { label: 'فيديو يوتيوب', icon: '▶️', description: 'تضمين فيديو يوتيوب', explanation: 'لعرض فيديو توضيحي داخل النموذج' },
-  match_items: { label: 'توصيل العناصر', icon: '🔗', description: 'مطابقة عمودين', explanation: 'مثال: وصّل الكلمة بمعناها' }
+  match_items: { label: 'توصيل العناصر', icon: '🔗', description: 'مطابقة عمودين', explanation: 'مثال: وصّل الكلمة بمعناها' },
+  appointment: { label: 'حجز موعد', icon: '📅', description: 'اختيار تاريخ ووقت للحجز', explanation: 'مثال: حجز موعد استشارة' }
 } as const
 
 interface MatrixRow {
@@ -488,7 +489,9 @@ const supabase = createClient()
           points: q.points,
           has_counter: q.has_counter || false,
           order_index: index,
-          options: JSON.stringify(optionsData)
+          row_group: q.row_group || null,
+          page: q.page || 1,
+          options: JSON.stringify({ ...optionsData, _visibility_rules: q.visibility_rules || [] })
         }
       })
 

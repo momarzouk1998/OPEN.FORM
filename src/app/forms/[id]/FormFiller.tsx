@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -18,6 +18,12 @@ interface QuestionOption {
   validation_max?: string
 }
 
+interface VisibilityRule {
+  question_id: string
+  operator: string
+  value: string
+}
+
 interface Question {
   id: string
   text: string
@@ -29,6 +35,7 @@ interface Question {
   order_index: number
   row_group?: number | null
   page?: number
+  visibility_rules?: VisibilityRule[]
 }
 
 interface Form {
@@ -168,6 +175,14 @@ export default function FormFiller({ form, questions, existingResponse: propExis
   const [draftRestored, setDraftRestored] = useState(false)
   const [draftDismissed, setDraftDismissed] = useState(false)
   const [redirectMessage, setRedirectMessage] = useState<string | null>(null)
+
+  // Appointment calendar state
+  const [apptMonth, setApptMonth] = useState(() => {
+    const now = new Date()
+    return { year: now.getFullYear(), month: now.getMonth() }
+  })
+  const [bookedSlots, setBookedSlots] = useState<Record<string, Record<string, string[]>>>({})
+
   const router = useRouter()
   const supabase = createClient()
 
@@ -190,10 +205,49 @@ export default function FormFiller({ form, questions, existingResponse: propExis
   const [displayQuestions, setDisplayQuestions] = useState<Question[]>([]);
   const [isExpired, setIsExpired] = useState(false);
 
-  // Multi-page computation
-  const pages = Array.from(new Set(displayQuestions.map(q => q.page || 1))).sort((a, b) => a - b)
+  // Extract visibility_rules from question (may be in q.visibility_rules or inside options._visibility_rules)
+  const getVisibilityRules = (q: any): VisibilityRule[] | undefined => {
+    if (q.visibility_rules && q.visibility_rules.length > 0) return q.visibility_rules
+    if (typeof q.options === 'string') {
+      try {
+        const opts = JSON.parse(q.options)
+        if (opts && opts._visibility_rules && opts._visibility_rules.length > 0) return opts._visibility_rules
+      } catch { return undefined }
+    } else if (q.options && q.options._visibility_rules && q.options._visibility_rules.length > 0) {
+      return q.options._visibility_rules
+    }
+    return undefined
+  }
+
+  // Conditional logic: compute visible questions based on visibility rules
+  const visibleQuestions = useMemo(() => {
+    return displayQuestions.filter(q => {
+      const rules = getVisibilityRules(q)
+      if (!rules || rules.length === 0) return true
+      return rules.every(rule => {
+        const triggerAnswer = answers[rule.question_id]
+        if (triggerAnswer === undefined || triggerAnswer === null || triggerAnswer === '') return false
+        const ansStr = String(
+          typeof triggerAnswer === 'object' && triggerAnswer !== null
+            ? (triggerAnswer as any).option_id || ''
+            : triggerAnswer
+        )
+        switch (rule.operator) {
+          case 'equals': return ansStr === rule.value
+          case 'not_equals': return ansStr !== rule.value
+          case 'contains': return ansStr.includes(rule.value)
+          case 'greater_than': return Number(ansStr) > Number(rule.value)
+          case 'less_than': return Number(ansStr) < Number(rule.value)
+          default: return false
+        }
+      })
+    })
+  }, [displayQuestions, answers])
+
+  // Multi-page computation (based on visible questions only)
+  const pages = Array.from(new Set(visibleQuestions.map(q => q.page || 1))).sort((a, b) => a - b)
   const totalPages = pages.length
-  const pageQuestions = displayQuestions.filter(q => (q.page || 1) === currentPage)
+  const pageQuestions = visibleQuestions.filter(q => (q.page || 1) === currentPage)
   const pageIndex = pages.indexOf(currentPage)
   const isFirstPage = pageIndex <= 0
   const isLastPage = pageIndex >= totalPages - 1
@@ -232,7 +286,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
 
   // For anonymous users: load existing responses by respondent_id
   useEffect(() => {
-    if (isPreview || userId || existingResponse || !form.allow_multiple === undefined) return
+    if (isPreview || userId || existingResponse || form.allow_multiple) return
 
     const loadAnonymousResponses = async () => {
       setLoadingExisting(true)
@@ -259,6 +313,39 @@ export default function FormFiller({ form, questions, existingResponse: propExis
 
     loadAnonymousResponses()
   }, [userId, form.id, form.allow_multiple])
+
+  // Fetch existing appointment bookings for availability filtering
+  useEffect(() => {
+    const apptQuestions = displayQuestions.filter(q => q.type === 'appointment')
+    if (apptQuestions.length === 0) return
+
+    const fetchBookings = async () => {
+      const { data } = await supabase
+        .from('form_responses')
+        .select('answers')
+        .eq('form_id', form.id)
+
+      if (data) {
+        const slots: Record<string, Record<string, string[]>> = {}
+        for (const row of data) {
+          const answersObj = row.answers as Record<string, any> || {}
+          for (const q of apptQuestions) {
+            const ans = answersObj[q.id]
+            if (ans?.date && ans?.time) {
+              if (!slots[q.id]) slots[q.id] = {}
+              if (!slots[q.id][ans.date]) slots[q.id][ans.date] = []
+              if (!slots[q.id][ans.date].includes(ans.time)) {
+                slots[q.id][ans.date].push(ans.time)
+              }
+            }
+          }
+        }
+        setBookedSlots(slots)
+      }
+    }
+
+    fetchBookings()
+  }, [form.id, displayQuestions])
 
   useEffect(() => {
     if (timeLeft === null || submitted || isExpired) return;
@@ -432,7 +519,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
     let score = 0
     let maxScore = 0
 
-    displayQuestions.forEach((q) => {
+    visibleQuestions.forEach((q) => {
       const answer = answers[q.id]
       const options = parseOptions(q.options)
 
@@ -456,12 +543,37 @@ export default function FormFiller({ form, questions, existingResponse: propExis
         return
       }
 
-      maxScore += q.points || 0
+      // Compute maxScore (always, regardless of answer)
+      if (q.type === 'text' || q.type === 'textarea') {
+        maxScore += q.points || 0
+      } else if (q.type === 'single_choice') {
+        maxScore += Math.max(0, ...(Array.isArray(options) ? options : []).map((o: any) => o.points || 0))
+      } else if (q.type === 'multiple_choice') {
+        maxScore += (Array.isArray(options) ? options : []).reduce((sum: number, o: any) => sum + (o.points || 0), 0)
+      } else if (q.type === 'ranking') {
+        maxScore += (Array.isArray(options) ? options : []).reduce((sum: number, o: any) => sum + (o.points || 0), 0)
+      } else if (q.type === 'scale') {
+        maxScore += Math.max(10, ...(Array.isArray(options) ? options : []).map((o: any) => o.points || 0))
+      } else if (q.type === 'dropdown') {
+        const dropOpts = options.options || options
+        if (Array.isArray(dropOpts)) {
+          if (options.dropdown_type === 'multiple') {
+            maxScore += ((options.correct_option_ids || []) as string[]).reduce((sum: number, id: string) => {
+              const opt = dropOpts.find((o: any) => o.id === id)
+              return sum + (opt?.points || 0)
+            }, 0)
+          } else if (options.correct_option_ids?.length) {
+            const opt = dropOpts.find((o: any) => o.id === options.correct_option_ids[0])
+            maxScore += opt?.points || 0
+          } else {
+            maxScore += Math.max(0, ...dropOpts.map((o: any) => o.points || 0))
+          }
+        }
+      }
 
       if (answer === undefined || answer === null || answer === '') return
 
       if (q.type === 'single_choice' && options.length > 0) {
-          maxScore += Math.max(0, ...(Array.isArray(options) ? options : []).map((o: any) => o.points || 0))
           const optId = typeof answer === 'object' ? (answer as any).option_id : answer
           const mainOption = options.find((opt: any) => opt.id === optId)
           if (mainOption) {
@@ -507,20 +619,29 @@ export default function FormFiller({ form, questions, existingResponse: propExis
     return { score, maxScore }
   }
 
-  // Auto-save answers on every change
+  // Auto-save answers with debounce
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     if (isPreview) return
     if (form.enable_auto_save === false) return
     if (Object.keys(answers).length === 0) return
-    autoSave.saveDraft(answers)
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => {
+      autoSave.saveDraft(answers)
+    }, 1000) // 1-second debounce
+
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    }
   }, [answers])
 
   const handleSubmit = async () => {
     setSubmitting(true)
     setError('')
 
-    // Validate required questions
-    for (const q of displayQuestions) {
+    // Validate required questions (visible only)
+    for (const q of visibleQuestions) {
       if (q.type === 'matrix') {
         const matrixData = parseMatrixData(q)
         if (matrixData) {
@@ -544,6 +665,15 @@ export default function FormFiller({ form, questions, existingResponse: propExis
           setError(`يرجى الإجابة على السؤال: ${q.text}`)
           setSubmitting(false)
           return
+        }
+
+        // Appointment: validate both date and time
+        if (q.type === 'appointment') {
+          const appt = typeof answer === 'object' ? answer as any : {}
+          if (!appt.date || !appt.time) {
+            setError(`يرجى اختيار التاريخ والوقت في السؤال: ${q.text}`)
+            setSubmitting(false); return
+          }
         }
 
         // Text Validation
@@ -678,6 +808,260 @@ export default function FormFiller({ form, questions, existingResponse: propExis
     } finally {
       setSubmitting(false)
     }
+  }
+
+  // Appointment calendar utility functions
+  const ARABIC_MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']
+  const ARABIC_DAYS = ['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س']
+
+  function getDaysInMonth(year: number, month: number) {
+    return new Date(year, month + 1, 0).getDate()
+  }
+
+  function getFirstDayOfMonth(year: number, month: number) {
+    return new Date(year, month, 1).getDay()
+  }
+
+  function formatArabicTime(time24: string) {
+    const parts = time24.split(':')
+    const h = parseInt(parts[0]) || 0
+    const m = parts[1] || '00'
+    if (h === 0) return `12:${m} صباحاً`
+    if (h < 12) return `${h}:${m} صباحاً`
+    if (h === 12) return `12:${m} مساءاً`
+    return `${h - 12}:${m} مساءاً`
+  }
+
+  function isDateFullyBooked(dateStr: string, questionId: string, timeSlots: string[]) {
+    const qSlots = bookedSlots[questionId]
+    if (!qSlots || !qSlots[dateStr]) return false
+    return timeSlots.every(slot => qSlots[dateStr].includes(slot))
+  }
+
+  function getAvailableTimeSlots(dateStr: string, questionId: string, timeSlots: string[]) {
+    const qSlots = bookedSlots[questionId]
+    if (!qSlots || !qSlots[dateStr]) return timeSlots
+    return timeSlots.filter(slot => !qSlots[dateStr].includes(slot))
+  }
+
+  function isSameDay(d1: Date, d2: Date) {
+    return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate()
+  }
+
+  const renderAppointmentCalendar = (question: Question, currentAnswer: any, apptObj: any, timeSlots: string[]) => {
+    const today = new Date()
+    const { year, month } = apptMonth
+    const daysInMonth = getDaysInMonth(year, month)
+    const firstDay = getFirstDayOfMonth(year, month)
+    const monthName = ARABIC_MONTHS[month]
+    const questionId = question.id
+
+    const prevMonth = () => {
+      if (month === 0) setApptMonth({ year: year - 1, month: 11 })
+      else setApptMonth({ year, month: month - 1 })
+    }
+
+    const nextMonth = () => {
+      if (month === 11) setApptMonth({ year: year + 1, month: 0 })
+      else setApptMonth({ year, month: month + 1 })
+    }
+
+    const handleDateSelect = (date: Date) => {
+      const y = date.getFullYear()
+      const m = date.getMonth()
+      const d = date.getDate()
+      const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+      const dateOnly = new Date(y, m, d)
+      dateOnly.setHours(0, 0, 0, 0)
+      if (dateOnly < new Date(today.getFullYear(), today.getMonth(), today.getDate())) return
+      // Sync calendar view to the selected date's month
+      setApptMonth({ year: y, month: m })
+      setAnswers({ ...answers, [question.id]: { date: dateStr, time: '' } })
+    }
+
+    const goNextDay = () => {
+      const currentDate = apptObj.date ? new Date(apptObj.date + 'T00:00:00') : new Date()
+      currentDate.setDate(currentDate.getDate() + 1)
+      const y = currentDate.getFullYear()
+      const m = currentDate.getMonth()
+      const d = currentDate.getDate()
+      const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+      // Auto-navigate calendar month to match
+      setApptMonth({ year: y, month: m })
+      setAnswers({ ...answers, [question.id]: { date: dateStr, time: '' } })
+    }
+
+    const goPrevDay = () => {
+      const currentDate = apptObj.date ? new Date(apptObj.date + 'T00:00:00') : new Date()
+      currentDate.setDate(currentDate.getDate() - 1)
+      const y = currentDate.getFullYear()
+      const m = currentDate.getMonth()
+      const d = currentDate.getDate()
+      const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+      const dateOnly = new Date(y, m, d)
+      dateOnly.setHours(0, 0, 0, 0)
+      if (dateOnly < new Date(today.getFullYear(), today.getMonth(), today.getDate())) return
+      setApptMonth({ year: y, month: m })
+      setAnswers({ ...answers, [question.id]: { date: dateStr, time: '' } })
+    }
+
+    // Calendar grid
+    const prevMonthDays: number[] = []
+    for (let i = 0; i < firstDay; i++) {
+      prevMonthDays.push(i)
+    }
+
+    const calendarDays: ({ day: number; isCurrentMonth: boolean; date: Date })[] = []
+    // Days from previous month
+    const prevMonthDaysCount = getDaysInMonth(month === 0 ? year - 1 : year, month === 0 ? 11 : month - 1)
+    for (const i of prevMonthDays) {
+      const d = prevMonthDaysCount - firstDay + i + 1
+      const prevM = month === 0 ? 11 : month - 1
+      const prevY = month === 0 ? year - 1 : year
+      calendarDays.push({ day: d, isCurrentMonth: false, date: new Date(prevY, prevM, d) })
+    }
+    // Days of current month
+    for (let d = 1; d <= daysInMonth; d++) {
+      calendarDays.push({ day: d, isCurrentMonth: true, date: new Date(year, month, d) })
+    }
+    // Days from next month
+    const remaining = 42 - calendarDays.length
+    for (let d = 1; d <= remaining; d++) {
+      const nextM = month === 11 ? 0 : month + 1
+      const nextY = month === 11 ? year + 1 : year
+      calendarDays.push({ day: d, isCurrentMonth: false, date: new Date(nextY, nextM, d) })
+    }
+
+    const selectedDate = apptObj.date || ''
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+
+    const availableSlots = apptObj.date ? getAvailableTimeSlots(apptObj.date, questionId, timeSlots) : []
+    const allBooked = apptObj.date ? isDateFullyBooked(apptObj.date, questionId, timeSlots) : false
+
+    return (
+      <div className="space-y-4">
+        {/* Day navigation */}
+        {apptObj.date && (
+          <div className="flex items-center justify-between bg-blue-50 rounded-xl px-4 py-2">
+            <button type="button" onClick={goPrevDay} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <span className="text-sm font-medium text-blue-700">
+              {apptObj.date}
+            </span>
+            <button type="button" onClick={goNextDay} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </button>
+          </div>
+        )}
+
+        {/* Calendar header */}
+        <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
+          <button type="button" onClick={prevMonth} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+          </button>
+          <span className="text-sm font-bold text-gray-700">{monthName} {year}</span>
+          <button type="button" onClick={nextMonth} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+          </button>
+        </div>
+
+        {/* Day names */}
+        <div className="grid grid-cols-7 gap-1">
+          {ARABIC_DAYS.map((name, i) => (
+            <div key={i} className="text-center text-xs font-bold text-gray-500 py-1">{name}</div>
+          ))}
+        </div>
+
+        {/* Calendar grid */}
+        <div className="grid grid-cols-7 gap-1">
+          {calendarDays.map((cell, i) => {
+            const y = cell.date.getFullYear()
+            const m = cell.date.getMonth() + 1
+            const d = cell.date.getDate()
+            const cellDateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+            const dateOnly = new Date(y, m - 1, d)
+            const isPast = dateOnly < todayStart
+            const isToday = isSameDay(cell.date, today)
+            const isSelected = selectedDate === cellDateStr
+            const fullyBooked = cell.isCurrentMonth && !isPast && isDateFullyBooked(cellDateStr, questionId, timeSlots)
+            const isDisabled = isPast || !cell.isCurrentMonth
+
+            return (
+              <button
+                key={i}
+                type="button"
+                disabled={isDisabled}
+                onClick={() => handleDateSelect(cell.date)}
+                className={`
+                  relative p-2 text-sm rounded-lg transition-all font-medium
+                  ${!cell.isCurrentMonth ? 'text-gray-300' : ''}
+                  ${isPast && cell.isCurrentMonth ? 'text-gray-300 cursor-not-allowed' : ''}
+                  ${isToday && !isSelected && cell.isCurrentMonth ? 'bg-blue-100 text-blue-700' : ''}
+                  ${isSelected && cell.isCurrentMonth ? 'bg-blue-600 text-white shadow-md' : ''}
+                  ${fullyBooked && !isSelected ? 'bg-red-50 text-red-400 line-through' : ''}
+                  ${!isDisabled && !isSelected && !fullyBooked ? 'hover:bg-blue-50 hover:text-blue-600 text-gray-700 cursor-pointer' : ''}
+                `}
+              >
+                {d}
+                {isToday && cell.isCurrentMonth && (
+                  <span className={`absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${isSelected ? 'bg-white' : 'bg-blue-500'}`} />
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Time slots */}
+        {apptObj.date && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-medium text-gray-600">اختر الوقت</label>
+              {allBooked && (
+                <span className="text-xs text-red-500 font-medium">جميع المواعيد محجوزة لهذا اليوم</span>
+              )}
+            </div>
+            {availableSlots.length > 0 ? (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {availableSlots.map((slot: string) => {
+                  const isSelected = apptObj.time === slot
+                  return (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => setAnswers({ ...answers, [question.id]: { ...apptObj, time: slot } })}
+                      className={`px-3 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50'
+                      }`}
+                    >
+                      {formatArabicTime(slot)}
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              !allBooked && (
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center text-sm text-gray-500">
+                  لا توجد مواعيد متاحة
+                </div>
+              )
+            )}
+          </div>
+        )}
+
+        {/* Booking confirmation */}
+        {apptObj.date && apptObj.time && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2 text-sm text-green-700">
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            تم اختيار الموعد: {apptObj.date} الساعة {formatArabicTime(apptObj.time)}
+          </div>
+        )}
+      </div>
+    )
   }
 
   const renderQuestion = (question: Question, index: number) => {
@@ -1140,6 +1524,13 @@ export default function FormFiller({ form, questions, existingResponse: propExis
           />
         )
 
+      case 'appointment': {
+        const apptVal = currentAnswer || {}
+        const apptObj = typeof apptVal === 'object' ? apptVal as any : {}
+        const timeSlots: string[] = (Array.isArray(options) ? options : []).map((o: any) => o.text).filter(Boolean)
+        return renderAppointmentCalendar(question, currentAnswer, apptObj, timeSlots)
+      }
+
       case 'file_upload':
         return (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
@@ -1570,7 +1961,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
               </span>
             )}
             <span className="text-xs text-gray-500 bg-gray-100 px-2.5 py-1 rounded-lg">
-              {questions.length} سؤال
+              {visibleQuestions.length} سؤال
             </span>
           </div>
         </div>
@@ -1584,7 +1975,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
               </span>
             )}
             <span className={`text-xs ${totalPages > 1 ? '' : 'mr-auto'} text-gray-400`}>
-              {Object.keys(answers).length} / {displayQuestions.length} إجابة
+              {Object.keys(answers).filter(k => visibleQuestions.some(q => q.id === k)).length} / {visibleQuestions.length} إجابة
             </span>
           </div>
         </div>
@@ -1593,7 +1984,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
           <div 
             className="h-full bg-gradient-to-l from-blue-500 to-indigo-500 transition-all duration-500 rounded-full"
             style={{ 
-              width: `${(Object.keys(answers).length / (displayQuestions.length || 1)) * 100}%` 
+              width: `${(Object.keys(answers).filter(k => visibleQuestions.some(q => q.id === k)).length / (visibleQuestions.length || 1)) * 100}%` 
             }}
           />
         </div>
@@ -1754,6 +2145,21 @@ export default function FormFiller({ form, questions, existingResponse: propExis
                 </button>
               )}
             </div>
+            {/* "أكمل لاحقاً" button — saves draft and redirects to dashboard */}
+            {!isPreview && form.enable_auto_save !== false && Object.keys(answers).length > 0 && (
+              <button
+                onClick={() => {
+                  autoSave.saveDraft(answers)
+                  router.push(project ? `/projects/${project.id}` : '/dashboard')
+                }}
+                className="w-full py-2.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl font-medium hover:bg-amber-100 transition-colors text-sm flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                أكمل لاحقاً
+              </button>
+            )}
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 pt-2">
                 {pages.map(p => (
