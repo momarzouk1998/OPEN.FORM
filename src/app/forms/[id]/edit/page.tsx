@@ -1425,7 +1425,7 @@ const params = useParams()
             {question.required && <span className="text-xs text-red-500">* مطلوب</span>}
             {question.points > 0 && <span className="text-xs text-amber-600">{question.points} نقطة</span>}
           </div>
-          {question.options && question.options.length > 0 && !['scale'].includes(question.type) && (
+          {parseOptions(question.options).length > 0 && !['scale'].includes(question.type) && (
             <div className="flex flex-wrap gap-1.5 mt-2">
               {(parseOptions(question.options) as any[]).slice(0, 4).map((opt: any, oi: number) => (
                 <span key={oi} className="text-xs bg-white border border-gray-200 text-gray-500 px-2 py-0.5 rounded-lg">
