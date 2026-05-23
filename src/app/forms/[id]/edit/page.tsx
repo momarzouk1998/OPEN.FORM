@@ -11,6 +11,10 @@ import Link from 'next/link'
 import ImageUpload from '@/components/ImageUpload'
 import FormFiller from '../FormFiller'
 
+import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+
 import type { QuestionType, QuestionOption, ThemeSettings } from '@/types'
 import { generateShortCode } from '@/lib/shortCode'
 
@@ -157,6 +161,11 @@ function EditFormContent() {
   const [isDesignerOpen, setIsDesignerOpen] = useState(false)
   const [designerTab, setDesignerTab] = useState<'colors' | 'styles' | 'themes' | 'layout'>('colors')
   const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(false)
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDarkMode)
+  }, [isDarkMode])
 
   const PRESET_THEMES: Array<{ name: string; label: string; settings: ThemeSettings }> = [
     {
@@ -1059,7 +1068,6 @@ const params = useParams()
 
           allow_delete_responses: formData.allow_delete_responses || false,
           randomize_questions: formData.randomize_questions || false,
-          enable_auto_save: formData.enable_auto_save !== false,
           image_url: formData.image_url || null,
           short_code: formData.short_code || generateShortCode(),
           page_titles: formData.page_titles || {}
@@ -1183,6 +1191,27 @@ const params = useParams()
     if (targetIndex < 0 || targetIndex >= newQuestions.length) return
     ;[newQuestions[index], newQuestions[targetIndex]] = [newQuestions[targetIndex], newQuestions[index]]
     setFormData(prev => prev ? ({ ...prev, questions: newQuestions }) : null)
+  }
+
+  const [activeDragId, setActiveDragId] = useState<string | null>(null)
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  )
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(event.active.id as string)
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveDragId(null)
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    if (!formData) return
+    const qs = formData.questions
+    const oldIndex = qs.findIndex(q => q.id === active.id)
+    const newIndex = qs.findIndex(q => q.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+    setFormData(prev => prev ? ({ ...prev, questions: arrayMove([...prev.questions], oldIndex, newIndex) }) : null)
   }
 
   const importQuestion = (question: any) => {
@@ -1338,7 +1367,7 @@ const params = useParams()
 
   return (
 
-    <div dir="rtl" className="min-h-screen bg-gray-50">
+    <div dir="rtl" className={`min-h-screen ${isDarkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
       {renderThemeStyles()}
 
       {/* Header */}
@@ -1421,6 +1450,40 @@ const params = useParams()
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
             <span className="hidden sm:inline">معاينة</span>
+          </button>
+          <div className="flex-1"></div>
+          <button
+            onClick={() => setIsDarkMode(prev => !prev)}
+            className={`flex flex-col sm:flex-row items-center gap-1 px-2 sm:px-3 py-2 sm:py-1.5 rounded-xl active:scale-95 transition-all text-[10px] sm:text-xs font-medium cursor-pointer min-w-0 sm:min-w-fit ${
+              isDarkMode
+                ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                : 'bg-gray-800 text-white hover:bg-gray-700'
+            }`}
+            title={isDarkMode ? 'الوضع النهاري' : 'الوضع الليلي'}
+          >
+            <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {isDarkMode ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              )}
+            </svg>
+            <span className="hidden sm:inline">{isDarkMode ? 'نهاري' : 'ليلي'}</span>
+          </button>
+          <button
+            onClick={saveForm}
+            disabled={saving}
+            className="flex flex-col sm:flex-row items-center gap-1 px-2 sm:px-3 py-2 sm:py-1.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:scale-95 transition-all text-[10px] sm:text-xs font-medium cursor-pointer disabled:opacity-50 min-w-0 sm:min-w-fit"
+            title="حفظ التعديلات"
+          >
+            {saving ? (
+              <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent"></div>
+            ) : (
+              <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+              </svg>
+            )}
+            <span className="hidden sm:inline">{saving ? 'جاري الحفظ...' : 'حفظ'}</span>
           </button>
         </div>
       </div>
@@ -1714,7 +1777,9 @@ const params = useParams()
                           placeholder={`عنوان الصفحة ${pageNum} (اختياري)`}
                           className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500"
                         />
-                        {/* Question cards */}
+                        {/* Question cards with drag & drop */}
+                        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
+                          <SortableContext items={pageQs.map(q => q.id)} strategy={verticalListSortingStrategy}>
                         {pageQs.map((question, pi) => {
                           const qIndex = indices[pi]
                           const isSelected = selectedQuestionIndex === qIndex
@@ -1722,8 +1787,8 @@ const params = useParams()
                           
                           if (question.type === 'divider') {
                             return (
+                              <SortableQuestionItem key={question.id} id={question.id}>
                               <div
-                                key={question.id}
                                 className="group relative flex items-center py-4 px-2 bg-transparent cursor-pointer"
                               >
                                 <div className="flex-1 h-0.5 bg-gray-300 group-hover:bg-blue-400 transition-colors"></div>
@@ -1739,6 +1804,7 @@ const params = useParams()
                                   </button>
                                 </div>
                               </div>
+                            </SortableQuestionItem>
                             )
                           }
 
@@ -2239,8 +2305,11 @@ const params = useParams()
                               )}
 
                             </div>
+                            </SortableQuestionItem>
                           )
                         })}
+                          </SortableContext>
+                        </DndContext>
                         {/* Add question to this page */}
                         <div className="mt-4 pt-2 border-t border-dashed border-gray-200">
                           <p className="text-sm font-bold text-gray-700 mb-3">إضافة سؤال جديد:</p>
@@ -2777,6 +2846,43 @@ const params = useParams()
 }
 
 
+
+export function SortableQuestionItem({
+  id,
+  children,
+  className,
+  onClick,
+}: {
+  id: string
+  children: React.ReactNode
+  className?: string
+  onClick?: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    position: 'relative' as const,
+    zIndex: isDragging ? 10 : 'auto' as any,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className={className} onClick={onClick}>
+      {children}
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute top-1 right-1 p-1 text-gray-300 hover:text-gray-500 hover:bg-gray-100 rounded-lg cursor-grab active:cursor-grabbing z-10"
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M8 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm8-16a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" />
+        </svg>
+      </div>
+    </div>
+  )
+}
 
 export default function EditFormPage() {
 

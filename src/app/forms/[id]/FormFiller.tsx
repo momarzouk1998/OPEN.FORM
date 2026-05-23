@@ -183,6 +183,12 @@ export default function FormFiller({ form, questions, existingResponse: propExis
   })
   const [bookedSlots, setBookedSlots] = useState<Record<string, Record<string, string[]>>>({})
 
+  // Date range calendar state
+  const [dateRangeMonth, setDateRangeMonth] = useState(() => {
+    const now = new Date()
+    return { year: now.getFullYear(), month: now.getMonth() }
+  })
+
   const router = useRouter()
   const supabase = createClient()
 
@@ -1633,27 +1639,177 @@ export default function FormFiller({ form, questions, existingResponse: propExis
       case 'date_range': {
         const rangeVal = currentAnswer || {}
         const rangeObj = typeof rangeVal === 'object' ? rangeVal as any : {}
+        const today = new Date()
+        const { year, month } = dateRangeMonth
+        const daysInMonth = getDaysInMonth(year, month)
+        const firstDay = getFirstDayOfMonth(year, month)
+        const monthName = ARABIC_MONTHS[month]
+
+        const prevMonth = () => {
+          if (month === 0) setDateRangeMonth({ year: year - 1, month: 11 })
+          else setDateRangeMonth({ year, month: month - 1 })
+        }
+
+        const nextMonth = () => {
+          if (month === 11) setDateRangeMonth({ year: year + 1, month: 0 })
+          else setDateRangeMonth({ year, month: month + 1 })
+        }
+
+        const handleRangeDate = (date: Date) => {
+          const y = date.getFullYear()
+          const m = date.getMonth()
+          const d = date.getDate()
+          const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+          const dateOnly = new Date(y, m, d)
+          dateOnly.setHours(0, 0, 0, 0)
+          if (dateOnly < new Date(today.getFullYear(), today.getMonth(), today.getDate())) return
+
+          if (!rangeObj.from || (rangeObj.from && rangeObj.to)) {
+            // Start new range
+            setAnswers({ ...answers, [question.id]: { from: dateStr, to: '' } })
+          } else {
+            // Set "to" date, ensure it's after "from"
+            if (dateStr < rangeObj.from) {
+              // If clicked date is before from, swap
+              setAnswers({ ...answers, [question.id]: { from: dateStr, to: rangeObj.from } })
+            } else {
+              setAnswers({ ...answers, [question.id]: { ...rangeObj, to: dateStr } })
+            }
+          }
+        }
+
+        const clearRange = () => {
+          setAnswers({ ...answers, [question.id]: { from: '', to: '' } })
+        }
+
+        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+
+        // Build calendar days
+        const prevMonthDays: number[] = []
+        for (let i = 0; i < firstDay; i++) prevMonthDays.push(i)
+
+        const calendarDays: ({ day: number; isCurrentMonth: boolean; date: Date })[] = []
+        const prevMonthDaysCount = getDaysInMonth(month === 0 ? year - 1 : year, month === 0 ? 11 : month - 1)
+        for (const i of prevMonthDays) {
+          const d = prevMonthDaysCount - firstDay + i + 1
+          const prevM = month === 0 ? 11 : month - 1
+          const prevY = month === 0 ? year - 1 : year
+          calendarDays.push({ day: d, isCurrentMonth: false, date: new Date(prevY, prevM, d) })
+        }
+        for (let d = 1; d <= daysInMonth; d++) {
+          calendarDays.push({ day: d, isCurrentMonth: true, date: new Date(year, month, d) })
+        }
+        const remaining = 42 - calendarDays.length
+        for (let d = 1; d <= remaining; d++) {
+          const nextM = month === 11 ? 0 : month + 1
+          const nextY = month === 11 ? year + 1 : year
+          calendarDays.push({ day: d, isCurrentMonth: false, date: new Date(nextY, nextM, d) })
+        }
+
+        // Calculate day count
+        let dayCount = 0
+        if (rangeObj.from && rangeObj.to) {
+          const fromD = new Date(rangeObj.from + 'T00:00:00')
+          const toD = new Date(rangeObj.to + 'T00:00:00')
+          dayCount = Math.round((toD.getTime() - fromD.getTime()) / 86400000)
+        }
+
+        const isInRange = (dateStr: string) => {
+          if (!rangeObj.from || !rangeObj.to) return false
+          return dateStr >= rangeObj.from && dateStr <= rangeObj.to
+        }
+
         return (
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">من تاريخ</label>
-              <input
-                type="date"
-                value={rangeObj.from || ''}
-                onChange={(e) => setAnswers({ ...answers, [question.id]: { ...rangeObj, from: e.target.value } })}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              />
+          <div className="space-y-4">
+            {/* Selected range display */}
+            <div className="flex items-center justify-between bg-blue-50 rounded-xl px-4 py-3">
+              <div className="flex items-center gap-4">
+                <div className="text-center">
+                  <span className="text-xs text-gray-500">من</span>
+                  <p className="text-sm font-bold text-blue-700">{rangeObj.from || '—'}</p>
+                </div>
+                <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+                <div className="text-center">
+                  <span className="text-xs text-gray-500">إلى</span>
+                  <p className="text-sm font-bold text-blue-700">{rangeObj.to || '—'}</p>
+                </div>
+              </div>
+              {rangeObj.from && (
+                <div className="flex items-center gap-2">
+                  {dayCount > 0 && (
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">{dayCount} يوم</span>
+                  )}
+                  <button type="button" onClick={clearRange} className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="مسح">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+              )}
             </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">إلى تاريخ</label>
-              <input
-                type="date"
-                value={rangeObj.to || ''}
-                min={rangeObj.from || ''}
-                onChange={(e) => setAnswers({ ...answers, [question.id]: { ...rangeObj, to: e.target.value } })}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              />
+
+            {/* Calendar header */}
+            <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
+              <button type="button" onClick={prevMonth} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <span className="text-sm font-bold text-gray-700">{monthName} {year}</span>
+              <button type="button" onClick={nextMonth} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </button>
             </div>
+
+            {/* Day names */}
+            <div className="grid grid-cols-7 gap-1">
+              {ARABIC_DAYS.map((name, i) => (
+                <div key={i} className="text-center text-xs font-bold text-gray-500 py-1">{name}</div>
+              ))}
+            </div>
+
+            {/* Calendar grid */}
+            <div className="grid grid-cols-7 gap-1">
+              {calendarDays.map((cell, i) => {
+                const y = cell.date.getFullYear()
+                const m = cell.date.getMonth() + 1
+                const d = cell.date.getDate()
+                const cellDateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+                const dateOnly = new Date(y, m - 1, d)
+                const isPast = dateOnly < todayStart
+                const isToday = isSameDay(cell.date, today)
+                const isFrom = rangeObj.from === cellDateStr
+                const isTo = rangeObj.to === cellDateStr
+                const inRange = isInRange(cellDateStr)
+                const isDisabled = isPast || !cell.isCurrentMonth
+
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    disabled={isDisabled}
+                    onClick={() => handleRangeDate(cell.date)}
+                    className={`
+                      relative p-2 text-sm rounded-lg transition-all font-medium
+                      ${!cell.isCurrentMonth ? 'text-gray-300' : ''}
+                      ${isPast && cell.isCurrentMonth ? 'text-gray-300 cursor-not-allowed' : ''}
+                      ${isToday && !isFrom && !isTo && cell.isCurrentMonth ? 'bg-blue-100 text-blue-700' : ''}
+                      ${isFrom || isTo ? 'bg-blue-600 text-white shadow-md z-10' : ''}
+                      ${inRange && !isFrom && !isTo ? 'bg-blue-100 text-blue-700' : ''}
+                      ${isFrom && isTo ? 'ring-2 ring-blue-300' : ''}
+                      ${!isDisabled && !isFrom && !isTo && !inRange ? 'hover:bg-blue-50 hover:text-blue-600 text-gray-700 cursor-pointer' : ''}
+                    `}
+                  >
+                    {d}
+                    {isToday && cell.isCurrentMonth && (
+                      <span className={`absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${isFrom || isTo ? 'bg-white' : 'bg-blue-500'}`} />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            {rangeObj.from && !rangeObj.to && (
+              <p className="text-xs text-gray-500 text-center">اختر تاريخ النهاية لتحديد النطاق</p>
+            )}
           </div>
         )
       }
