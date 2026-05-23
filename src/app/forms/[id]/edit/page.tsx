@@ -142,6 +142,22 @@ interface FormData {
 
 
 
+function Tooltip({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="relative group">
+      {children}
+      <div className="absolute -top-1 -left-1 z-50">
+        <svg className="w-3.5 h-3.5 text-gray-400 hover:text-blue-500 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1.5 bg-gray-900 text-white text-[10px] rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg max-w-[180px] text-center">
+          {label}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function EditFormContent() {
 
   const [formData, setFormData] = useState<FormData | null>(null)
@@ -1666,7 +1682,9 @@ const params = useParams()
                   return (
                     <div className="flex items-center gap-3 mt-3 p-2.5 bg-gradient-to-l from-blue-50 to-purple-50 rounded-xl border border-blue-100 text-sm">
                       <span className="text-gray-600">الأسئلة: <strong className="text-gray-900">{qs.length}</strong></span>
-                      <span className="text-gray-600">النقاط: <strong className="text-blue-700">{totalPts}</strong></span>
+                      {!!(formData?.page_titles as any)?._is_test && (
+                        <span className="text-gray-600">النقاط: <strong className="text-blue-700">{totalPts}</strong></span>
+                      )}
                     </div>
                   )
                 })()}
@@ -1678,53 +1696,44 @@ const params = useParams()
                 <div className="grid grid-cols-2 gap-2">
                   <label className="flex items-start gap-2 p-2 bg-cyan-50 rounded-lg cursor-pointer text-sm">
                     <input type="checkbox" checked={!!(formData?.page_titles as any)?._is_test} onChange={(e) => setFormData(prev => prev ? ({ ...prev, page_titles: { ...prev.page_titles, _is_test: e.target.checked } }) : null)} className="w-4 h-4 mt-0.5 text-cyan-600 rounded" />
-                    <div>
-                      <span className="text-gray-700 font-medium">اختبار</span>
-                      <p className="text-xs text-gray-500 mt-0.5">إظهار حقول النقاط والدرجات</p>
-                    </div>
+                    <span className="text-gray-700 font-medium">اختبار</span>
                   </label>
-                  <label className="flex items-start gap-2 p-2 bg-amber-50 rounded-lg cursor-pointer text-sm">
-                    <input type="checkbox" checked={formData?.allow_multiple || false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, allow_multiple: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-blue-600 rounded" />
-                    <div>
+                  <Tooltip label="السماح للمستخدم بإعادة ملء النموذج عدة مرات">
+                    <label className="flex items-start gap-2 p-2 bg-amber-50 rounded-lg cursor-pointer text-sm">
+                      <input type="checkbox" checked={formData?.allow_multiple || false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, allow_multiple: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-blue-600 rounded" />
                       <span className="text-gray-700 font-medium">تسجيل متعدد</span>
-                      <p className="text-xs text-gray-500 mt-0.5">السماح للمستخدم بإعادة ملء النموذج عدة مرات</p>
-                    </div>
-                  </label>
-                  <label className="flex items-start gap-2 p-2 bg-green-50 rounded-lg cursor-pointer text-sm">
-                    <input type="checkbox" checked={formData?.time_limit !== null && formData?.time_limit !== undefined} onChange={(e) => setFormData(prev => prev ? ({ ...prev, time_limit: e.target.checked ? 10 : null }) : null)} className="w-4 h-4 mt-0.5 text-green-600 rounded" />
-                    <div>
+                    </label>
+                  </Tooltip>
+                  <Tooltip label="عداد تنازلي لإكمال النموذج خلال مدة محددة">
+                    <label className="flex items-start gap-2 p-2 bg-green-50 rounded-lg cursor-pointer text-sm">
+                      <input type="checkbox" checked={formData?.time_limit !== null && formData?.time_limit !== undefined} onChange={(e) => setFormData(prev => prev ? ({ ...prev, time_limit: e.target.checked ? 10 : null }) : null)} className="w-4 h-4 mt-0.5 text-green-600 rounded" />
                       <span className="text-gray-700 font-medium">مؤقت</span>
-                      <p className="text-xs text-gray-500 mt-0.5">عداد تنازلي لإكمال النموذج خلال مدة محددة</p>
-                    </div>
-                  </label>
-                  <label className="flex items-start gap-2 p-2 bg-red-50 rounded-lg cursor-pointer text-sm">
-                    <input type="checkbox" checked={!!formData?.expires_at} onChange={(e) => setFormData(prev => prev ? ({ ...prev, expires_at: e.target.checked ? new Date(Date.now() + 86400000).toISOString().slice(0, 16) : '' }) : null)} className="w-4 h-4 mt-0.5 text-red-600 rounded" />
-                    <div>
+                    </label>
+                  </Tooltip>
+                  <Tooltip label="إغلاق النموذج تلقائياً في تاريخ محدد">
+                    <label className="flex items-start gap-2 p-2 bg-red-50 rounded-lg cursor-pointer text-sm">
+                      <input type="checkbox" checked={!!formData?.expires_at} onChange={(e) => setFormData(prev => prev ? ({ ...prev, expires_at: e.target.checked ? new Date(Date.now() + 86400000).toISOString().slice(0, 16) : '' }) : null)} className="w-4 h-4 mt-0.5 text-red-600 rounded" />
                       <span className="text-gray-700 font-medium">تاريخ إغلاق</span>
-                      <p className="text-xs text-gray-500 mt-0.5">إغلاق النموذج تلقائياً في تاريخ محدد</p>
-                    </div>
-                  </label>
-                  <label className="flex items-start gap-2 p-2 bg-orange-50 rounded-lg cursor-pointer text-sm">
-                    <input type="checkbox" checked={formData?.allow_delete_responses || false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, allow_delete_responses: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-orange-600 rounded" />
-                    <div>
+                    </label>
+                  </Tooltip>
+                  <Tooltip label="إظهار زر حذف لكل تسجيل ليحذفه المستخدم بنفسه">
+                    <label className="flex items-start gap-2 p-2 bg-orange-50 rounded-lg cursor-pointer text-sm">
+                      <input type="checkbox" checked={formData?.allow_delete_responses || false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, allow_delete_responses: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-orange-600 rounded" />
                       <span className="text-gray-700 font-medium">حذف الردود</span>
-                      <p className="text-xs text-gray-500 mt-0.5">إظهار زر حذف لكل تسجيل ليحذفه المستخدم بنفسه</p>
-                    </div>
-                  </label>
-                  <label className="flex items-start gap-2 p-2 bg-purple-50 rounded-lg cursor-pointer text-sm">
-                    <input type="checkbox" checked={formData?.randomize_questions || false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, randomize_questions: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-purple-600 rounded" />
-                    <div>
+                    </label>
+                  </Tooltip>
+                  <Tooltip label="عرض الأسئلة بترتيب مختلف لكل مستخدم">
+                    <label className="flex items-start gap-2 p-2 bg-purple-50 rounded-lg cursor-pointer text-sm">
+                      <input type="checkbox" checked={formData?.randomize_questions || false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, randomize_questions: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-purple-600 rounded" />
                       <span className="text-gray-700 font-medium">ترتيب عشوائي للأسئلة</span>
-                      <p className="text-xs text-gray-500 mt-0.5">عرض الأسئلة بترتيب مختلف لكل مستخدم</p>
-                    </div>
-                  </label>
-                  <label className="flex items-start gap-2 p-2 bg-indigo-50 rounded-lg cursor-pointer text-sm">
-                    <input type="checkbox" checked={formData?.enable_auto_save !== false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, enable_auto_save: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-indigo-600 rounded" />
-                    <div>
-                      <span className="text-gray-700 font-medium">الحفظ التلقائي (Auto Save)</span>
-                      <p className="text-xs text-gray-500 mt-0.5">حفظ إجابات المستخدم محلياً للعودة لها لاحقاً</p>
-                    </div>
-                  </label>
+                    </label>
+                  </Tooltip>
+                  <Tooltip label="حفظ إجابات المستخدم محلياً للعودة لها لاحقاً">
+                    <label className="flex items-start gap-2 p-2 bg-indigo-50 rounded-lg cursor-pointer text-sm">
+                      <input type="checkbox" checked={formData?.enable_auto_save !== false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, enable_auto_save: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-indigo-600 rounded" />
+                      <span className="text-gray-700 font-medium">الحفظ التلقائي</span>
+                    </label>
+                  </Tooltip>
                 </div>
 
                 {formData?.time_limit !== null && formData?.time_limit !== undefined && (
