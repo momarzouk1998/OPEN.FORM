@@ -64,6 +64,18 @@ const ADMIN_CARDS = [
     ),
     color: 'bg-gray-700',
     lightColor: 'bg-gray-100'
+  },
+  {
+    title: 'شركاء النجاح',
+    description: 'إدارة شركاء النجاح والأفكار والمقترحات',
+    href: '/admin/partners',
+    icon: (
+      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+      </svg>
+    ),
+    color: 'bg-indigo-500',
+    lightColor: 'bg-indigo-50'
   }
 ]
 

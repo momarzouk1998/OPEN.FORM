@@ -2376,7 +2376,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
         </div>
 
         {/* Products (only if no products_block question type) */}
-        {!form.questions?.some(q => q.type === 'products_block') && products.length > 0 && !submitted && (
+        {!questions?.some(q => q.type === 'products_block') && products.length > 0 && !submitted && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-6 form-themed-card">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
               <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>

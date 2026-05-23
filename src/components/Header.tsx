@@ -61,6 +61,9 @@ export default function Header({ user, settings, onMenuClick, showMenuButton = t
             <Link href="/templates" className="px-3.5 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium">
               القوالب
             </Link>
+            <Link href="/partners" className="px-3.5 py-2 text-sm text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium">
+              شركاء النجاح
+            </Link>
             <Link href="/profile" className="px-3.5 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium">
               الملف الشخصي
             </Link>
@@ -82,6 +85,7 @@ export default function Header({ user, settings, onMenuClick, showMenuButton = t
         <div className="lg:hidden bg-white border-b border-gray-100 px-4 py-2 flex flex-col gap-1 shadow-sm">
           <Link href="/dashboard" className="px-3 py-2.5 text-gray-700 hover:bg-blue-50 rounded-lg text-sm font-medium">الرئيسية</Link>
           <Link href="/templates" className="px-3 py-2.5 text-gray-700 hover:bg-blue-50 rounded-lg text-sm font-medium">القوالب</Link>
+          <Link href="/partners" className="px-3 py-2.5 text-gray-700 hover:bg-indigo-50 rounded-lg text-sm font-medium">شركاء النجاح</Link>
           <Link href="/profile" className="px-3 py-2.5 text-gray-700 hover:bg-blue-50 rounded-lg text-sm font-medium">الملف الشخصي</Link>
           {user?.role === 'admin' && (
             <Link href="/admin" className="px-3 py-2.5 text-blue-600 hover:bg-blue-50 rounded-lg text-sm font-medium">لوحة التحكم</Link>

@@ -249,4 +249,60 @@ export interface ThemeSettings {
   borderWidth?: number
 }
 
+// Partner / Success Partners types
+export interface PartnerIdea {
+  id: string
+  partner_id: string
+  text: string
+  implemented: boolean
+  created_at: string
+}
+
+export interface PartnerLike {
+  id: string
+  partner_id: string
+  user_id: string
+  created_at: string
+}
+
+export interface Referral {
+  id: string
+  referrer_id: string
+  referred_email?: string | null
+  referred_id?: string | null
+  status: 'pending' | 'completed'
+  created_at: string
+}
+
+export interface UserTemplate {
+  id: string
+  form_id: string
+  created_by: string
+  name: string
+  description: string
+  category: string
+  usage_count: number
+  is_published: boolean
+  approved: boolean
+  created_at: string
+}
+
+export interface PartnerProfile extends User {
+  company?: string
+  facebook_url?: string
+  linkedin_url?: string
+  youtube_url?: string
+  other_links?: { label: string; url: string }[]
+  bio?: string
+  is_partner?: boolean
+  referral_code?: string
+  referral_count?: number
+  likes_count?: number
+  forms_count?: number
+  templates_count?: number
+  submissions_count?: number
+  ideas?: PartnerIdea[]
+  liked_by_me?: boolean
+}
+
 

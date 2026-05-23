@@ -21,7 +21,13 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
-    gender: '' as Gender | ''
+    gender: '' as Gender | '',
+    company: '',
+    bio: '',
+    facebook_url: '',
+    linkedin_url: '',
+    youtube_url: '',
+    other_links: [] as { label: string; url: string }[]
   })
 
   const [passwordData, setPasswordData] = useState({
@@ -59,10 +65,19 @@ export default function ProfilePage() {
       }
 
       setProfile(profileData)
+      const otherLinks = profileData.other_links
+        ? (typeof profileData.other_links === 'string' ? JSON.parse(profileData.other_links) : profileData.other_links)
+        : []
       setFormData({
         name: profileData.name || '',
         phone: profileData.phone || '',
-        gender: profileData.gender || ''
+        gender: profileData.gender || '',
+        company: profileData.company || '',
+        bio: profileData.bio || '',
+        facebook_url: profileData.facebook_url || '',
+        linkedin_url: profileData.linkedin_url || '',
+        youtube_url: profileData.youtube_url || '',
+        other_links: Array.isArray(otherLinks) ? otherLinks : []
       })
 
       // Fetch notification preferences
@@ -106,6 +121,12 @@ export default function ProfilePage() {
           name: formData.name.trim(),
           phone: formData.phone?.trim() || null,
           gender: formData.gender || null,
+          company: formData.company?.trim() || null,
+          bio: formData.bio?.trim() || null,
+          facebook_url: formData.facebook_url?.trim() || null,
+          linkedin_url: formData.linkedin_url?.trim() || null,
+          youtube_url: formData.youtube_url?.trim() || null,
+          other_links: formData.other_links || [],
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id)
@@ -281,6 +302,39 @@ export default function ProfilePage() {
             تعديل البيانات الشخصية
           </h3>
 
+          {/* Avatar */}
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-200 bg-gray-100">
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt={profile.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-400 text-2xl font-bold">
+                  {profile?.name?.charAt(0) || '?'}
+                </div>
+              )}
+            </div>
+            <label className="cursor-pointer">
+              <div className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm hover:bg-blue-700 transition-colors">
+                تغيير الصورة
+              </div>
+              <input type="file" accept=".jpg,.jpeg,.png,.gif" className="hidden" onChange={async (e) => {
+                if (!e.target.files?.[0]) return
+                const file = e.target.files[0]
+                if (file.size > 5 * 1024 * 1024) { alert('حجم الصورة يجب أن يكون أقل من 5 ميجابايت'); return }
+                const supabase = createClient()
+                const ext = file.name.split('.').pop()
+                const path = `avatars/${profile.id}-${Date.now()}.${ext}`
+                const { error: upErr } = await supabase.storage.from('project-images').upload(path, file)
+                if (upErr) { alert('فشل رفع الصورة'); return }
+                const { data: { publicUrl } } = supabase.storage.from('project-images').getPublicUrl(path)
+                const { error: updErr } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', profile.id)
+                if (updErr) { alert('فشل حفظ الصورة'); return }
+                setProfile((prev: any) => ({ ...prev, avatar_url: publicUrl }))
+                setSuccess('تم تحديث الصورة بنجاح')
+              }} />
+            </label>
+          </div>
+
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6">
               {error}
@@ -345,6 +399,80 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            {/* Company */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">الشركة / المؤسسة</label>
+              <input
+                type="text"
+                value={formData.company}
+                onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="اسم الشركة (اختياري)"
+              />
+            </div>
+
+            {/* Bio */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">نبذة عني</label>
+              <textarea
+                value={formData.bio}
+                onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
+                rows={3}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="اكتب نبذة قصيرة عن نفسك (اختياري)"
+              />
+            </div>
+
+            {/* Social Links */}
+            <div className="pt-2">
+              <p className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-1.5">
+                <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                روابط التواصل
+              </p>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500 w-20 shrink-0">فيسبوك</span>
+                  <input type="text" value={formData.facebook_url} onChange={(e) => setFormData(prev => ({ ...prev, facebook_url: e.target.value }))}
+                    placeholder="https://facebook.com/..." className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500 w-20 shrink-0">لينكدإن</span>
+                  <input type="text" value={formData.linkedin_url} onChange={(e) => setFormData(prev => ({ ...prev, linkedin_url: e.target.value }))}
+                    placeholder="https://linkedin.com/in/..." className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500 w-20 shrink-0">يوتيوب</span>
+                  <input type="text" value={formData.youtube_url} onChange={(e) => setFormData(prev => ({ ...prev, youtube_url: e.target.value }))}
+                    placeholder="https://youtube.com/..." className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+                </div>
+                {/* Other links */}
+                {formData.other_links.map((link, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500 w-20 shrink-0">رابط {i + 1}</span>
+                    <input type="text" value={link.url} onChange={(e) => {
+                      const newLinks = [...formData.other_links]
+                      newLinks[i] = { ...newLinks[i], url: e.target.value }
+                      setFormData(prev => ({ ...prev, other_links: newLinks }))
+                    }} placeholder="الرابط" className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+                    <input type="text" value={link.label} onChange={(e) => {
+                      const newLinks = [...formData.other_links]
+                      newLinks[i] = { ...newLinks[i], label: e.target.value }
+                      setFormData(prev => ({ ...prev, other_links: newLinks }))
+                    }} placeholder="تسمية" className="w-20 px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+                    <button onClick={() => setFormData(prev => ({ ...prev, other_links: prev.other_links.filter((_, j) => j !== i) }))}
+                      className="p-1.5 text-red-400 hover:text-red-600">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+                ))}
+                <button onClick={() => setFormData(prev => ({ ...prev, other_links: [...prev.other_links, { label: '', url: '' }] }))}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                  إضافة رابط
+                </button>
+              </div>
+            </div>
+
             <button
               type="submit"
               disabled={saving}
@@ -366,6 +494,42 @@ export default function ProfilePage() {
             </button>
           </form>
         </div>
+
+        {/* Referral Code */}
+        {profile?.referral_code && (
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+              </svg>
+              رابط الإحالة الخاص بي
+            </h3>
+            <p className="text-sm text-gray-500 mb-3">شارك هذا الرابط مع منشئين آخرين ليتم تسجيل الإحالات لحسابك</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={`${typeof window !== 'undefined' ? window.location.origin : ''}/register?ref=${profile.referral_code}`}
+                className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-left" dir="ltr"
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+              />
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/register?ref=${profile.referral_code}`)
+                  alert('تم نسخ الرابط!')
+                }}
+                className="px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+            </div>
+            {profile.referral_count > 0 && (
+              <p className="text-sm text-green-600 mt-2 font-medium">📊 {profile.referral_count} إحالة ناجحة</p>
+            )}
+          </div>
+        )}
 
         {/* Change Password */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
