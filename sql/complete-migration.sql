@@ -602,7 +602,7 @@ WHERE NOT EXISTS (
 -- Default app settings
 INSERT INTO app_settings (key, value, description) VALUES
 ('app_logo', '', 'شعار التطبيق الرئيسي'),
-('app_name', 'OpenApp.Form', 'اسم التطبيق'),
+('app_name', 'Forms.OpenappO', 'اسم التطبيق'),
 ('app_description', 'منصة النماذج والاستبيانات الاحترافية', 'وصف التطبيق')
 ON CONFLICT (key) DO NOTHING;
 
