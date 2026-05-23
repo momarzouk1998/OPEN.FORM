@@ -1958,6 +1958,7 @@ const params = useParams()
                           }
 
                           return (
+                            <SortableQuestionItem key={question.id} id={question.id}>
                             <div
                               key={question.id}
                               onClick={() => setSelectedQuestionIndex(isSelected ? null : qIndex)}
