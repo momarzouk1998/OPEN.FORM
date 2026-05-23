@@ -2425,7 +2425,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
         )}
 
         {/* Offer Countdown (only if no countdown_timer question type) */}
-        {!form.questions?.some(q => q.type === 'countdown_timer') && offerEndStr && offerCountdown > 0 && !submitted && (
+        {!questions?.some(q => q.type === 'countdown_timer') && offerEndStr && offerCountdown > 0 && !submitted && (
           <div className="bg-gradient-to-l from-red-500 to-orange-500 rounded-2xl p-4 mb-6 shadow-lg text-center">
             <p className="text-white/80 text-xs mb-1">العرض ينتهي خلال</p>
             <p className="text-white text-3xl font-mono font-bold tracking-widest" dir="ltr">
@@ -2514,7 +2514,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
         </div>
 
         {/* Payment Info Display (only if no payment_info_block question type) */}
-        {isLastPage && !form.questions?.some(q => q.type === 'payment_info_block') && form.page_titles?._payment && (() => {
+        {isLastPage && !questions?.some(q => q.type === 'payment_info_block') && form.page_titles?._payment && (() => {
           const rawPayment = form.page_titles._payment
           const paymentMethods = typeof rawPayment === 'string' ? JSON.parse(rawPayment) : rawPayment
           if (!paymentMethods || paymentMethods.length === 0) return null
