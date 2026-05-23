@@ -2053,8 +2053,8 @@ export default function FormFiller({ form, questions, existingResponse: propExis
                 </p>
               </div>
 
-              {/* Score (only if form has scoring) */}
-              {maxScore > 0 && (
+              {/* Score (only if form has scoring and is test mode) */}
+              {!!(form.page_titles as any)?._is_test && maxScore > 0 && (
                 <div className={`rounded-2xl p-4 mb-5 border ${
                   percentage >= 70 ? 'bg-emerald-50 border-emerald-100' : percentage >= 50 ? 'bg-amber-50 border-amber-100' : 'bg-red-50 border-red-100'
                 }`}>

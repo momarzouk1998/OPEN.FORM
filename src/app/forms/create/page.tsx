@@ -456,7 +456,8 @@ const supabase = createClient()
           image_url: formData.image_url,
           created_by: profile.id,
           is_active: true,
-          short_code: generateShortCode()
+          short_code: generateShortCode(),
+          page_titles: { _is_test: !!((formData as any)._is_test) }
         })
         .select()
         .single()
@@ -638,10 +639,12 @@ const supabase = createClient()
                   <span className="text-sm text-gray-600">عدد الأسئلة:</span>
                   <span className="font-bold text-gray-900">{questions.length}</span>
                 </div>
+                {!!((formData as any)._is_test) && (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-600">إجمالي النقاط:</span>
                   <span className="font-bold text-blue-700">{totalPoints}</span>
                 </div>
+                )}
               </div>
             )
           })()}
@@ -673,6 +676,22 @@ const supabase = createClient()
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="وصف مختصر للنموذج..."
               />
+            </div>
+
+            {/* Is Test */}
+            <div className="bg-cyan-50 rounded-xl p-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!(formData as any)._is_test}
+                  onChange={(e) => setFormData(prev => ({ ...prev, _is_test: e.target.checked } as FormData))}
+                  className="w-5 h-5 mt-1 text-cyan-600 rounded focus:ring-cyan-500"
+                />
+                <div>
+                  <span className="font-medium text-gray-800 block">اختبار</span>
+                  <span className="text-sm text-gray-600">إظهار حقول النقاط والدرجات للتقييم والتصحيح</span>
+                </div>
+              </label>
             </div>
 
             {/* Allow Multiple */}
@@ -917,7 +936,7 @@ const supabase = createClient()
                     <span className="text-sm text-gray-700">مطلوب</span>
                   </label>
                   
-                  {!['single_choice', 'multiple_choice', 'dropdown', 'ranking', 'matrix', 'button_choice', 'match_items', 'static_text', 'static_image', 'divider', 'terms', 'youtube'].includes(question.type) && (
+                  {!!((formData as any)._is_test) && !['single_choice', 'multiple_choice', 'dropdown', 'ranking', 'matrix', 'button_choice', 'match_items', 'static_text', 'static_image', 'divider', 'terms', 'youtube'].includes(question.type) && (
                   <div className="flex items-center gap-2">
                     <label className="text-sm text-gray-700">النقاط:</label>
                     <input
@@ -933,7 +952,7 @@ const supabase = createClient()
                   <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full">
                     {QUESTION_TYPES[question.type as QuestionType]?.label}
                   </span>
-                  {(() => {
+                  {!!((formData as any)._is_test) && (() => {
                     if (question.type === 'file_upload') return null
                     let total = 0
                     if (question.type === 'single_choice') {
@@ -1173,7 +1192,7 @@ const supabase = createClient()
                               placeholder="عنوان العمود..."
                               className="flex-1 px-3 py-2 border border-amber-200 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white"
                             />
-                            <div className="flex items-center gap-1">
+                            <div className={`flex items-center gap-1 ${!!((formData as any)._is_test) ? '' : 'hidden'}`}>
                               <span className="text-xs text-gray-500">الدرجة:</span>
                               <input
                                 type="number"
@@ -1291,7 +1310,7 @@ const supabase = createClient()
                               value={option.points}
                               onChange={(e) => updateOption(qIndex, oIndex, { points: Number(e.target.value) })}
                               placeholder="الدرجة"
-                              className="w-16 px-2 py-2 border border-gray-200 rounded-lg text-center"
+                              className={`w-16 px-2 py-2 border border-gray-200 rounded-lg text-center ${!!((formData as any)._is_test) ? '' : 'hidden'}`}
                             />
                           </div>
                           <button
@@ -1351,7 +1370,7 @@ const supabase = createClient()
                             value={option.points}
                             onChange={(e) => updateOption(qIndex, oIndex, { points: Number(e.target.value) })}
                             placeholder="النقاط"
-                            className="w-20 px-2 py-2 border border-gray-200 rounded-lg text-center"
+                            className={`w-20 px-2 py-2 border border-gray-200 rounded-lg text-center ${!!((formData as any)._is_test) ? '' : 'hidden'}`}
                             title="النقاط"
                           />
                           {question.has_counter && (
@@ -1409,7 +1428,7 @@ const supabase = createClient()
                         {(question.matrix_columns || []).map((col: any, ci: number) => (
                           <div key={ci} className="flex items-center gap-2">
                             <input type="text" value={col.text} onChange={(e) => updateMatrixColumn(qIndex, ci, { text: e.target.value })} placeholder={`إجابة ${ci + 1}`} className="flex-1 px-3 py-2 border border-gray-200 rounded-lg" />
-                            <input type="number" min="0" value={col.points} onChange={(e) => updateMatrixColumn(qIndex, ci, { points: Number(e.target.value) })} className="w-16 px-2 py-2 border border-gray-200 rounded-lg text-center" placeholder="نقاط" />
+                            <input type="number" min="0" value={col.points} onChange={(e) => updateMatrixColumn(qIndex, ci, { points: Number(e.target.value) })} className={`w-16 px-2 py-2 border border-gray-200 rounded-lg text-center ${!!((formData as any)._is_test) ? '' : 'hidden'}`} placeholder="نقاط" />
                             <button onClick={() => removeMatrixColumn(qIndex, ci)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
                           </div>
                         ))}
@@ -1469,7 +1488,7 @@ const supabase = createClient()
                               const idx = (question.options || []).findIndex((o: any) => o.id === opt.id)
                               updateOption(qIndex, idx, { points: Number(e.target.value) })
                             }}
-                            className="w-12 px-1 py-1 border border-blue-200 rounded text-center text-sm"
+                            className={`w-12 px-1 py-1 border border-blue-200 rounded text-center text-sm ${!!((formData as any)._is_test) ? '' : 'hidden'}`}
                           />
                         </div>
                       ))}

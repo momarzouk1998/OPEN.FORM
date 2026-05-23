@@ -1147,7 +1147,7 @@ const params = useParams()
           randomize_questions: formData.randomize_questions || false,
           image_url: formData.image_url || null,
           short_code: formData.short_code || generateShortCode(),
-          page_titles: { ...formData.page_titles, _payment: formData.payment_info || [], _submit_button: (formData.page_titles as any)?._submit_button || {}, _offer_countdown: (formData.page_titles as any)?._offer_countdown || '' }
+          page_titles: { ...formData.page_titles, _is_test: !!(formData.page_titles as any)?._is_test, _payment: formData.payment_info || [], _submit_button: (formData.page_titles as any)?._submit_button || {}, _offer_countdown: (formData.page_titles as any)?._offer_countdown || '' }
 
         })
 
@@ -1674,6 +1674,13 @@ const params = useParams()
               <div>
                 <h4 className="text-sm font-bold text-gray-900 mb-3">خيارات النموذج</h4>
                 <div className="grid grid-cols-2 gap-2">
+                  <label className="flex items-start gap-2 p-2 bg-cyan-50 rounded-lg cursor-pointer text-sm">
+                    <input type="checkbox" checked={!!(formData?.page_titles as any)?._is_test} onChange={(e) => setFormData(prev => prev ? ({ ...prev, page_titles: { ...prev.page_titles, _is_test: e.target.checked } }) : null)} className="w-4 h-4 mt-0.5 text-cyan-600 rounded" />
+                    <div>
+                      <span className="text-gray-700 font-medium">اختبار</span>
+                      <p className="text-xs text-gray-500 mt-0.5">إظهار حقول النقاط والدرجات</p>
+                    </div>
+                  </label>
                   <label className="flex items-start gap-2 p-2 bg-amber-50 rounded-lg cursor-pointer text-sm">
                     <input type="checkbox" checked={formData?.allow_multiple || false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, allow_multiple: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-blue-600 rounded" />
                     <div>
@@ -2089,7 +2096,7 @@ const params = useParams()
                                   </h4>
                                   <div className="flex items-center gap-2 mt-1">
                                     <span className="text-xs text-blue-500 form-themed-primary-text">{typeInfo?.icon} {typeInfo?.label}</span>
-                                    {question.points > 0 && <span className="text-xs text-gray-400">{question.points} نقطة</span>}
+                                    {!!(formData?.page_titles as any)?._is_test && question.points > 0 && <span className="text-xs text-gray-400">{question.points} نقطة</span>}
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -2135,7 +2142,7 @@ const params = useParams()
                                       <input type="checkbox" checked={question.required} onChange={(e) => updateQuestion(qIndex, { required: e.target.checked })} className="w-4 h-4 text-blue-600 rounded" />
                                       <span className="text-sm text-gray-700 font-medium">مطلوب</span>
                                     </label>
-                                    {!['single_choice', 'multiple_choice', 'dropdown', 'ranking', 'matrix', 'button_choice', 'match_items', 'static_text', 'static_image', 'divider', 'terms', 'youtube'].includes(question.type) && (
+                                    {!!(formData?.page_titles as any)?._is_test && !['single_choice', 'multiple_choice', 'dropdown', 'ranking', 'matrix', 'button_choice', 'match_items', 'static_text', 'static_image', 'divider', 'terms', 'youtube'].includes(question.type) && (
                                       <div className="flex-1">
                                         <input type="number" min="0" value={question.points} onChange={(e) => updateQuestion(qIndex, { points: Number(e.target.value) })} placeholder="النقاط" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" />
                                       </div>
@@ -2158,7 +2165,7 @@ const params = useParams()
                                         {(parseOptions(question.options) as any[]).map((opt: any, oi: number) => (
                                           <div key={oi} className="flex items-center gap-1.5">
                                             <input type="text" value={opt.text} onChange={(e) => updateOption(qIndex, oi, { text: e.target.value })} placeholder={`خيار ${oi + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
-                                            <input type="number" min="0" value={opt.points} onChange={(e) => updateOption(qIndex, oi, { points: Number(e.target.value) })} className="w-14 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center" placeholder="نقاط" />
+                                            <input type="number" min="0" value={opt.points} onChange={(e) => updateOption(qIndex, oi, { points: Number(e.target.value) })} className={`w-14 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center ${!!(formData?.page_titles as any)?._is_test ? '' : 'hidden'}`} placeholder="نقاط" />
                                             {question.has_counter && (
                                               <input type="number" min="1" value={opt.counter_target || ''} onChange={(e) => updateOption(qIndex, oi, { counter_target: parseInt(e.target.value) || null })} className="w-14 px-2 py-1.5 border border-emerald-200 rounded-lg text-sm text-center" placeholder="هدف" />
                                             )}
@@ -2206,7 +2213,7 @@ const params = useParams()
                                           {(question.matrix_columns || []).map((col: any, ci: number) => (
                                             <div key={ci} className="flex items-center gap-1">
                                               <input type="text" value={col.text} onChange={(e) => updateMatrixColumn(qIndex, ci, { text: e.target.value })} placeholder={`عمود ${ci + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
-                                              <input type="number" min="0" value={col.points} onChange={(e) => updateMatrixColumn(qIndex, ci, { points: Number(e.target.value) })} className="w-14 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center" placeholder="نقاط" />
+                                              <input type="number" min="0" value={col.points} onChange={(e) => updateMatrixColumn(qIndex, ci, { points: Number(e.target.value) })} className={`w-14 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center ${!!(formData?.page_titles as any)?._is_test ? '' : 'hidden'}`} placeholder="نقاط" />
                                               <button onClick={() => removeMatrixColumn(qIndex, ci)} className="p-1 text-red-400 hover:text-red-600"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
                                             </div>
                                           ))}
@@ -2236,7 +2243,7 @@ const params = useParams()
                                           {(question.matrix_columns || []).map((col: any, ci: number) => (
                                             <div key={ci} className="flex items-center gap-1">
                                               <input type="text" value={col.text} onChange={(e) => updateMatrixColumn(qIndex, ci, { text: e.target.value })} placeholder={`إجابة ${ci + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
-                                              <input type="number" min="0" value={col.points} onChange={(e) => updateMatrixColumn(qIndex, ci, { points: Number(e.target.value) })} className="w-14 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center" placeholder="نقاط" />
+                                              <input type="number" min="0" value={col.points} onChange={(e) => updateMatrixColumn(qIndex, ci, { points: Number(e.target.value) })} className={`w-14 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center ${!!(formData?.page_titles as any)?._is_test ? '' : 'hidden'}`} placeholder="نقاط" />
                                               <button onClick={() => removeMatrixColumn(qIndex, ci)} className="p-1 text-red-400 hover:text-red-600"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
                                             </div>
                                           ))}
@@ -2452,7 +2459,7 @@ const params = useParams()
                                         {(parseOptions(question.options) as any[]).map((opt: any, oi: number) => (
                                           <div key={oi} className="text-center">
                                             <div className="w-full py-1.5 bg-blue-600 text-white rounded-lg font-bold text-sm mb-1">{opt.text}</div>
-                                            <input type="number" value={opt.points} onChange={(e) => { const idx = (question.options || []).findIndex((o: any) => o.id === opt.id); if (idx >= 0) updateOption(qIndex, idx, { points: Number(e.target.value) }) }} className="w-full px-1 py-1 border border-blue-200 rounded text-center text-sm" />
+                                            <input type="number" value={opt.points} onChange={(e) => { const idx = (question.options || []).findIndex((o: any) => o.id === opt.id); if (idx >= 0) updateOption(qIndex, idx, { points: Number(e.target.value) }) }} className={`w-full px-1 py-1 border border-blue-200 rounded text-center text-sm ${!!(formData?.page_titles as any)?._is_test ? '' : 'hidden'}`} />
                                           </div>
                                         ))}
                                       </div>
