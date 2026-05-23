@@ -210,6 +210,17 @@ export default function FormFiller({ form, questions, existingResponse: propExis
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [offerCountdown, setOfferCountdown] = useState<number>(-1);
   const [totalResponses, setTotalResponses] = useState<number>(0);
+  const [cart, setCart] = useState<Record<string, number>>({});
+
+  const products: Array<{ id: string; name: string; description?: string; price: number; image_url?: string; available?: boolean }> =
+    (form.page_titles as any)?._products || []
+
+  const cartTotal = Object.entries(cart).reduce((sum, [id, qty]) => {
+    const prod = products.find(p => p.id === id)
+    return sum + (prod ? prod.price * qty : 0)
+  }, 0)
+
+  const cartCount = Object.values(cart).reduce((sum, qty) => sum + qty, 0)
   const [displayQuestions, setDisplayQuestions] = useState<Question[]>([]);
   const [isExpired, setIsExpired] = useState(false);
 
@@ -775,6 +786,9 @@ export default function FormFiller({ form, questions, existingResponse: propExis
     }
 
     try {
+      // Inject cart into answers
+      const finalAnswers = { ...answers, __cart: products.length > 0 ? cart : {} }
+
       // Check user limits if authenticated
       if (userId) {
         const { data: profile } = await supabase
@@ -810,7 +824,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
           .update({
             score,
             max_score: maxScore,
-            answers: answers,
+            answers: finalAnswers,
             submitted_at: new Date().toISOString()
           })
           .eq('id', existingResponse.id)
@@ -822,7 +836,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
           form_id: form.id,
           score,
           max_score: maxScore,
-          answers
+          answers: finalAnswers
         }
 
         if (userId) {
@@ -2260,6 +2274,55 @@ export default function FormFiller({ form, questions, existingResponse: propExis
             </div>
           )}
         </div>
+
+        {/* Products */}
+        {products.length > 0 && !submitted && (
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-6 form-themed-card">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+              المنتجات المتاحة
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {products.filter(p => p.available !== false).map((prod) => {
+                const qty = cart[prod.id] || 0
+                return (
+                  <div key={prod.id} className="border border-gray-200 rounded-xl overflow-hidden hover:border-blue-300 transition-colors">
+                    {prod.image_url && (
+                      <div className="h-36 bg-gray-50 overflow-hidden">
+                        <img src={prod.image_url} alt={prod.name} className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    <div className="p-3">
+                      <h4 className="font-bold text-gray-900 text-sm">{prod.name}</h4>
+                      {prod.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{prod.description}</p>}
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-lg font-bold text-blue-700">{prod.price.toLocaleString()} <span className="text-xs font-normal">EGP</span></span>
+                        {qty > 0 ? (
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: Math.max(0, qty - 1) }))} className="w-7 h-7 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-sm font-bold hover:bg-red-200">−</button>
+                            <span className="text-sm font-bold w-5 text-center">{qty}</span>
+                            <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: qty + 1 }))} className="w-7 h-7 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold hover:bg-blue-200">+</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: 1 }))} className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors">إضافة</button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            {cartCount > 0 && (
+              <div className="mt-4 p-3 bg-gradient-to-l from-blue-50 to-indigo-50 rounded-xl border border-blue-100 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">إجمالي الطلب</p>
+                  <p className="text-xl font-bold text-blue-700">{cartTotal.toLocaleString()} <span className="text-sm font-normal">EGP</span></p>
+                </div>
+                <p className="text-xs text-gray-500">{cartCount} منتج{cartCount > 1 ? 'ات' : ''}</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Offer Countdown */}
         {offerEndStr && offerCountdown > 0 && !submitted && (

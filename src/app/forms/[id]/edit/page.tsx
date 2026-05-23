@@ -136,6 +136,7 @@ interface FormData {
   redirect_rules?: Array<{ question_id: string; operator: string; value: string; redirect_url: string; message?: string }>
   default_redirect_url?: string
   payment_info?: Array<{ method: string; label: string; value: string }>
+  products?: Array<{ id: string; name: string; description?: string; price: number; image_url?: string; available?: boolean }>
 
 }
 
@@ -777,7 +778,8 @@ const params = useParams()
         short_code: form.short_code || '',
         serial_number: form.serial_number,
         page_titles: form.page_titles || {},
-        payment_info: form.page_titles?._payment ? (typeof form.page_titles._payment === 'string' ? JSON.parse(form.page_titles._payment) : form.page_titles._payment) : []
+        payment_info: form.page_titles?._payment ? (typeof form.page_titles._payment === 'string' ? JSON.parse(form.page_titles._payment) : form.page_titles._payment) : [],
+        products: form.page_titles?._products || []
 
       })
 
@@ -1147,7 +1149,7 @@ const params = useParams()
           randomize_questions: formData.randomize_questions || false,
           image_url: formData.image_url || null,
           short_code: formData.short_code || generateShortCode(),
-          page_titles: { ...formData.page_titles, _is_test: !!(formData.page_titles as any)?._is_test, _payment: formData.payment_info || [], _submit_button: (formData.page_titles as any)?._submit_button || {}, _offer_countdown: (formData.page_titles as any)?._offer_countdown || '' }
+          page_titles: { ...formData.page_titles, _is_test: !!(formData.page_titles as any)?._is_test, _payment: formData.payment_info || [], _products: formData.products || [], _submit_button: (formData.page_titles as any)?._submit_button || {}, _offer_countdown: (formData.page_titles as any)?._offer_countdown || '' }
 
         })
 
@@ -1879,6 +1881,87 @@ const params = useParams()
                       />
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Products Section */}
+              <div>
+                <h4 className="text-sm font-bold text-gray-900 mb-3">المنتجات</h4>
+                <p className="text-xs text-gray-500 mb-3">أضف المنتجات التي سيتم عرضها للمستخدم لاختيارها وطلبها</p>
+                <div className="space-y-3">
+                  {(formData?.products || []).map((prod: any, pi: number) => (
+                    <div key={pi} className="p-3 bg-white rounded-xl border border-gray-200 space-y-2">
+                      <div className="flex gap-2 items-start">
+                        {prod.image_url ? (
+                          <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200 shrink-0">
+                            <img src={prod.image_url} alt={prod.name} className="w-full h-full object-cover" />
+                            <button onClick={() => {
+                              const newProds = [...(formData?.products || [])]
+                              newProds[pi] = { ...newProds[pi], image_url: '' }
+                              setFormData(prev => prev ? ({ ...prev, products: newProds }) : null)
+                            }} className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">×</button>
+                          </div>
+                        ) : (
+                          <label className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 shrink-0">
+                            <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                            <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                              const file = e.target.files?.[0]
+                              if (!file) return
+                              const supabase = (await import('@/utils/supabase/client')).createClient()
+                              const ext = file.name.split('.').pop()
+                              const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`
+                              const { data, error } = await supabase.storage.from('products').upload(fileName, file)
+                              if (error) { alert('فشل رفع الصورة'); return }
+                              const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(fileName)
+                              const newProds = [...(formData?.products || [])]
+                              newProds[pi] = { ...newProds[pi], image_url: publicUrl }
+                              setFormData(prev => prev ? ({ ...prev, products: newProds }) : null)
+                            }} />
+                          </label>
+                        )}
+                        <div className="flex-1 space-y-1.5 min-w-0">
+                          <input type="text" value={prod.name} onChange={(e) => {
+                            const newProds = [...(formData?.products || [])]
+                            newProds[pi] = { ...newProds[pi], name: e.target.value }
+                            setFormData(prev => prev ? ({ ...prev, products: newProds }) : null)
+                          }} placeholder="اسم المنتج" className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium" />
+                          <textarea value={prod.description || ''} onChange={(e) => {
+                            const newProds = [...(formData?.products || [])]
+                            newProds[pi] = { ...newProds[pi], description: e.target.value }
+                            setFormData(prev => prev ? ({ ...prev, products: newProds }) : null)
+                          }} rows={2} placeholder="وصف المنتج (اختياري)" className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs" />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <label className="text-xs text-gray-500">السعر (EGP)</label>
+                          <input type="number" min="0" value={prod.price || ''} onChange={(e) => {
+                            const newProds = [...(formData?.products || [])]
+                            newProds[pi] = { ...newProds[pi], price: Number(e.target.value) }
+                            setFormData(prev => prev ? ({ ...prev, products: newProds }) : null)
+                          }} placeholder="0.00" className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm" />
+                        </div>
+                        <label className="flex items-center gap-1.5 text-xs text-gray-600 mt-5">
+                          <input type="checkbox" checked={prod.available !== false} onChange={(e) => {
+                            const newProds = [...(formData?.products || [])]
+                            newProds[pi] = { ...newProds[pi], available: e.target.checked }
+                            setFormData(prev => prev ? ({ ...prev, products: newProds }) : null)
+                          }} className="w-3.5 h-3.5 text-blue-600 rounded" />
+                          متاح
+                        </label>
+                        <button onClick={() => {
+                          setFormData(prev => prev ? ({ ...prev, products: prev.products?.filter((_: any, i: number) => i !== pi) }) : null)
+                        }} className="p-1.5 mt-5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <button onClick={() => {
+                    setFormData(prev => prev ? ({ ...prev, products: [...(prev.products || []), { id: `p_${Date.now()}`, name: '', description: '', price: 0, image_url: '', available: true }] }) : null)
+                  }} className="w-full py-2.5 border-2 border-dashed border-gray-300 text-gray-500 rounded-xl hover:border-blue-400 hover:text-blue-600 transition-colors text-sm flex items-center justify-center gap-1">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> إضافة منتج
+                  </button>
                 </div>
               </div>
 
