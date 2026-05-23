@@ -209,6 +209,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
 
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [offerCountdown, setOfferCountdown] = useState<number>(-1);
+  const [totalResponses, setTotalResponses] = useState<number>(0);
   const [displayQuestions, setDisplayQuestions] = useState<Question[]>([]);
   const [isExpired, setIsExpired] = useState(false);
 
@@ -855,6 +856,13 @@ export default function FormFiller({ form, questions, existingResponse: propExis
       } else if (form.default_redirect_url) {
         setTimeout(() => { window.location.href = form.default_redirect_url! }, 2500)
       }
+
+      // Fetch total response count for this form
+      const { count: totalCount } = await supabase
+        .from('form_responses')
+        .select('id', { count: 'exact', head: true })
+        .eq('form_id', form.id)
+      if (totalCount !== null) setTotalResponses(totalCount)
 
       setSubmitted(true)
     } catch (err: any) {
@@ -2013,72 +2021,95 @@ export default function FormFiller({ form, questions, existingResponse: propExis
   if (submitted) {
     const { score, maxScore } = calculateScore()
     const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0
-
-    let resultMessage = ''
-    if (percentage >= 90) resultMessage = 'ممتاز! أداء رائع'
-    else if (percentage >= 70) resultMessage = 'جيد جداً'
-    else if (percentage >= 50) resultMessage = 'جيد'
-    else resultMessage = 'يحتاج تحسين'
+    const siteUrl = 'https://forms.openappo.com'
 
     return (
       <div dir="rtl" className={`${isPreview ? 'min-h-full' : 'min-h-screen'} bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4 form-themed-container`}>
         {renderThemeStyles()}
         <div className="bg-white rounded-3xl shadow-xl shadow-blue-900/5 border border-gray-100 p-8 max-w-md w-full text-center form-themed-card">
-          <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-emerald-100 to-green-100 rounded-full flex items-center justify-center">
-            <svg className="w-12 h-12 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="w-20 h-20 mx-auto mb-5 bg-gradient-to-br from-emerald-100 to-green-100 rounded-full flex items-center justify-center">
+            <svg className="w-10 h-10 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2 form-themed-text">تم الحفظ بنجاح!</h2>
-          <p className="text-gray-500 mb-6 form-themed-description">{redirectMessage || resultMessage}</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-1 form-themed-text">تم إرسال طلبك بنجاح ✅</h2>
+          {redirectMessage && <p className="text-gray-500 text-sm mb-4 form-themed-description">{redirectMessage}</p>}
           {form.default_redirect_url || (form.redirect_rules && form.redirect_rules.length > 0) ? (
-            <p className="text-xs text-gray-400 mb-4 animate-pulse">سيتم توجيهك خلال لحظات...</p>
+            <p className="text-xs text-gray-400 mb-5 animate-pulse">سيتم توجيهك خلال لحظات...</p>
           ) : null}
 
-          <div className={`rounded-2xl p-6 mb-6 border ${
-            percentage >= 70 ? 'bg-emerald-50 border-emerald-100' : percentage >= 50 ? 'bg-amber-50 border-amber-100' : 'bg-red-50 border-red-100'
-          }`}>
-            <p className="text-gray-500 mb-2">درجتك</p>
-            <p className={`text-5xl font-bold ${
-              percentage >= 70 ? 'text-emerald-600' : percentage >= 50 ? 'text-amber-600' : 'text-red-600'
-            }`}>
-              {percentage}%
-            </p>
-            <p className="text-gray-400 text-sm mt-2">
-              {score} من {maxScore} نقطة
-            </p>
-          </div>
+          {!form.default_redirect_url && (!form.redirect_rules || form.redirect_rules.length === 0) && (
+            <>
+              {/* Total Responses Count */}
+              <div className="bg-gradient-to-l from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-5 mb-5">
+                <p className="text-gray-600 text-sm mb-1">
+                  صاحب هذا النموذج استقبل
+                </p>
+                <p className="text-3xl font-bold text-blue-700 font-mono" dir="ltr">
+                  {totalResponses.toLocaleString()}
+                </p>
+                <p className="text-gray-600 text-sm mt-1">
+                  طلب حتى الآن باستخدام <span className="font-bold text-blue-600">{form.name}</span>
+                </p>
+              </div>
 
-          {form.allow_multiple && allUserResponses && allUserResponses.length > 0 && (
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-6">
-              <p className="text-blue-700 text-sm">
-                هذا التسجيل رقم {allUserResponses.length} في هذا الفورم
-              </p>
-            </div>
+              {/* Score (only if form has scoring) */}
+              {maxScore > 0 && (
+                <div className={`rounded-2xl p-4 mb-5 border ${
+                  percentage >= 70 ? 'bg-emerald-50 border-emerald-100' : percentage >= 50 ? 'bg-amber-50 border-amber-100' : 'bg-red-50 border-red-100'
+                }`}>
+                  <p className="text-gray-500 text-sm mb-1">درجتك</p>
+                  <p className={`text-3xl font-bold ${
+                    percentage >= 70 ? 'text-emerald-600' : percentage >= 50 ? 'text-amber-600' : 'text-red-600'
+                  }`}>
+                    {percentage}%
+                  </p>
+                  <p className="text-gray-400 text-xs mt-1">{score} من {maxScore} نقطة</p>
+                </div>
+              )}
+
+              {form.allow_multiple && allUserResponses && allUserResponses.length > 0 && (
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-5">
+                  <p className="text-blue-700 text-sm">
+                    هذا التسجيل رقم {allUserResponses.length} في هذا الفورم
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-3 mb-4">
+                <Link
+                  href={project ? `/projects/${project.id}` : '/dashboard'}
+                  className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors text-sm"
+                >
+                  العودة
+                </Link>
+                <button
+                  onClick={() => {
+                    if (form.allow_multiple) {
+                      setSubmitted(false)
+                      setAnswers({})
+                      setShowRetryConfirm(false)
+                    } else {
+                      setShowRetryConfirm(true)
+                    }
+                  }}
+                  className="flex-1 py-3 bg-gradient-to-l from-blue-600 to-indigo-600 text-white rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 transition-colors shadow-lg shadow-blue-500/25 text-sm"
+                >
+                  {form.allow_multiple ? 'تسجيل جديد' : 'إعادة المحاولة'}
+                </button>
+              </div>
+
+              {/* Create Your Own Form */}
+              <a
+                href={siteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full py-3.5 bg-gradient-to-l from-emerald-500 to-green-600 text-white rounded-xl font-bold hover:from-emerald-600 hover:to-green-700 transition-all shadow-lg shadow-emerald-500/30 text-sm"
+              >
+                أنشئ نموذجك مجانًا 🚀
+              </a>
+            </>
           )}
-
-          <div className="flex gap-3">
-            <Link
-              href={project ? `/projects/${project.id}` : '/dashboard'}
-              className="flex-1 py-3.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-            >
-              العودة
-            </Link>
-            <button
-              onClick={() => {
-                if (form.allow_multiple) {
-                  setSubmitted(false)
-                  setAnswers({})
-                  setShowRetryConfirm(false)
-                } else {
-                  setShowRetryConfirm(true)
-                }
-              }}
-              className="flex-1 py-3.5 bg-gradient-to-l from-blue-600 to-indigo-600 text-white rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 transition-colors shadow-lg shadow-blue-500/25"
-            >
-              {form.allow_multiple ? 'تسجيل جديد' : 'إعادة المحاولة'}
-            </button>
-          </div>
         </div>
       </div>
     )
