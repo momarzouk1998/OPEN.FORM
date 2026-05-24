@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -110,6 +110,7 @@ interface Question {
   correct_option_ids?: string[]
   row_group?: number | null
   page?: number
+  visibility_rules?: any[]
 }
 
 interface FormData {
@@ -130,6 +131,7 @@ interface ExistingForm {
 }
 
 function CreateFormContent() {
+  const draftCreationStarted = useRef(false)
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -175,6 +177,16 @@ function CreateFormContent() {
       return options
     }
     return []
+  }
+
+  const extractVisibilityRules = (options: any): any[] => {
+    const raw = typeof options === 'string' ? (() => {
+      try { return JSON.parse(options) } catch { return [] }
+    })() : options
+    if (Array.isArray(raw)) {
+      return raw[raw.length - 1]?._visibility_rules || []
+    }
+    return raw?._visibility_rules || []
   }
 
   const normalizeProductGroups = (value: any): ProductGroup[] => {
@@ -230,6 +242,165 @@ function CreateFormContent() {
 
   const getAppointmentSlots = (options: any) => {
     return parseOptions(options).filter((opt: any) => opt.id !== APPOINTMENT_META_ID)
+  }
+
+  const buildQuestionInsertRows = (questions: any[], formId: string) => {
+    return (questions || []).map((q: any, index: number) => {
+      let optionsData: any
+      const matrixRows = q.matrix_rows || q.options?.matrix_rows || []
+      const matrixColumns = q.matrix_columns || q.options?.matrix_columns || []
+
+      if (q.type === 'matrix') {
+        optionsData = {
+          matrix_rows: matrixRows.map((row: any) => ({
+            id: row.id,
+            text: row.text,
+            required: row.required ?? true
+          })),
+          matrix_columns: matrixColumns.map((col: any) => ({
+            id: col.id,
+            text: col.text,
+            points: col.points || 0
+          }))
+        }
+      } else if (q.type === 'dropdown') {
+        const dropdownOptions = q.options?.options || q.options || []
+        const items = parseOptions(dropdownOptions).map((opt: any) => ({
+          id: opt.id,
+          text: opt.text,
+          points: opt.points || 0
+        }))
+        optionsData = {
+          dropdown_type: q.dropdown_type || q.options?.dropdown_type || 'single',
+          correct_option_ids: q.correct_option_ids || q.options?.correct_option_ids || [],
+          options: items
+        }
+      } else if (q.type === 'match_items') {
+        optionsData = {
+          left_items: q.options?.left_items || matrixRows.map((row: any) => ({ id: row.id, text: row.text })),
+          right_items: q.options?.right_items || matrixColumns.map((col: any) => ({ id: col.id, text: col.text }))
+        }
+      } else {
+        optionsData = parseOptions(q.options)
+      }
+
+      const storedOpts = Array.isArray(optionsData)
+        ? [...optionsData, { _visibility_rules: q.visibility_rules || extractVisibilityRules(q.options) || [] }]
+        : { ...optionsData, _visibility_rules: q.visibility_rules || extractVisibilityRules(q.options) || [] }
+
+      return {
+        form_id: formId,
+        text: q.text || '',
+        type: q.type || 'text',
+        required: q.required ?? false,
+        points: q.points || 0,
+        has_counter: q.has_counter || false,
+        order_index: index,
+        row_group: q.row_group || null,
+        page: q.page || 1,
+        options: JSON.stringify(storedOpts)
+      }
+    })
+  }
+
+  const createDraftAndOpenEditor = async (profileData: any, templateId?: string | null) => {
+    let template: any = null
+    let templateSource: 'form_templates' | 'user_templates' | null = null
+    let templateQuestions: any[] = []
+    let templateSettings: Record<string, any> = {}
+
+    if (templateId) {
+      const { data: built } = await supabase
+        .from('form_templates')
+        .select('*')
+        .eq('id', templateId)
+        .maybeSingle()
+
+      if (built) {
+        template = built
+        templateSource = 'form_templates'
+        templateQuestions = built.questions_data || []
+        templateSettings = built.form_settings || {}
+      } else {
+        const { data: userTemplate } = await supabase
+          .from('user_templates')
+          .select('*')
+          .eq('id', templateId)
+          .maybeSingle()
+
+        if (userTemplate?.form_id) {
+          const { data: sourceQuestions } = await supabase
+            .from('questions')
+            .select('*')
+            .eq('form_id', userTemplate.form_id)
+            .order('order_index', { ascending: true })
+
+          template = userTemplate
+          templateSource = 'user_templates'
+          templateQuestions = (sourceQuestions || []).map((q: any) => ({
+            ...q,
+            order_index: q.order_index,
+            options: q.options
+          }))
+        }
+      }
+
+      if (!template) {
+        alert('لم يتم العثور على القالب المطلوب')
+      }
+    }
+
+    const pageTitles = {
+      ...templateSettings,
+      _is_test: !!templateSettings._is_test,
+      _availability: templateSettings._availability || null,
+      _payment: templateSettings._payment || [],
+      _products: templateSettings._products || [],
+      _submit_button: templateSettings._submit_button || {},
+      _offer_countdown: templateSettings._offer_countdown || ''
+    }
+
+    const { data: form, error: formError } = await supabase
+      .from('forms')
+      .insert({
+        name: template?.name || 'نموذج جديد',
+        description: template?.description || '',
+        allow_multiple: templateSettings.allow_multiple ?? false,
+        time_limit: templateSettings.time_limit ?? null,
+        allow_delete_responses: templateSettings.allow_delete_responses ?? false,
+        randomize_questions: templateSettings.randomize_questions ?? false,
+        image_url: template?.image_url || '',
+        created_by: profileData.id,
+        is_active: true,
+        short_code: generateShortCode(),
+        page_titles: pageTitles
+      })
+      .select()
+      .single()
+
+    if (formError) throw formError
+
+    if (templateQuestions.length > 0) {
+      const { error: questionsError } = await supabase
+        .from('questions')
+        .insert(buildQuestionInsertRows(templateQuestions, form.id))
+
+      if (questionsError) throw questionsError
+    }
+
+    if (templateId && templateSource === 'user_templates') {
+      try {
+        await fetch('/api/templates/increment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ templateId })
+        })
+      } catch (e) {
+        console.warn('Failed to notify template usage', e)
+      }
+    }
+
+    router.replace(`/forms/${form.id}/edit`)
   }
 
   const setAppointmentOptions = (questionIndex: number, configUpdates: any = {}, slots?: any[]) => {
@@ -322,6 +493,9 @@ const supabase = createClient()
   }, [])
 
   const init = async () => {
+    if (draftCreationStarted.current) return
+    draftCreationStarted.current = true
+
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
@@ -350,7 +524,7 @@ const supabase = createClient()
 
       // Check form limit
       if (profileData.form_limit !== -1 && profileData.form_limit !== null && profileData.form_limit !== undefined) {
-        const { data: userForms, count } = await supabase
+        const { count } = await supabase
           .from('forms')
           .select('id', { count: 'exact', head: true })
           .eq('created_by', user.id)
@@ -360,26 +534,12 @@ const supabase = createClient()
         }
       }
 
-      // Get user's existing forms for question reuse
-      const { data: forms } = await supabase
-        .from('forms')
-        .select('*, questions(*)')
-        .eq('created_by', user.id)
-        .order('created_at', { ascending: false })
-
-      setExistingForms(forms || [])
-
-      // Fetch built-in and user templates (approved)
-      const { data: built } = await supabase.from('form_templates').select('*').order('sort_order')
-      const { data: userTemplates } = await supabase.from('user_templates').select('*').eq('approved', true).order('created_at')
-      const merged = [
-        ...(built || []).map((t: any) => ({ ...t, source: 'form_templates' })),
-        ...(userTemplates || []).map((t: any) => ({ ...t, source: 'user_templates' }))
-      ]
-      setTemplates(merged)
-      setTemplatesLoading(false)
+      const params = new URLSearchParams(window.location.search)
+      await createDraftAndOpenEditor(profileData, params.get('templateId'))
+      return
     } catch (error) {
       console.error('Error fetching data:', error)
+      alert('حدث خطأ أثناء تجهيز محرر النموذج')
     } finally {
       setLoading(false)
     }
@@ -625,9 +785,12 @@ const supabase = createClient()
       let dropdown_type: 'single' | 'multiple' | undefined = undefined
       let correct_option_ids: string[] | undefined = undefined
 
-      if (q.type === 'matrix' && q.options?.matrix_rows) {
-        matrix_rows = q.options.matrix_rows
-        matrix_columns = q.options.matrix_columns || []
+      if (q.type === 'matrix' && (q.options?.matrix_rows || q.matrix_rows)) {
+        matrix_rows = q.options?.matrix_rows || q.matrix_rows
+        matrix_columns = q.options?.matrix_columns || q.matrix_columns || []
+      } else if (q.type === 'match_items') {
+        matrix_rows = q.options?.left_items || q.matrix_rows || []
+        matrix_columns = q.options?.right_items || q.matrix_columns || []
       } else if (q.type === 'dropdown' && q.options?.dropdown_type) {
         dropdown_type = q.options.dropdown_type
         correct_option_ids = q.options.correct_option_ids || []
@@ -655,7 +818,9 @@ const supabase = createClient()
         dropdown_type,
         correct_option_ids,
         correct_option_id: correct_option_ids?.[0],
-        row_group: q.row_group || null
+        row_group: q.row_group || null,
+        page: q.page || 1,
+        visibility_rules: q.visibility_rules || extractVisibilityRules(q.options)
       }
     })
 
@@ -699,7 +864,11 @@ const supabase = createClient()
           short_code: generateShortCode(),
           page_titles: {
             _is_test: !!((formData as any)._is_test),
-            _availability: (formData as any)._availability || null
+            _availability: (formData as any)._availability || null,
+            _payment: (formData as any)._payment || [],
+            _products: (formData as any)._products || [],
+            _submit_button: (formData as any)._submit_button || {},
+            _offer_countdown: (formData as any)._offer_countdown || ''
           }
         })
         .select()
@@ -2229,4 +2398,3 @@ const supabase = createClient()
 export default function CreateFormPage() {
   return <CreateFormContent />
 }
-
