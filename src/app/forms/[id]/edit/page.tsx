@@ -825,21 +825,8 @@ const params = useParams()
 
       })
 
-      // If there is a locally saved draft and auto-save is enabled, offer to restore it
-      try {
-        const key = `form_draft_${formId}`
-        const draft = localStorage.getItem(key)
-        if (draft) {
-          const parsed = JSON.parse(draft)
-          if (parsed && parsed.id === form.id && parsed.enable_auto_save !== false) {
-            if (confirm('يوجد مسودة محفوظة محلياً. هل تريد استعادتها؟')) {
-              setFormData({ ...parsed })
-            }
-          }
-        }
-      } catch (e) {
-        // ignore
-      }
+      // Clear any old local draft
+      try { localStorage.removeItem(`form_draft_${formId}`) } catch (e) { /* ignore */ }
 
       // Get existing forms for question import
       const { data: allForms } = await supabase
