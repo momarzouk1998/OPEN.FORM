@@ -25,7 +25,7 @@ export default async function FormPage({ params }: PageProps) {
   const { data: questions } = await supabase
     .from('questions')
     .select('*')
-    .eq('form_id', id)
+    .eq('form_id', form.id)
     .order('order_index', { ascending: true })
 
   // Check if user is authenticated (optional)
@@ -37,7 +37,7 @@ export default async function FormPage({ params }: PageProps) {
     const { data: responses } = await supabase
       .from('form_responses')
       .select('*')
-      .eq('form_id', id)
+      .eq('form_id', form.id)
       .eq('user_id', user.id)
       .order('submitted_at', { ascending: false })
 

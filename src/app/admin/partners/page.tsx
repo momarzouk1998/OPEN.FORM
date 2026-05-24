@@ -6,28 +6,28 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { PartnerIdea, PartnerLike, Referral, UserTemplate, PartnerProfile } from '@/types'
 
-export default async function AdminPartnersPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    return <div>Unauthorized</div>
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || profile.role !== 'admin') {
-    return <div>Access denied</div>
-  }
-
+export default function AdminPartnersPage() {
+  const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
   const [partners, setPartners] = useState<PartnerProfile[]>([])
   const [ideas, setIdeas] = useState<PartnerIdea[]>([])
   const [templates, setTemplates] = useState<UserTemplate[]>([])
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    checkAuth()
+  }, [])
+
+  async function checkAuth() {
+    const supabase = createClient()
+    const { data: { user: u } } = await supabase.auth.getUser()
+    if (!u) { setLoading(false); return }
+    setUser(u)
+    const { data: p } = await supabase.from('profiles').select('*').eq('id', u.id).single()
+    if (!p || p.role !== 'admin') { setLoading(false); return }
+    setProfile(p)
+    fetchData()
+  }
 
   // Fetch data
   useEffect(() => {
@@ -35,86 +35,59 @@ export default async function AdminPartnersPage() {
   }, [])
 
   async function fetchData() {
+    const supabase = createClient()
     setLoading(true)
-    // Fetch partners (profiles with is_partner = true)
-    const { data: partnersData, error: partnersError } = await supabase
+    const { data: partnersData } = await supabase
       .from('profiles')
       .select('id, name, email, avatar_url, company, bio, facebook_url, linkedin_url, youtube_url, other_links, referral_code, referral_count, is_partner, created_at')
       .eq('is_partner', true)
       .order('referral_count', { ascending: false })
+    if (partnersData) setPartners(partnersData as PartnerProfile[])
 
-    if (!partnersError) {
-      setPartners(partnersData as PartnerProfile[])
-    }
-
-    // Fetch pending ideas
-    const { data: ideasData, error: ideasError } = await supabase
+    const { data: ideasData } = await supabase
       .from('partner_ideas')
       .select('id, partner_id, text, implemented, created_at, profiles(name, avatar_url)')
       .order('created_at', { ascending: false })
+    if (ideasData) setIdeas(ideasData as PartnerIdea[])
 
-    if (!ideasError) {
-      setIdeas(ideasData as PartnerIdea[])
-    }
-
-    // Fetch pending templates (not approved)
-    const { data: templatesData, error: templatesError } = await supabase
+    const { data: templatesData } = await supabase
       .from('user_templates')
       .select('id, created_by, name, description, approved, created_at, profiles!created_by!inner(name, avatar_url), forms!form_id!inner(id, name)')
       .eq('approved', false)
       .order('created_at', { ascending: false })
-
-    if (!templatesError) {
-      setTemplates(templatesData as UserTemplate[])
-    }
+    if (templatesData) setTemplates(templatesData as UserTemplate[])
 
     setLoading(false)
   }
 
-  // Toggle partner status
   async function togglePartner(userId: string, currentStatus: boolean) {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_partner: !currentStatus })
-      .eq('id', userId)
-
-    if (!error) {
-      await fetchData()
-    } else {
-      alert('حدث خطأ أثناء تحديث الحالة')
-    }
+    const supabase = createClient()
+    const { error } = await supabase.from('profiles').update({ is_partner: !currentStatus }).eq('id', userId)
+    if (!error) await fetchData(); else alert('حدث خطأ أثناء تحديث الحالة')
   }
 
-  // Approve idea
   async function approveIdea(ideaId: string) {
-    const { error } = await supabase
-      .from('partner_ideas')
-      .update({ implemented: true })
-      .eq('id', ideaId)
-
-    if (!error) {
-      await fetchData()
-    } else {
-      alert('حدث خطأ أثناء الموافقة على الفكرة')
-    }
+    const supabase = createClient()
+    const { error } = await supabase.from('partner_ideas').update({ implemented: true }).eq('id', ideaId)
+    if (!error) await fetchData(); else alert('حدث خطأ أثناء الموافقة على الفكرة')
   }
 
-  // Approve template
   async function approveTemplate(templateId: string) {
-    const { error } = await supabase
-      .from('user_templates')
-      .update({ approved: true })
-      .eq('id', templateId)
-
-    if (!error) {
-      await fetchData()
-    } else {
-      alert('حدث خطأ أثناء الموافقة على القالب')
-    }
+    const supabase = createClient()
+    const { error } = await supabase.from('user_templates').update({ approved: true }).eq('id', templateId)
+    if (!error) await fetchData(); else alert('حدث خطأ أثناء الموافقة على القالب')
   }
 
   if (loading) {
     return <div className="p-8">جاري التحميل...</div>
+  }
+
+  if (!user) {
+    return <div className="p-8 text-center text-red-500">غير مصرح بالدخول</div>
+  }
+
+  if (!profile || profile.role !== 'admin') {
+    return <div className="p-8 text-center text-red-500">ليس لديك صلاحية الوصول</div>
   }
 
   return (

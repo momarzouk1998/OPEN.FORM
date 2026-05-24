@@ -3346,17 +3346,17 @@ const params = useParams()
                    const supabase = createClient()
                    
                    // First create the template record
-                   const { data: templateData, error: templateError } = await supabase
-                     .from('user_templates')
-                     .insert({
-                       title: templateTitle,
-                       description: templateDescription,
-                       user_id: profile?.id,
-                       form_id: formData?.id,
-                       approved: false // Requires admin approval
-                     })
-                     .select()
-                     .single()
+                    const { data: templateData, error: templateError } = await supabase
+                      .from('user_templates')
+                      .insert({
+                        name: templateTitle,
+                        description: templateDescription,
+                        created_by: profile?.id,
+                        form_id: formData?.id,
+                        approved: false
+                      })
+                      .select()
+                      .single()
                      
                    if (templateError) throw templateError
                    

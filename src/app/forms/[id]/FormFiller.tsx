@@ -2539,7 +2539,10 @@ export default function FormFiller({ form, questions, existingResponse: propExis
         {/* Payment Info Display (only if no payment_info_block question type) */}
         {isLastPage && !questions?.some(q => q.type === 'payment_info_block') && form.page_titles?._payment && (() => {
           const rawPayment = form.page_titles._payment
-          const paymentMethods = typeof rawPayment === 'string' ? JSON.parse(rawPayment) : rawPayment
+          let paymentMethods: any[] = []
+          try {
+            paymentMethods = typeof rawPayment === 'string' ? JSON.parse(rawPayment) : rawPayment
+          } catch { paymentMethods = [] }
           if (!paymentMethods || paymentMethods.length === 0) return null
           return (
           <div className="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-4">
