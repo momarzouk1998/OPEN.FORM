@@ -2319,724 +2319,740 @@ const params = useParams()
                           const isSelected = selectedQuestionIndex === qIndex
                           const typeInfo = QUESTION_TYPES[question.type as QuestionType]
                           
-                          if (question.type === 'divider') {
+                          const renderCard = (q: any, qi: number, sel: boolean) => {
+                            const typeInfo = QUESTION_TYPES[q.type as QuestionType]
+                            if (q.type === 'divider') {
+                              return (
+                                <SortableQuestionItem key={q.id} id={q.id}>
+                                <div
+                                  className="group relative flex items-center py-4 px-2 bg-transparent cursor-pointer"
+                                >
+                                  <div className="flex-1 h-0.5 bg-gray-300 group-hover:bg-blue-400 transition-colors"></div>
+                                  <div className="absolute left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 bg-white shadow-md border border-gray-200 rounded-xl flex items-center gap-1 p-1 transition-opacity z-10">
+                                    <button onClick={() => moveQuestion(qi, 'up')} disabled={qi === 0} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+                                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+                                    </button>
+                                    <button onClick={() => moveQuestion(qi, 'down')} disabled={qi === qs.length - 1} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+                                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                    </button>
+                                    <button onClick={() => removeQuestion(qi)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button>
+                                  </div>
+                                </div>
+                                </SortableQuestionItem>
+                              )
+                            }
                             return (
-                              <SortableQuestionItem key={question.id} id={question.id}>
-                              <div
-                                className="group relative flex items-center py-4 px-2 bg-transparent cursor-pointer"
-                              >
-                                <div className="flex-1 h-0.5 bg-gray-300 group-hover:bg-blue-400 transition-colors"></div>
-                                <div className="absolute left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 bg-white shadow-md border border-gray-200 rounded-xl flex items-center gap-1 p-1 transition-opacity z-10">
-                                  <button onClick={() => moveQuestion(qIndex, 'up')} disabled={qIndex === 0} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
-                                  </button>
-                                  <button onClick={() => moveQuestion(qIndex, 'down')} disabled={qIndex === qs.length - 1} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                                  </button>
-                                  <button onClick={() => removeQuestion(qIndex)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                                  </button>
-                                </div>
-                              </div>
-                            </SortableQuestionItem>
-                            )
-                          }
-
-                          return (
-                            <div
-                              key={question.id}
-                              onClick={() => setSelectedQuestionIndex(isSelected ? null : qIndex)}
-                              className={`bg-white rounded-2xl p-5 shadow-sm border transition-all cursor-pointer form-themed-card form-themed-spacing ${
-                                isSelected
-                                  ? 'border-blue-500 ring-2 ring-blue-100'
-                                  : 'border-gray-100 hover:shadow-md'
-                              } ${isSelected && theme?.primaryColor ? 'form-themed-primary-border' : ''}`}
-                            >
-                              <div className="flex items-start gap-3 cursor-pointer" onClick={() => setSelectedQuestionIndex(isSelected ? null : qIndex)}>
-                                <span className="w-7 h-7 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg flex items-center justify-center font-bold text-xs shrink-0 form-themed-primary-bg">
-                                  {qIndex + 1}
-                                </span>
-                                <div className="flex-1 min-w-0">
-                                  <h4 className="text-base font-semibold text-gray-900 form-themed-text">
-                                    {question.text || 'سؤال جديد'}
-                                    {question.required && !DISPLAY_ONLY_QUESTION_TYPES.includes(question.type) && <span className="text-red-500 mr-1">*</span>}
-                                  </h4>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-xs text-blue-500 form-themed-primary-text">{typeInfo?.icon} {typeInfo?.label}</span>
-                                    {!!(formData?.page_titles as any)?._is_test && question.points > 0 && <span className="text-xs text-gray-400">{question.points} نقطة</span>}
+                              <SortableQuestionItem key={q.id} id={q.id}
+                                onClick={() => setSelectedQuestionIndex(sel ? null : qi)}
+                                className={`bg-white rounded-2xl p-5 shadow-sm border transition-all cursor-pointer form-themed-card form-themed-spacing ${
+                                  sel
+                                    ? 'border-blue-500 ring-2 ring-blue-100'
+                                    : 'border-gray-100 hover:shadow-md'
+                                } ${sel && theme?.primaryColor ? 'form-themed-primary-border' : ''}`}>
+                                <div className="flex items-start gap-3 cursor-pointer" onClick={() => setSelectedQuestionIndex(sel ? null : qi)}>
+                                  <span className="w-7 h-7 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg flex items-center justify-center font-bold text-xs shrink-0 form-themed-primary-bg">
+                                    {qi + 1}
+                                  </span>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="text-base font-semibold text-gray-900 form-themed-text">
+                                      {q.text || 'سؤال جديد'}
+                                      {q.required && !DISPLAY_ONLY_QUESTION_TYPES.includes(q.type) && <span className="text-red-500 mr-1">*</span>}
+                                    </h4>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <span className="text-xs text-blue-500 form-themed-primary-text">{typeInfo?.icon} {typeInfo?.label}</span>
+                                      {!!(formData?.page_titles as any)?._is_test && q.points > 0 && <span className="text-xs text-gray-400">{q.points} نقطة</span>}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                    <button onClick={() => moveQuestion(qi, 'up')} disabled={qi === 0} className="p-1.5 text-gray-300 hover:text-gray-600 disabled:opacity-20 rounded-lg hover:bg-gray-100">
+                                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+                                    </button>
+                                    <button onClick={() => moveQuestion(qi, 'down')} disabled={qi === qs.length - 1} className="p-1.5 text-gray-300 hover:text-gray-600 disabled:opacity-20 rounded-lg hover:bg-gray-100">
+                                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                    </button>
+                                    <button onClick={() => { removeQuestion(qi); if (sel) setSelectedQuestionIndex(null) }} className="p-1.5 text-red-300 hover:text-red-500 rounded-lg hover:bg-red-50">
+                                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                                  <button onClick={() => moveQuestion(qIndex, 'up')} disabled={qIndex === 0} className="p-1.5 text-gray-300 hover:text-gray-600 disabled:opacity-20 rounded-lg hover:bg-gray-100">
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
-                                  </button>
-                                  <button onClick={() => moveQuestion(qIndex, 'down')} disabled={qIndex === qs.length - 1} className="p-1.5 text-gray-300 hover:text-gray-600 disabled:opacity-20 rounded-lg hover:bg-gray-100">
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                                  </button>
-                                  <button onClick={() => { removeQuestion(qIndex); if (isSelected) setSelectedQuestionIndex(null) }} className="p-1.5 text-red-300 hover:text-red-500 rounded-lg hover:bg-red-50">
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                                  </button>
-                                </div>
-                              </div>
-                              {isSelected && (
+                                {sel && (
 
-                                <div className="mt-4 pt-4 border-t border-gray-100 space-y-4 cursor-default" onClick={(e) => e.stopPropagation()}>
-                                  {/* Question Text */}
-                                  <div>
-                                    <label className="block text-xs font-medium text-gray-600 mb-1.5">نص السؤال</label>
-                    {question.type === 'static_text' ? (
-                      <RichTextEditor
-                        value={question.text}
-                        onChange={(html) => updateQuestion(qIndex, { text: html })}
-                        placeholder="اكتب النص هنا..."
-                      />
-                    ) : ['terms'].includes(question.type) ? (
-                      <textarea
-                        value={question.text}
-                        onChange={(e) => updateQuestion(qIndex, { text: e.target.value })}
-                        rows={4}
-                        placeholder="اكتب النص هنا..."
-                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                      />
-                    ) : (
-                                      <input type="text" value={question.text} onChange={(e) => updateQuestion(qIndex, { text: e.target.value })} placeholder="اكتب السؤال هنا..." className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
-                                    )}
-                                  </div>
-
-                                  {/* Required & Points */}
-                                  <div className="flex gap-4">
-                                    {!DISPLAY_ONLY_QUESTION_TYPES.includes(question.type) && (
-                                      <label className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-lg cursor-pointer flex-1">
-                                        <input type="checkbox" checked={question.required} onChange={(e) => updateQuestion(qIndex, { required: e.target.checked })} className="w-4 h-4 text-blue-600 rounded" />
-                                        <span className="text-sm text-gray-700 font-medium">مطلوب</span>
-                                      </label>
-                                    )}
-                                    {!!(formData?.page_titles as any)?._is_test && !['single_choice', 'multiple_choice', 'dropdown', 'ranking', 'matrix', 'button_choice', 'match_items', 'static_text', 'static_image', 'divider', 'terms', 'youtube', 'countdown_timer', 'products_block', 'payment_info_block'].includes(question.type) && (
-                                      <div className="flex-1">
-                                        <input type="number" min="0" value={question.points} onChange={(e) => updateQuestion(qIndex, { points: Number(e.target.value) })} placeholder="النقاط" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" />
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Options */}
-                                  {['single_choice', 'multiple_choice', 'button_choice'].includes(question.type) && (
+                                  <div className="mt-4 pt-4 border-t border-gray-100 space-y-4 cursor-default" onClick={(e) => e.stopPropagation()}>
+                                    {/* Question Text */}
                                     <div>
-                                      <div className="flex items-center justify-between mb-2">
-                                        <label className="text-xs font-medium text-gray-600">الخيارات</label>
-                                        {question.type === 'single_choice' && (
-                                          <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                                            <input type="checkbox" checked={question.has_counter || false} onChange={(e) => updateQuestion(qIndex, { has_counter: e.target.checked })} className="w-3.5 h-3.5 text-emerald-600 rounded" />
-                                            <span className="text-gray-600">عداد</span>
-                                          </label>
-                                        )}
+                                      <label className="block text-xs font-medium text-gray-600 mb-1.5">نص السؤال</label>
+                      {q.type === 'static_text' ? (
+                        <RichTextEditor
+                          value={q.text}
+                          onChange={(html) => updateQuestion(qi, { text: html })}
+                          placeholder="اكتب النص هنا..."
+                        />
+                      ) : ['terms'].includes(q.type) ? (
+                        <textarea
+                          value={q.text}
+                          onChange={(e) => updateQuestion(qi, { text: e.target.value })}
+                          rows={4}
+                          placeholder="اكتب النص هنا..."
+                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                        />
+                      ) : (
+                                        <input type="text" value={q.text} onChange={(e) => updateQuestion(qi, { text: e.target.value })} placeholder="اكتب السؤال هنا..." className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+                                      )}
+                                    </div>
+
+                                    {/* Required & Points */}
+                                    <div className="flex gap-4">
+                                      {!DISPLAY_ONLY_QUESTION_TYPES.includes(q.type) && (
+                                        <label className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-lg cursor-pointer flex-1">
+                                          <input type="checkbox" checked={q.required} onChange={(e) => updateQuestion(qi, { required: e.target.checked })} className="w-4 h-4 text-blue-600 rounded" />
+                                          <span className="text-sm text-gray-700 font-medium">مطلوب</span>
+                                        </label>
+                                      )}
+                                      {!!(formData?.page_titles as any)?._is_test && !['single_choice', 'multiple_choice', 'dropdown', 'ranking', 'matrix', 'button_choice', 'match_items', 'static_text', 'static_image', 'divider', 'terms', 'youtube', 'countdown_timer', 'products_block', 'payment_info_block'].includes(q.type) && (
+                                        <div className="flex-1">
+                                          <input type="number" min="0" value={q.points} onChange={(e) => updateQuestion(qi, { points: Number(e.target.value) })} placeholder="النقاط" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" />
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Options */}
+                                    {['single_choice', 'multiple_choice', 'button_choice'].includes(q.type) && (
+                                      <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                          <label className="text-xs font-medium text-gray-600">الخيارات</label>
+                                          {q.type === 'single_choice' && (
+                                            <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                                              <input type="checkbox" checked={q.has_counter || false} onChange={(e) => updateQuestion(qi, { has_counter: e.target.checked })} className="w-3.5 h-3.5 text-emerald-600 rounded" />
+                                              <span className="text-gray-600">عداد</span>
+                                            </label>
+                                          )}
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          {(parseOptions(q.options) as any[]).map((opt: any, oi: number) => (
+                                            <div key={oi} className="flex items-center gap-1.5">
+                                              <input type="text" value={opt.text} onChange={(e) => updateOption(qi, oi, { text: e.target.value })} placeholder={`خيار ${oi + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
+                                              <input type="number" min="0" value={opt.points} onChange={(e) => updateOption(qi, oi, { points: Number(e.target.value) })} className={`w-14 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center ${!!(formData?.page_titles as any)?._is_test ? '' : 'hidden'}`} placeholder="نقاط" />
+                                              {q.has_counter && (
+                                                <input type="number" min="1" value={opt.counter_target || ''} onChange={(e) => updateOption(qi, oi, { counter_target: parseInt(e.target.value) || null })} className="w-14 px-2 py-1.5 border border-emerald-200 rounded-lg text-sm text-center" placeholder="هدف" />
+                                              )}
+                                              <button onClick={() => removeOption(qi, oi)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                            </div>
+                                          ))}
+                                        </div>
+                                        <button onClick={() => addOption(qi)} className="w-full mt-2 py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors text-sm flex items-center justify-center gap-1">
+                                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> إضافة خيار
+                                        </button>
                                       </div>
-                                      <div className="space-y-1.5">
-                                        {(parseOptions(question.options) as any[]).map((opt: any, oi: number) => (
-                                          <div key={oi} className="flex items-center gap-1.5">
-                                            <input type="text" value={opt.text} onChange={(e) => updateOption(qIndex, oi, { text: e.target.value })} placeholder={`خيار ${oi + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
-                                            <input type="number" min="0" value={opt.points} onChange={(e) => updateOption(qIndex, oi, { points: Number(e.target.value) })} className={`w-14 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center ${!!(formData?.page_titles as any)?._is_test ? '' : 'hidden'}`} placeholder="نقاط" />
-                                            {question.has_counter && (
-                                              <input type="number" min="1" value={opt.counter_target || ''} onChange={(e) => updateOption(qIndex, oi, { counter_target: parseInt(e.target.value) || null })} className="w-14 px-2 py-1.5 border border-emerald-200 rounded-lg text-sm text-center" placeholder="هدف" />
-                                            )}
-                                            <button onClick={() => removeOption(qIndex, oi)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                    )}
+
+                                    {/* Dropdown Options */}
+                                    {q.type === 'dropdown' && (
+                                      <div>
+                                        <select value={q.dropdown_type || 'single'} onChange={(e) => updateQuestion(qi, { dropdown_type: e.target.value as 'single' | 'multiple' })} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm mb-3">
+                                          <option value="single">اختيار واحد</option>
+                                          <option value="multiple">اختيار متعدد</option>
+                                        </select>
+                                        <textarea value={q.bulk_text || ''} onChange={(e) => updateQuestion(qi, { bulk_text: e.target.value })} rows={4} placeholder="اكتب كل خيار في سطر منفصل" className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                                        <button onClick={() => parseBulkText(qi)} className="mt-1.5 w-full py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition-colors">تطبيق</button>
+                                      </div>
+                                    )}
+
+                                    {/* Matrix Options */}
+                                    {q.type === 'matrix' && (
+                                      <div className="space-y-3">
+                                        <div>
+                                          <label className="block text-xs font-medium text-gray-600 mb-1.5">الصفوف</label>
+                                          <div className="space-y-1">
+                                            {(q.matrix_rows || []).map((row: any, ri: number) => (
+                                              <div key={ri} className="flex items-center gap-1">
+                                                <input type="text" value={row.text} onChange={(e) => updateMatrixRow(qi, ri, { text: e.target.value })} placeholder={`صف ${ri + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
+                                                <label className="flex items-center gap-1 text-xs shrink-0"><input type="checkbox" checked={row.required} onChange={(e) => updateMatrixRow(qi, ri, { required: e.target.checked })} className="w-3.5 h-3.5" /> مطلوب</label>
+                                                <button onClick={() => removeMatrixRow(qi, ri)} className="p-1 text-red-400 hover:text-red-600"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                              </div>
+                                            ))}
                                           </div>
-                                        ))}
-                                      </div>
-                                      <button onClick={() => addOption(qIndex)} className="w-full mt-2 py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors text-sm flex items-center justify-center gap-1">
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> إضافة خيار
-                                      </button>
-                                    </div>
-                                  )}
-
-                                  {/* Dropdown Options */}
-                                  {question.type === 'dropdown' && (
-                                    <div>
-                                      <select value={question.dropdown_type || 'single'} onChange={(e) => updateQuestion(qIndex, { dropdown_type: e.target.value as 'single' | 'multiple' })} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm mb-3">
-                                        <option value="single">اختيار واحد</option>
-                                        <option value="multiple">اختيار متعدد</option>
-                                      </select>
-                                      <textarea value={question.bulk_text || ''} onChange={(e) => updateQuestion(qIndex, { bulk_text: e.target.value })} rows={4} placeholder="اكتب كل خيار في سطر منفصل" className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
-                                      <button onClick={() => parseBulkText(qIndex)} className="mt-1.5 w-full py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition-colors">تطبيق</button>
-                                    </div>
-                                  )}
-
-                                  {/* Matrix Options */}
-                                  {question.type === 'matrix' && (
-                                    <div className="space-y-3">
-                                      <div>
-                                        <label className="block text-xs font-medium text-gray-600 mb-1.5">الصفوف</label>
-                                        <div className="space-y-1">
-                                          {(question.matrix_rows || []).map((row: any, ri: number) => (
-                                            <div key={ri} className="flex items-center gap-1">
-                                              <input type="text" value={row.text} onChange={(e) => updateMatrixRow(qIndex, ri, { text: e.target.value })} placeholder={`صف ${ri + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
-                                              <label className="flex items-center gap-1 text-xs shrink-0"><input type="checkbox" checked={row.required} onChange={(e) => updateMatrixRow(qIndex, ri, { required: e.target.checked })} className="w-3.5 h-3.5" /> مطلوب</label>
-                                              <button onClick={() => removeMatrixRow(qIndex, ri)} className="p-1 text-red-400 hover:text-red-600"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-                                            </div>
-                                          ))}
+                                          <button onClick={() => addMatrixRow(qi)} className="mt-1 text-xs text-blue-600 hover:text-blue-700">+ إضافة صف</button>
                                         </div>
-                                        <button onClick={() => addMatrixRow(qIndex)} className="mt-1 text-xs text-blue-600 hover:text-blue-700">+ إضافة صف</button>
-                                      </div>
-                                      <div>
-                                        <label className="block text-xs font-medium text-gray-600 mb-1.5">الأعمدة</label>
-                                        <div className="space-y-1">
-                                          {(question.matrix_columns || []).map((col: any, ci: number) => (
-                                            <div key={ci} className="flex items-center gap-1">
-                                              <input type="text" value={col.text} onChange={(e) => updateMatrixColumn(qIndex, ci, { text: e.target.value })} placeholder={`عمود ${ci + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
-                                              <input type="number" min="0" value={col.points} onChange={(e) => updateMatrixColumn(qIndex, ci, { points: Number(e.target.value) })} className={`w-14 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center ${!!(formData?.page_titles as any)?._is_test ? '' : 'hidden'}`} placeholder="نقاط" />
-                                              <button onClick={() => removeMatrixColumn(qIndex, ci)} className="p-1 text-red-400 hover:text-red-600"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-                                            </div>
-                                          ))}
+                                        <div>
+                                          <label className="block text-xs font-medium text-gray-600 mb-1.5">الأعمدة</label>
+                                          <div className="space-y-1">
+                                            {(q.matrix_columns || []).map((col: any, ci: number) => (
+                                              <div key={ci} className="flex items-center gap-1">
+                                                <input type="text" value={col.text} onChange={(e) => updateMatrixColumn(qi, ci, { text: e.target.value })} placeholder={`عمود ${ci + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
+                                                <input type="number" min="0" value={col.points} onChange={(e) => updateMatrixColumn(qi, ci, { points: Number(e.target.value) })} className={`w-14 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center ${!!(formData?.page_titles as any)?._is_test ? '' : 'hidden'}`} placeholder="نقاط" />
+                                                <button onClick={() => removeMatrixColumn(qi, ci)} className="p-1 text-red-400 hover:text-red-600"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                              </div>
+                                            ))}
+                                          </div>
+                                          <button onClick={() => addMatrixColumn(qi)} className="mt-1 text-xs text-blue-600 hover:text-blue-700">+ إضافة عمود</button>
                                         </div>
-                                        <button onClick={() => addMatrixColumn(qIndex)} className="mt-1 text-xs text-blue-600 hover:text-blue-700">+ إضافة عمود</button>
                                       </div>
-                                    </div>
-                                  )}
+                                    )}
 
-                                  {question.type === 'match_items' && (
-                                    <div className="space-y-3">
-                                      <div>
-                                        <label className="block text-xs font-medium text-gray-600 mb-1.5">العمود الأيمن (الخيارات)</label>
-                                        <div className="space-y-1">
-                                          {(question.matrix_rows || []).map((row: any, ri: number) => (
-                                            <div key={ri} className="flex items-center gap-1">
-                                              <input type="text" value={row.text} onChange={(e) => updateMatrixRow(qIndex, ri, { text: e.target.value })} placeholder={`عنصر ${ri + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
-                                              <button onClick={() => removeMatrixRow(qIndex, ri)} className="p-1 text-red-400 hover:text-red-600"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-                                            </div>
-                                          ))}
+                                    {q.type === 'match_items' && (
+                                      <div className="space-y-3">
+                                        <div>
+                                          <label className="block text-xs font-medium text-gray-600 mb-1.5">العمود الأيمن (الخيارات)</label>
+                                          <div className="space-y-1">
+                                            {(q.matrix_rows || []).map((row: any, ri: number) => (
+                                              <div key={ri} className="flex items-center gap-1">
+                                                <input type="text" value={row.text} onChange={(e) => updateMatrixRow(qi, ri, { text: e.target.value })} placeholder={`عنصر ${ri + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
+                                                <button onClick={() => removeMatrixRow(qi, ri)} className="p-1 text-red-400 hover:text-red-600"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                              </div>
+                                            ))}
+                                          </div>
+                                          <button onClick={() => addMatrixRow(qi)} className="mt-1 text-xs text-blue-600 hover:text-blue-700">+ إضافة عنصر</button>
                                         </div>
-                                        <button onClick={() => addMatrixRow(qIndex)} className="mt-1 text-xs text-blue-600 hover:text-blue-700">+ إضافة عنصر</button>
-                                      </div>
-                                      <div>
-                                        <label className="block text-xs font-medium text-gray-600 mb-1.5">العمود الأيسر (الإجابات)</label>
-                                        <div className="space-y-1">
-                                          {(question.matrix_columns || []).map((col: any, ci: number) => (
-                                            <div key={ci} className="flex items-center gap-1">
-                                              <input type="text" value={col.text} onChange={(e) => updateMatrixColumn(qIndex, ci, { text: e.target.value })} placeholder={`إجابة ${ci + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
-                                              <input type="number" min="0" value={col.points} onChange={(e) => updateMatrixColumn(qIndex, ci, { points: Number(e.target.value) })} className={`w-14 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center ${!!(formData?.page_titles as any)?._is_test ? '' : 'hidden'}`} placeholder="نقاط" />
-                                              <button onClick={() => removeMatrixColumn(qIndex, ci)} className="p-1 text-red-400 hover:text-red-600"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-                                            </div>
-                                          ))}
+                                        <div>
+                                          <label className="block text-xs font-medium text-gray-600 mb-1.5">العمود الأيسر (الإجابات)</label>
+                                          <div className="space-y-1">
+                                            {(q.matrix_columns || []).map((col: any, ci: number) => (
+                                              <div key={ci} className="flex items-center gap-1">
+                                                <input type="text" value={col.text} onChange={(e) => updateMatrixColumn(qi, ci, { text: e.target.value })} placeholder={`إجابة ${ci + 1}`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
+                                                <input type="number" min="0" value={col.points} onChange={(e) => updateMatrixColumn(qi, ci, { points: Number(e.target.value) })} className={`w-14 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center ${!!(formData?.page_titles as any)?._is_test ? '' : 'hidden'}`} placeholder="نقاط" />
+                                                <button onClick={() => removeMatrixColumn(qi, ci)} className="p-1 text-red-400 hover:text-red-600"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                              </div>
+                                            ))}
+                                          </div>
+                                          <button onClick={() => addMatrixColumn(qi)} className="mt-1 text-xs text-blue-600 hover:text-blue-700">+ إضافة إجابة</button>
                                         </div>
-                                        <button onClick={() => addMatrixColumn(qIndex)} className="mt-1 text-xs text-blue-600 hover:text-blue-700">+ إضافة إجابة</button>
                                       </div>
-                                    </div>
-                                  )}
+                                    )}
 
-                                  {question.type === 'slider' && (
-                                    <div>
-                                      <label className="block text-xs font-medium text-gray-600 mb-1.5">إعدادات الشريط الرقمي (Min|Max|Step)</label>
-                                      <input type="text" value={(parseOptions(question.options)[0] || {}).text || '0|100|1'} onChange={(e) => { if(parseOptions(question.options).length===0) addOption(qIndex); updateOption(qIndex, 0, { text: e.target.value }) }} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" dir="ltr" placeholder="0|100|1" />
-                                      <p className="text-xs text-gray-500 mt-1">أدخل الحد الأدنى | الحد الأقصى | مقدار الزيادة</p>
-                                    </div>
-                                  )}
-
-                                  {question.type === 'youtube' && (
-                                    <div>
-                                      <label className="block text-xs font-medium text-gray-600 mb-1.5">رابط يوتيوب</label>
-                                      <input type="text" value={(parseOptions(question.options)[0] || {}).text || ''} onChange={(e) => { if(parseOptions(question.options).length===0) addOption(qIndex); updateOption(qIndex, 0, { text: e.target.value }) }} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" dir="ltr" placeholder="https://youtube.com/watch?v=..." />
-                                    </div>
-                                  )}
-
-                                  {question.type === 'date_range' && (
-                                    <div>
-                                      <label className="block text-xs font-medium text-gray-600 mb-2">نوع النطاق</label>
-                                      <div className="grid gap-2 sm:grid-cols-3">
-                                        {DATE_RANGE_MODE_OPTIONS.map((mode) => {
-                                          const currentMode = parseOptions(question.options)[0]?.validation_type || 'datetime'
-                                          const isSelected = currentMode === mode.value
-                                          return (
-                                            <button
-                                              key={mode.value}
-                                              type="button"
-                                              onClick={() => {
-                                                if (parseOptions(question.options).length === 0) addOption(qIndex)
-                                                updateOption(qIndex, 0, { validation_type: mode.value })
-                                              }}
-                                              className={`px-3 py-2 rounded-lg border text-sm transition-colors ${isSelected ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'}`}
-                                            >
-                                              {mode.label}
-                                            </button>
-                                          )
-                                        })}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {question.type === 'countdown_timer' && (
-                                    <div className="space-y-3">
+                                    {q.type === 'slider' && (
                                       <div>
-                                        <label className="block text-xs font-medium text-gray-600 mb-1.5">عنوان العد التنازلي</label>
-                                        <input
-                                          type="text"
-                                          value={parseOptions(question.options)[0]?.validation_value || 'العرض ينتهي خلال'}
-                                          onChange={(e) => {
-                                            if (parseOptions(question.options).length === 0) addOption(qIndex)
-                                            updateOption(qIndex, 0, { validation_value: e.target.value })
-                                          }}
-                                          className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm"
-                                          placeholder="العرض ينتهي خلال"
+                                        <label className="block text-xs font-medium text-gray-600 mb-1.5">إعدادات الشريط الرقمي (Min|Max|Step)</label>
+                                        <input type="text" value={(parseOptions(q.options)[0] || {}).text || '0|100|1'} onChange={(e) => { if(parseOptions(q.options).length===0) addOption(qi); updateOption(qi, 0, { text: e.target.value }) }} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" dir="ltr" placeholder="0|100|1" />
+                                        <p className="text-xs text-gray-500 mt-1">أدخل الحد الأدنى | الحد الأقصى | مقدار الزيادة</p>
+                                      </div>
+                                    )}
+
+                                    {q.type === 'youtube' && (
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1.5">رابط يوتيوب</label>
+                                        <input type="text" value={(parseOptions(q.options)[0] || {}).text || ''} onChange={(e) => { if(parseOptions(q.options).length===0) addOption(qi); updateOption(qi, 0, { text: e.target.value }) }} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" dir="ltr" placeholder="https://youtube.com/watch?v=..." />
+                                      </div>
+                                    )}
+
+                                    {q.type === 'date_range' && (
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-2">نوع النطاق</label>
+                                        <div className="grid gap-2 sm:grid-cols-3">
+                                          {DATE_RANGE_MODE_OPTIONS.map((mode) => {
+                                            const currentMode = parseOptions(q.options)[0]?.validation_type || 'datetime'
+                                            const sel = currentMode === mode.value
+                                            return (
+                                              <button
+                                                key={mode.value}
+                                                type="button"
+                                                onClick={() => {
+                                                  if (parseOptions(q.options).length === 0) addOption(qi)
+                                                  updateOption(qi, 0, { validation_type: mode.value })
+                                                }}
+                                                className={`px-3 py-2 rounded-lg border text-sm transition-colors ${sel ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'}`}
+                                              >
+                                                {mode.label}
+                                              </button>
+                                            )
+                                          })}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {q.type === 'countdown_timer' && (
+                                      <div className="space-y-3">
+                                        <div>
+                                          <label className="block text-xs font-medium text-gray-600 mb-1.5">عنوان العد التنازلي</label>
+                                          <input
+                                            type="text"
+                                            value={parseOptions(q.options)[0]?.validation_value || 'العرض ينتهي خلال'}
+                                            onChange={(e) => {
+                                              if (parseOptions(q.options).length === 0) addOption(qi)
+                                              updateOption(qi, 0, { validation_value: e.target.value })
+                                            }}
+                                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm"
+                                            placeholder="العرض ينتهي خلال"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-xs font-medium text-gray-600 mb-1.5">وقت انتهاء العرض</label>
+                                          <input type="datetime-local" value={parseOptions(q.options)[0]?.text || ''} onChange={(e) => {
+                                            if (parseOptions(q.options).length === 0) addOption(qi)
+                                            updateOption(qi, 0, { text: e.target.value })
+                                          }} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                                        </div>
+                                        <div>
+                                          <label className="block text-xs font-medium text-gray-600 mb-1.5">وصف اختياري</label>
+                                          <textarea
+                                            value={parseOptions(q.options)[0]?.validation_min || ''}
+                                            onChange={(e) => {
+                                              if (parseOptions(q.options).length === 0) addOption(qi)
+                                              updateOption(qi, 0, { validation_min: e.target.value })
+                                            }}
+                                            rows={2}
+                                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm"
+                                            placeholder="مثال: احجز الآن قبل انتهاء العرض"
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {q.type === 'products_block' && (
+                                      <div className="space-y-3">
+                                        <div>
+                                          <label className="text-xs font-medium text-gray-600">المنتجات</label>
+                                          <p className="text-xs text-gray-500 mt-1">أضف مجموعات، وداخل كل مجموعة الأصناف والسعر والتفاصيل والصورة.</p>
+                                        </div>
+                                        <ProductGroupsEditor
+                                          groups={getQuestionProductGroups(q)}
+                                          onChange={(groups) => updateQuestion(qi, { options: groups as any })}
                                         />
                                       </div>
+                                    )}
+
+                                    {q.type === 'payment_info_block' && (
+                                      <div className="space-y-3">
+                                        <div>
+                                          <label className="text-xs font-medium text-gray-600">بيانات الدفع</label>
+                                          <p className="text-xs text-gray-500 mt-1">اكتب بياناتك التي ستظهر للمستخدم مع زر نسخ لكل رقم أو رابط.</p>
+                                        </div>
+                                        <PaymentMethodsEditor
+                                          methods={getQuestionPaymentMethods(q)}
+                                          onChange={(methods) => updateQuestion(qi, { options: methods as any })}
+                                        />
+                                      </div>
+                                    )}
+
+                                    {q.type === 'appointment' && (
+                                      (() => {
+                                        const appointmentConfig = getAppointmentConfig(q.options)
+                                        const appointmentSlots = getAppointmentSlots(q.options)
+                                        return (
+                                          <div className="space-y-4">
+                                            <div>
+                                              <label className="block text-xs font-medium text-gray-600 mb-2">نوع المواعيد</label>
+                                              <div className="grid gap-2 sm:grid-cols-2">
+                                                {[
+                                                  { value: 'fixed', label: 'مواعيد ثابتة', hint: 'نفس المواعيد متاحة كل يوم.' },
+                                                  { value: 'custom', label: 'مواعيد مخصصة', hint: 'مواعيد مختلفة حسب اليوم أو التاريخ.' },
+                                                  { value: 'auto', label: 'موعد تلقائي', hint: 'يعرض أقرب موعد تلقائيًا، وكل حجز جديد يزيد بعدد دقائق تحدده.' },
+                                                ].map((mode) => (
+                                                  <button
+                                                    key={mode.value}
+                                                    type="button"
+                                                    onClick={() => setAppointmentOptions(qi, { mode: mode.value })}
+                                                    className={`text-right p-3 rounded-xl border transition-colors ${appointmentConfig.mode === mode.value ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300'}`}
+                                                  >
+                                                    <span className="block text-sm font-semibold">{mode.label}</span>
+                                                    <span className="block text-xs mt-1 opacity-75">{mode.hint}</span>
+                                                  </button>
+                                                ))}
+                                              </div>
+                                            </div>
+
+                                            {appointmentConfig.mode === 'custom' && (
+                                              <div>
+                                                <label className="block text-xs font-medium text-gray-600 mb-2">تخصيص المواعيد حسب</label>
+                                                <div className="grid gap-2 sm:grid-cols-2">
+                                                  <button type="button" onClick={() => setAppointmentOptions(qi, { customBy: 'weekday' })} className={`px-3 py-2 rounded-lg border text-sm ${appointmentConfig.customBy === 'weekday' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}>أيام الأسبوع</button>
+                                                  <button type="button" onClick={() => setAppointmentOptions(qi, { customBy: 'date' })} className={`px-3 py-2 rounded-lg border text-sm ${appointmentConfig.customBy === 'date' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}>تاريخ محدد</button>
+                                                </div>
+                                              </div>
+                                            )}
+
+                                            {appointmentConfig.mode === 'auto' && (
+                                              <div className="grid gap-3 sm:grid-cols-2">
+                                                <label className="block">
+                                                  <span className="block text-xs font-medium text-gray-600 mb-1.5">بداية أول موعد</span>
+                                                  <input
+                                                    type="datetime-local"
+                                                    value={appointmentSlots[0]?.validation_value || ''}
+                                                    onChange={(e) => {
+                                                      const firstSlot = appointmentSlots[0] || { id: `appt_auto_${Date.now()}`, text: '', points: 0 }
+                                                      setAppointmentOptions(qi, {}, [{ ...firstSlot, text: 'auto', validation_category: 'auto', validation_value: e.target.value, validation_min: firstSlot.validation_min || '30' }])
+                                                    }}
+                                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+                                                  />
+                                                </label>
+                                                <label className="block">
+                                                  <span className="block text-xs font-medium text-gray-600 mb-1.5">فرق الدقائق بين كل حالة</span>
+                                                  <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={appointmentSlots[0]?.validation_min || '30'}
+                                                    onChange={(e) => {
+                                                      const firstSlot = appointmentSlots[0] || { id: `appt_auto_${Date.now()}`, text: 'auto', points: 0, validation_category: 'auto' }
+                                                      setAppointmentOptions(qi, {}, [{ ...firstSlot, validation_category: 'auto', validation_value: firstSlot.validation_value || '', validation_min: e.target.value }])
+                                                    }}
+                                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+                                                  />
+                                                </label>
+                                                <p className="sm:col-span-2 text-xs text-gray-500">مثال: لو أول موعد 10:00 والفرق 15 دقيقة، أول حجز يكون 10:00 والثاني 10:15 والثالث 10:30.</p>
+                                              </div>
+                                            )}
+
+                                            {appointmentConfig.mode !== 'auto' && <label className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-100 rounded-xl cursor-pointer">
+                                              <input
+                                                type="checkbox"
+                                                checked={appointmentConfig.single}
+                                                onChange={(e) => setAppointmentOptions(qi, { single: e.target.checked })}
+                                                className="w-4 h-4 mt-0.5 text-amber-600 rounded"
+                                              />
+                                              <span>
+                                                <span className="block text-sm font-medium text-amber-800">مواعيد منفردة</span>
+                                                <span className="block text-xs text-amber-700 mt-1">لو مستخدم اختار موعد، يختفي هذا الموعد من الاختيارات المتاحة لباقي المستخدمين.</span>
+                                              </span>
+                                            </label>}
+
+                                            {appointmentConfig.mode !== 'auto' && <div className="space-y-2">
+                                              <label className="block text-xs font-medium text-gray-600">المواعيد المتاحة</label>
+                                              {appointmentSlots.map((slot: any, slotIndex: number) => (
+                                                <div key={slot.id || slotIndex} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] items-center bg-white border border-gray-200 rounded-xl p-2">
+                                                  {appointmentConfig.mode === 'custom' && appointmentConfig.customBy === 'weekday' && (
+                                                    <select value={slot.validation_value || '0'} onChange={(e) => updateAppointmentSlot(qi, slotIndex, { validation_category: 'weekday', validation_value: e.target.value })} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+                                                      {WEEKDAY_OPTIONS.map((day) => <option key={day.value} value={day.value}>{day.label}</option>)}
+                                                    </select>
+                                                  )}
+                                                  {appointmentConfig.mode === 'custom' && appointmentConfig.customBy === 'date' && (
+                                                    <input type="date" value={slot.validation_value || ''} onChange={(e) => updateAppointmentSlot(qi, slotIndex, { validation_category: 'date', validation_value: e.target.value })} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" />
+                                                  )}
+                                                  <input type="time" value={slot.text || ''} onChange={(e) => updateAppointmentSlot(qi, slotIndex, { text: e.target.value, validation_category: appointmentConfig.mode === 'fixed' ? 'fixed' : appointmentConfig.customBy })} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" />
+                                                  <button type="button" onClick={() => removeAppointmentSlot(qi, slotIndex)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                                  </button>
+                                                </div>
+                                              ))}
+                                              <button type="button" onClick={() => addAppointmentSlot(qi)} className="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors text-sm">
+                                                + إضافة موعد
+                                              </button>
+                                            </div>}
+                                          </div>
+                                        )
+                                      })()
+                                    )}
+
+                                    {q.type === 'star_rating' && (
                                       <div>
-                                        <label className="block text-xs font-medium text-gray-600 mb-1.5">وقت انتهاء العرض</label>
-                                        <input type="datetime-local" value={parseOptions(question.options)[0]?.text || ''} onChange={(e) => {
-                                          if (parseOptions(question.options).length === 0) addOption(qIndex)
-                                          updateOption(qIndex, 0, { text: e.target.value })
+                                        <label className="block text-xs font-medium text-gray-600 mb-1.5">عدد النجوم</label>
+                                        <input type="number" min="1" max="10" value={parseOptions(q.options).length} onChange={(e) => {
+                                          const count = parseInt(e.target.value) || 5;
+                                          updateQuestion(qi, { options: Array.from({ length: count }).map((_, i) => ({ id: `opt_${Date.now()}_${i}`, text: String(i+1), points: i+1 })) });
                                         }} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
                                       </div>
-                                      <div>
-                                        <label className="block text-xs font-medium text-gray-600 mb-1.5">وصف اختياري</label>
-                                        <textarea
-                                          value={parseOptions(question.options)[0]?.validation_min || ''}
-                                          onChange={(e) => {
-                                            if (parseOptions(question.options).length === 0) addOption(qIndex)
-                                            updateOption(qIndex, 0, { validation_min: e.target.value })
-                                          }}
-                                          rows={2}
-                                          className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm"
-                                          placeholder="مثال: احجز الآن قبل انتهاء العرض"
-                                        />
-                                      </div>
-                                    </div>
-                                  )}
+                                    )}
 
-                                  {question.type === 'products_block' && (
-                                    <div className="space-y-3">
+                                    {q.type === 'static_image' && (
                                       <div>
-                                        <label className="text-xs font-medium text-gray-600">المنتجات</label>
-                                        <p className="text-xs text-gray-500 mt-1">أضف مجموعات، وداخل كل مجموعة الأصناف والسعر والتفاصيل والصورة.</p>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1.5">رابط الصورة (URL)</label>
+                                        <input type="text" value={(parseOptions(q.options)[0] || {}).validation_value || ''} onChange={(e) => { if(parseOptions(q.options).length===0) addOption(qi); updateOption(qi, 0, { validation_value: e.target.value }) }} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" dir="ltr" placeholder="https://..." />
+                                        <p className="text-xs text-gray-500 mt-1">انسخ رابط الصورة وضعه هنا</p>
                                       </div>
-                                      <ProductGroupsEditor
-                                        groups={getQuestionProductGroups(question)}
-                                        onChange={(groups) => updateQuestion(qIndex, { options: groups as any })}
-                                      />
-                                    </div>
-                                  )}
+                                    )}
 
-                                  {question.type === 'payment_info_block' && (
-                                    <div className="space-y-3">
-                                      <div>
-                                        <label className="text-xs font-medium text-gray-600">بيانات الدفع</label>
-                                        <p className="text-xs text-gray-500 mt-1">اكتب بياناتك التي ستظهر للمستخدم مع زر نسخ لكل رقم أو رابط.</p>
-                                      </div>
-                                      <PaymentMethodsEditor
-                                        methods={getQuestionPaymentMethods(question)}
-                                        onChange={(methods) => updateQuestion(qIndex, { options: methods as any })}
-                                      />
-                                    </div>
-                                  )}
-
-                                  {question.type === 'appointment' && (
-                                    (() => {
-                                      const appointmentConfig = getAppointmentConfig(question.options)
-                                      const appointmentSlots = getAppointmentSlots(question.options)
+                                    {/* Text validation options (short text only) */}
+                                    {q.type === 'text' && (() => {
+                                      const opts: any[] = parseOptions(q.options)
+                                      const meta = opts[0] || {}
+                                      const vt = meta.validation_type || ''
+                                      const vcat = meta.validation_category || ''
+                                      const firstOptions = [
+                                        { value: 'name', label: 'اسم' },
+                                        { value: 'email', label: 'ايميل' },
+                                        { value: 'phone', label: 'رقم هاتف' },
+                                        { value: 'number', label: 'رقم' },
+                                        { value: 'plain', label: 'نص بدون تحقق' },
+                                        { value: 'text_check', label: 'نص بتحقق' },
+                                      ]
+                                      const currentFirst = firstOptions.find(o => {
+                                        if (vcat) return o.value === vcat
+                                        if (!vt || vt === '') return o.value === 'plain'
+                                        if (vt === 'name' || vt === 'email' || vt === 'phone' || vt === 'plain') return o.value === vt
+                                        return o.value === 'plain'
+                                      }) || firstOptions[0]
+                  
+                                      const secondOptions = (() => {
+                                        if (currentFirst.value === 'name') return [
+                                          { value: 'name_2', label: 'ثنائي' },
+                                          { value: 'name_3', label: 'ثلاثي' },
+                                          { value: 'name_4', label: 'رباعي' },
+                                        ]
+                                        if (currentFirst.value === 'number') return [
+                                          { value: 'equal_to', label: 'يساوي' },
+                                          { value: 'not_equal_to', label: 'لا يساوي' },
+                                          { value: 'less_than', label: 'أقل من' },
+                                          { value: 'less_than_or_equal', label: 'أقل من أو يساوي' },
+                                          { value: 'greater_than', label: 'أكبر من' },
+                                          { value: 'greater_than_or_equal', label: 'أكبر من أو يساوي' },
+                                          { value: 'between', label: 'بين' },
+                                          { value: 'not_between', label: 'ليس بين' },
+                                          { value: 'whole_number', label: 'عدد صحيح' },
+                                          { value: 'is_number', label: 'اعداد عشرية' },
+                                        ]
+                                        if (currentFirst.value === 'text_check') return [
+                                          { value: 'equal_to', label: 'يساوي' },
+                                          { value: 'not_equal_to', label: 'لا يساوي' },
+                                          { value: 'contains_word', label: 'يحتوى على' },
+                                          { value: 'does_not_contain', label: 'لا يحتوى على' },
+                                        ]
+                                        return []
+                                      })()
+                  
+                                      const setValidation = (firstVal: string, secondVal?: string) => {
+                                        if (firstVal === '' || firstVal === 'email' || firstVal === 'phone' || firstVal === 'plain') {
+                                          updateQuestion(qi, { options: [{ validation_type: firstVal, validation_category: '', validation_value: '', validation_min: '', validation_max: '' }] as any })
+                                        } else if (firstVal === 'name') {
+                                          const wordCount = secondVal ? parseInt(secondVal.split('_')[1]) : 2
+                                          updateQuestion(qi, { options: [{ validation_type: 'name', validation_category: 'name', validation_value: String(wordCount), validation_min: '', validation_max: '' }] as any })
+                                        } else if (firstVal === 'number') {
+                                          const sv = secondVal || 'equal_to'
+                                          updateQuestion(qi, { options: [{ validation_type: sv, validation_category: 'number', validation_value: '', validation_min: '', validation_max: '' }] as any })
+                                        } else if (firstVal === 'text_check') {
+                                          const sv = secondVal || 'contains_word'
+                                          updateQuestion(qi, { options: [{ validation_type: sv, validation_category: 'text_check', validation_value: sv === 'contains_word' || sv === 'does_not_contain' ? '' : '', validation_min: '', validation_max: '' }] as any })
+                                        }
+                                      }
+                  
+                                      const currentSecondVal = (() => {
+                                        if (currentFirst.value === 'name') {
+                                          const wc = meta.validation_value || '2'
+                                          return `name_${wc}`
+                                        }
+                                        if (currentFirst.value === 'number' || currentFirst.value === 'text_check') {
+                                          if (['contains_word','does_not_contain','equal_to','not_equal_to','less_than','less_than_or_equal','greater_than','greater_than_or_equal','between','not_between','whole_number','is_number'].includes(vt)) return vt
+                                        }
+                                        return ''
+                                      })()
+                  
                                       return (
-                                        <div className="space-y-4">
-                                          <div>
-                                            <label className="block text-xs font-medium text-gray-600 mb-2">نوع المواعيد</label>
-                                            <div className="grid gap-2 sm:grid-cols-2">
-                                              {[
-                                                { value: 'fixed', label: 'مواعيد ثابتة', hint: 'نفس المواعيد متاحة كل يوم.' },
-                                                { value: 'custom', label: 'مواعيد مخصصة', hint: 'مواعيد مختلفة حسب اليوم أو التاريخ.' },
-                                                { value: 'auto', label: 'موعد تلقائي', hint: 'يعرض أقرب موعد تلقائيًا، وكل حجز جديد يزيد بعدد دقائق تحدده.' },
-                                              ].map((mode) => (
-                                                <button
-                                                  key={mode.value}
-                                                  type="button"
-                                                  onClick={() => setAppointmentOptions(qIndex, { mode: mode.value })}
-                                                  className={`text-right p-3 rounded-xl border transition-colors ${appointmentConfig.mode === mode.value ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300'}`}
-                                                >
-                                                  <span className="block text-sm font-semibold">{mode.label}</span>
-                                                  <span className="block text-xs mt-1 opacity-75">{mode.hint}</span>
-                                                </button>
-                                              ))}
-                                            </div>
-                                          </div>
-
-                                          {appointmentConfig.mode === 'custom' && (
-                                            <div>
-                                              <label className="block text-xs font-medium text-gray-600 mb-2">تخصيص المواعيد حسب</label>
-                                              <div className="grid gap-2 sm:grid-cols-2">
-                                                <button type="button" onClick={() => setAppointmentOptions(qIndex, { customBy: 'weekday' })} className={`px-3 py-2 rounded-lg border text-sm ${appointmentConfig.customBy === 'weekday' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}>أيام الأسبوع</button>
-                                                <button type="button" onClick={() => setAppointmentOptions(qIndex, { customBy: 'date' })} className={`px-3 py-2 rounded-lg border text-sm ${appointmentConfig.customBy === 'date' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}>تاريخ محدد</button>
-                                              </div>
-                                            </div>
-                                          )}
-
-                                          {appointmentConfig.mode === 'auto' && (
-                                            <div className="grid gap-3 sm:grid-cols-2">
-                                              <label className="block">
-                                                <span className="block text-xs font-medium text-gray-600 mb-1.5">بداية أول موعد</span>
-                                                <input
-                                                  type="datetime-local"
-                                                  value={appointmentSlots[0]?.validation_value || ''}
-                                                  onChange={(e) => {
-                                                    const firstSlot = appointmentSlots[0] || { id: `appt_auto_${Date.now()}`, text: '', points: 0 }
-                                                    setAppointmentOptions(qIndex, {}, [{ ...firstSlot, text: 'auto', validation_category: 'auto', validation_value: e.target.value, validation_min: firstSlot.validation_min || '30' }])
-                                                  }}
-                                                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
-                                                />
-                                              </label>
-                                              <label className="block">
-                                                <span className="block text-xs font-medium text-gray-600 mb-1.5">فرق الدقائق بين كل حالة</span>
-                                                <input
-                                                  type="number"
-                                                  min="1"
-                                                  value={appointmentSlots[0]?.validation_min || '30'}
-                                                  onChange={(e) => {
-                                                    const firstSlot = appointmentSlots[0] || { id: `appt_auto_${Date.now()}`, text: 'auto', points: 0, validation_category: 'auto' }
-                                                    setAppointmentOptions(qIndex, {}, [{ ...firstSlot, validation_category: 'auto', validation_value: firstSlot.validation_value || '', validation_min: e.target.value }])
-                                                  }}
-                                                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
-                                                />
-                                              </label>
-                                              <p className="sm:col-span-2 text-xs text-gray-500">مثال: لو أول موعد 10:00 والفرق 15 دقيقة، أول حجز يكون 10:00 والثاني 10:15 والثالث 10:30.</p>
-                                            </div>
-                                          )}
-
-                                          {appointmentConfig.mode !== 'auto' && <label className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-100 rounded-xl cursor-pointer">
-                                            <input
-                                              type="checkbox"
-                                              checked={appointmentConfig.single}
-                                              onChange={(e) => setAppointmentOptions(qIndex, { single: e.target.checked })}
-                                              className="w-4 h-4 mt-0.5 text-amber-600 rounded"
-                                            />
-                                            <span>
-                                              <span className="block text-sm font-medium text-amber-800">مواعيد منفردة</span>
-                                              <span className="block text-xs text-amber-700 mt-1">لو مستخدم اختار موعد، يختفي هذا الموعد من الاختيارات المتاحة لباقي المستخدمين.</span>
-                                            </span>
-                                          </label>}
-
-                                          {appointmentConfig.mode !== 'auto' && <div className="space-y-2">
-                                            <label className="block text-xs font-medium text-gray-600">المواعيد المتاحة</label>
-                                            {appointmentSlots.map((slot: any, slotIndex: number) => (
-                                              <div key={slot.id || slotIndex} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] items-center bg-white border border-gray-200 rounded-xl p-2">
-                                                {appointmentConfig.mode === 'custom' && appointmentConfig.customBy === 'weekday' && (
-                                                  <select value={slot.validation_value || '0'} onChange={(e) => updateAppointmentSlot(qIndex, slotIndex, { validation_category: 'weekday', validation_value: e.target.value })} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-                                                    {WEEKDAY_OPTIONS.map((day) => <option key={day.value} value={day.value}>{day.label}</option>)}
-                                                  </select>
-                                                )}
-                                                {appointmentConfig.mode === 'custom' && appointmentConfig.customBy === 'date' && (
-                                                  <input type="date" value={slot.validation_value || ''} onChange={(e) => updateAppointmentSlot(qIndex, slotIndex, { validation_category: 'date', validation_value: e.target.value })} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" />
-                                                )}
-                                                <input type="time" value={slot.text || ''} onChange={(e) => updateAppointmentSlot(qIndex, slotIndex, { text: e.target.value, validation_category: appointmentConfig.mode === 'fixed' ? 'fixed' : appointmentConfig.customBy })} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" />
-                                                <button type="button" onClick={() => removeAppointmentSlot(qIndex, slotIndex)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
-                                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                                                </button>
-                                              </div>
-                                            ))}
-                                            <button type="button" onClick={() => addAppointmentSlot(qIndex)} className="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors text-sm">
-                                              + إضافة موعد
-                                            </button>
-                                          </div>}
-                                        </div>
-                                      )
-                                    })()
-                                  )}
-
-                                  {question.type === 'star_rating' && (
-                                    <div>
-                                      <label className="block text-xs font-medium text-gray-600 mb-1.5">عدد النجوم</label>
-                                      <input type="number" min="1" max="10" value={parseOptions(question.options).length} onChange={(e) => {
-                                        const count = parseInt(e.target.value) || 5;
-                                        updateQuestion(qIndex, { options: Array.from({ length: count }).map((_, i) => ({ id: `opt_${Date.now()}_${i}`, text: String(i+1), points: i+1 })) });
-                                      }} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
-                                    </div>
-                                  )}
-
-                                  {question.type === 'static_image' && (
-                                    <div>
-                                      <label className="block text-xs font-medium text-gray-600 mb-1.5">رابط الصورة (URL)</label>
-                                      <input type="text" value={(parseOptions(question.options)[0] || {}).validation_value || ''} onChange={(e) => { if(parseOptions(question.options).length===0) addOption(qIndex); updateOption(qIndex, 0, { validation_value: e.target.value }) }} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" dir="ltr" placeholder="https://..." />
-                                      <p className="text-xs text-gray-500 mt-1">انسخ رابط الصورة وضعه هنا</p>
-                                    </div>
-                                  )}
-
-                                  {/* Text validation options (short text only) */}
-                                  {question.type === 'text' && (() => {
-                                    const opts: any[] = parseOptions(question.options)
-                                    const meta = opts[0] || {}
-                                    const vt = meta.validation_type || ''
-                                    const vcat = meta.validation_category || ''
-                                    const firstOptions = [
-                                      { value: 'name', label: 'اسم' },
-                                      { value: 'email', label: 'ايميل' },
-                                      { value: 'phone', label: 'رقم هاتف' },
-                                      { value: 'number', label: 'رقم' },
-                                      { value: 'plain', label: 'نص بدون تحقق' },
-                                      { value: 'text_check', label: 'نص بتحقق' },
-                                    ]
-                                    const currentFirst = firstOptions.find(o => {
-                                      if (vcat) return o.value === vcat
-                                      if (!vt || vt === '') return o.value === 'plain'
-                                      if (vt === 'name' || vt === 'email' || vt === 'phone' || vt === 'plain') return o.value === vt
-                                      return o.value === 'plain'
-                                    }) || firstOptions[0]
-                  
-                                    const secondOptions = (() => {
-                                      if (currentFirst.value === 'name') return [
-                                        { value: 'name_2', label: 'ثنائي' },
-                                        { value: 'name_3', label: 'ثلاثي' },
-                                        { value: 'name_4', label: 'رباعي' },
-                                      ]
-                                      if (currentFirst.value === 'number') return [
-                                        { value: 'equal_to', label: 'يساوي' },
-                                        { value: 'not_equal_to', label: 'لا يساوي' },
-                                        { value: 'less_than', label: 'أقل من' },
-                                        { value: 'less_than_or_equal', label: 'أقل من أو يساوي' },
-                                        { value: 'greater_than', label: 'أكبر من' },
-                                        { value: 'greater_than_or_equal', label: 'أكبر من أو يساوي' },
-                                        { value: 'between', label: 'بين' },
-                                        { value: 'not_between', label: 'ليس بين' },
-                                        { value: 'whole_number', label: 'عدد صحيح' },
-                                        { value: 'is_number', label: 'اعداد عشرية' },
-                                      ]
-                                      if (currentFirst.value === 'text_check') return [
-                                        { value: 'equal_to', label: 'يساوي' },
-                                        { value: 'not_equal_to', label: 'لا يساوي' },
-                                        { value: 'contains_word', label: 'يحتوى على' },
-                                        { value: 'does_not_contain', label: 'لا يحتوى على' },
-                                      ]
-                                      return []
-                                    })()
-                  
-                                    const setValidation = (firstVal: string, secondVal?: string) => {
-                                      if (firstVal === '' || firstVal === 'email' || firstVal === 'phone' || firstVal === 'plain') {
-                                        updateQuestion(qIndex, { options: [{ validation_type: firstVal, validation_category: '', validation_value: '', validation_min: '', validation_max: '' }] as any })
-                                      } else if (firstVal === 'name') {
-                                        const wordCount = secondVal ? parseInt(secondVal.split('_')[1]) : 2
-                                        updateQuestion(qIndex, { options: [{ validation_type: 'name', validation_category: 'name', validation_value: String(wordCount), validation_min: '', validation_max: '' }] as any })
-                                      } else if (firstVal === 'number') {
-                                        const sv = secondVal || 'equal_to'
-                                        updateQuestion(qIndex, { options: [{ validation_type: sv, validation_category: 'number', validation_value: '', validation_min: '', validation_max: '' }] as any })
-                                      } else if (firstVal === 'text_check') {
-                                        const sv = secondVal || 'contains_word'
-                                        updateQuestion(qIndex, { options: [{ validation_type: sv, validation_category: 'text_check', validation_value: sv === 'contains_word' || sv === 'does_not_contain' ? '' : '', validation_min: '', validation_max: '' }] as any })
-                                      }
-                                    }
-                  
-                                    const currentSecondVal = (() => {
-                                      if (currentFirst.value === 'name') {
-                                        const wc = meta.validation_value || '2'
-                                        return `name_${wc}`
-                                      }
-                                      if (currentFirst.value === 'number' || currentFirst.value === 'text_check') {
-                                        if (['contains_word','does_not_contain','equal_to','not_equal_to','less_than','less_than_or_equal','greater_than','greater_than_or_equal','between','not_between','whole_number','is_number'].includes(vt)) return vt
-                                      }
-                                      return ''
-                                    })()
-                  
-                                    return (
-                                      <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                                        <p className="text-sm font-medium text-purple-700 mb-2">نوع التحقق من الإجابة:</p>
-                                        <div className="flex flex-wrap gap-2">
-                                          <select
-                                            value={currentFirst.value}
-                                            onChange={(e) => {
-                                              setValidation(e.target.value)
-                                            }}
-                                            className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500"
-                                          >
-                                            {firstOptions.map(o => (
-                                              <option key={o.value} value={o.value}>{o.label}</option>
-                                            ))}
-                                          </select>
-                                          {secondOptions.length > 0 && (
+                                        <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                          <p className="text-sm font-medium text-purple-700 mb-2">نوع التحقق من الإجابة:</p>
+                                          <div className="flex flex-wrap gap-2">
                                             <select
-                                              value={currentSecondVal}
+                                              value={currentFirst.value}
                                               onChange={(e) => {
-                                                setValidation(currentFirst.value, e.target.value)
+                                                setValidation(e.target.value)
                                               }}
                                               className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500"
                                             >
-                                              <option value="">اختر...</option>
-                                              {secondOptions.map(o => (
+                                              {firstOptions.map(o => (
                                                 <option key={o.value} value={o.value}>{o.label}</option>
                                               ))}
                                             </select>
-                                          )}
-                                          {(currentFirst.value === 'text_check' && vt) && (
-                                            <input
-                                              type="text"
-                                              value={meta.validation_value || ''}
-                                              onChange={(e) => updateQuestion(qIndex, { options: [{ validation_type: vt, validation_value: e.target.value, validation_min: '', validation_max: '' }] as any })}
-                                              placeholder="أدخل النص..."
-                                              className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500 w-40"
-                                            />
-                                          )}
-                                          {(currentFirst.value === 'number' && (vt === 'equal_to' || vt === 'not_equal_to' || vt === 'less_than' || vt === 'less_than_or_equal' || vt === 'greater_than' || vt === 'greater_than_or_equal')) && (
-                                            <input
-                                              type="number"
-                                              step="any"
-                                              value={meta.validation_value ?? ''}
-                                              onChange={(e) => updateQuestion(qIndex, { options: [{ validation_type: vt, validation_value: e.target.value, validation_min: '', validation_max: '' }] as any })}
-                                              placeholder="القيمة..."
-                                              className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500 w-32"
-                                            />
-                                          )}
-                                          {(currentFirst.value === 'number' && (vt === 'between' || vt === 'not_between')) && (
-                                            <>
+                                            {secondOptions.length > 0 && (
+                                              <select
+                                                value={currentSecondVal}
+                                                onChange={(e) => {
+                                                  setValidation(currentFirst.value, e.target.value)
+                                                }}
+                                                className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500"
+                                              >
+                                                <option value="">اختر...</option>
+                                                {secondOptions.map(o => (
+                                                  <option key={o.value} value={o.value}>{o.label}</option>
+                                                ))}
+                                              </select>
+                                            )}
+                                            {(currentFirst.value === 'text_check' && vt) && (
+                                              <input
+                                                type="text"
+                                                value={meta.validation_value || ''}
+                                                onChange={(e) => updateQuestion(qi, { options: [{ validation_type: vt, validation_value: e.target.value, validation_min: '', validation_max: '' }] as any })}
+                                                placeholder="أدخل النص..."
+                                                className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500 w-40"
+                                              />
+                                            )}
+                                            {(currentFirst.value === 'number' && (vt === 'equal_to' || vt === 'not_equal_to' || vt === 'less_than' || vt === 'less_than_or_equal' || vt === 'greater_than' || vt === 'greater_than_or_equal')) && (
                                               <input
                                                 type="number"
                                                 step="any"
-                                                value={meta.validation_min ?? ''}
-                                                onChange={(e) => updateQuestion(qIndex, { options: [{ validation_type: vt, validation_min: e.target.value, validation_max: meta.validation_max || '', validation_value: '' }] as any })}
-                                                placeholder="الصغرى..."
-                                                className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500 w-28"
+                                                value={meta.validation_value ?? ''}
+                                                onChange={(e) => updateQuestion(qi, { options: [{ validation_type: vt, validation_value: e.target.value, validation_min: '', validation_max: '' }] as any })}
+                                                placeholder="القيمة..."
+                                                className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500 w-32"
                                               />
-                                              <input
-                                                type="number"
-                                                step="any"
-                                                value={meta.validation_max ?? ''}
-                                                onChange={(e) => updateQuestion(qIndex, { options: [{ validation_type: vt, validation_min: meta.validation_min || '', validation_max: e.target.value, validation_value: '' }] as any })}
-                                                placeholder="العظمى..."
-                                                className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500 w-28"
-                                              />
-                                            </>
-                                          )}
+                                            )}
+                                            {(currentFirst.value === 'number' && (vt === 'between' || vt === 'not_between')) && (
+                                              <>
+                                                <input
+                                                  type="number"
+                                                  step="any"
+                                                  value={meta.validation_min ?? ''}
+                                                  onChange={(e) => updateQuestion(qi, { options: [{ validation_type: vt, validation_min: e.target.value, validation_max: meta.validation_max || '', validation_value: '' }] as any })}
+                                                  placeholder="الصغرى..."
+                                                  className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500 w-28"
+                                                />
+                                                <input
+                                                  type="number"
+                                                  step="any"
+                                                  value={meta.validation_max ?? ''}
+                                                  onChange={(e) => updateQuestion(qi, { options: [{ validation_type: vt, validation_min: meta.validation_min || '', validation_max: e.target.value, validation_value: '' }] as any })}
+                                                  placeholder="العظمى..."
+                                                  className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500 w-28"
+                                                />
+                                              </>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )
+                                    })()}
+
+                                    {/* Scale Options */}
+                                    {q.type === 'scale' && (
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1.5">نقاط المقياس</label>
+                                        <div className="grid grid-cols-5 gap-1.5">
+                                          {(parseOptions(q.options) as any[]).map((opt: any, oi: number) => (
+                                            <div key={oi} className="text-center">
+                                              <div className="w-full py-1.5 bg-blue-600 text-white rounded-lg font-bold text-sm mb-1">{opt.text}</div>
+                                              <input type="number" value={opt.points} onChange={(e) => { const idx = (Array.isArray(q.options) ? q.options : []).findIndex((o: any) => o.id === opt.id); if (idx >= 0) updateOption(qi, idx, { points: Number(e.target.value) }) }} className={`w-full px-1 py-1 border border-blue-200 rounded text-center text-sm ${!!(formData?.page_titles as any)?._is_test ? '' : 'hidden'}`} />
+                                            </div>
+                                          ))}
                                         </div>
                                       </div>
-                                    )
-                                  })()}
-
-                                  {/* Scale Options */}
-                                  {question.type === 'scale' && (
-                                    <div>
-                                      <label className="block text-xs font-medium text-gray-600 mb-1.5">نقاط المقياس</label>
-                                      <div className="grid grid-cols-5 gap-1.5">
-                                        {(parseOptions(question.options) as any[]).map((opt: any, oi: number) => (
-                                          <div key={oi} className="text-center">
-                                            <div className="w-full py-1.5 bg-blue-600 text-white rounded-lg font-bold text-sm mb-1">{opt.text}</div>
-                                            <input type="number" value={opt.points} onChange={(e) => { const idx = (Array.isArray(question.options) ? question.options : []).findIndex((o: any) => o.id === opt.id); if (idx >= 0) updateOption(qIndex, idx, { points: Number(e.target.value) }) }} className={`w-full px-1 py-1 border border-blue-200 rounded text-center text-sm ${!!(formData?.page_titles as any)?._is_test ? '' : 'hidden'}`} />
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-
-                              )}
-                            {/* Click-away handler */}
-                            {questionMenuOpen && (
-                              <div className="fixed inset-0 z-40" onClick={() => setQuestionMenuOpen(null)} />
-                            )}
-                            <div className="relative flex justify-center -mt-2 mb-1">
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); setQuestionMenuOpen(questionMenuOpen === question.id ? null : question.id) }}
-                                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
-                                  questionMenuOpen === question.id
-                                    ? 'bg-blue-100 text-blue-600 shadow-sm'
-                                    : 'bg-gray-50 border border-gray-200 text-gray-400 hover:bg-blue-50 hover:text-blue-500 hover:border-blue-200'
-                                }`}
-                                title="إعدادات السؤال"
-                              >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                              </button>
-                              {questionMenuOpen === question.id && (
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-white rounded-xl shadow-xl border border-gray-200 py-1.5 min-w-[200px] z-50" onClick={(e) => e.stopPropagation()}>
-                                  {/* Hide/Show */}
-                                  <button onClick={() => { updateQuestion(qIndex, { hidden: !question.hidden }); setQuestionMenuOpen(null) }} className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right">
-                                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      {question.hidden ? (
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                                      ) : (
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                      )}
-                                    </svg>
-                                    {question.hidden ? 'إظهار' : 'إخفاء'}
-                                  </button>
-                                  <div className="h-px bg-gray-100 my-1" />
-                                  {/* Move to start */}
-                                  <button onClick={() => { moveToStart(qIndex); setQuestionMenuOpen(null) }} disabled={qIndex === 0} className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right disabled:opacity-30">
-                                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
-                                    نقل إلى البداية
-                                  </button>
-                                  {/* Move to end */}
-                                  <button onClick={() => { moveToEnd(qIndex); setQuestionMenuOpen(null) }} disabled={qIndex === qs.length - 1} className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right disabled:opacity-30">
-                                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
-                                    نقل إلى النهاية
-                                  </button>
-                                  <div className="h-px bg-gray-100 my-1" />
-                                  {/* Page */}
-                                  <div className="px-4 py-2">
-                                    <label className="flex items-center gap-2 text-sm text-gray-700">
-                                      <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                      <span className="shrink-0">الصفحة</span>
-                                      <select value={question.page || 1} onChange={(e) => { updateQuestion(qIndex, { page: parseInt(e.target.value) }); setQuestionMenuOpen(null) }} className="flex-1 px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs">
-                                        {Array.from({ length: Math.max(1, ...formData.questions.map((q: any) => q.page || 1)) + 1 }, (_, i) => i + 1).map(p => (
-                                          <option key={p} value={p}>{p}</option>
-                                        ))}
-                                      </select>
-                                    </label>
-                                  </div>
-                                  <div className="h-px bg-gray-100 my-1" />
-                                  {/* Next to previous */}
-                                  {qIndex > 0 && formData.questions[qIndex - 1].page === (question.page || 1) && (
-                                    <button onClick={() => {
-                                      if (!question.row_group || formData.questions[qIndex - 1].row_group !== question.row_group) {
-                                        const prevQ = formData.questions[qIndex - 1];
-                                        const newGroupId = prevQ.row_group || Date.now();
-                                        if (!prevQ.row_group) updateQuestion(qIndex - 1, { row_group: newGroupId });
-                                        updateQuestion(qIndex, { row_group: newGroupId });
-                                      } else {
-                                        updateQuestion(qIndex, { row_group: null });
-                                      }
-                                      setQuestionMenuOpen(null)
-                                    }} className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right">
-                                      <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
-                                      <span className={`${!!question.row_group && formData.questions[qIndex - 1].row_group === question.row_group ? 'text-blue-600 font-bold' : ''}`}>
-                                        {!!question.row_group && formData.questions[qIndex - 1].row_group === question.row_group ? '✓ ' : ''}عرض بجوار السؤال السابق
-                                      </span>
-                                    </button>
-                                  )}
-                                  <div className="h-px bg-gray-100 my-1" />
-                                  {/* Conditional Logic */}
-                                  <div className="px-4 py-2">
-                                    <div className="flex items-center justify-between mb-2">
-                                      <label className="flex items-center gap-2 text-sm text-gray-700">
-                                        <svg className="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                        المنطق الشرطي
-                                      </label>
-                                      <button onClick={() => {
-                                        const firstQ = (formData?.questions || []).find((q: any) => q.id !== question.id)
-                                        if (firstQ) {
-                                          updateQuestion(qIndex, { visibility_rules: [{ question_id: firstQ.id, operator: 'equals', value: '' }] })
-                                        }
-                                      }} className="text-xs text-indigo-600 hover:underline shrink-0">+ إضافة شرط</button>
-                                    </div>
-                                    {(question.visibility_rules || []).length > 0 ? (
-                                      <div className="space-y-1.5 mt-1">
-                                        {(question.visibility_rules || []).map((rule: any, ri: number) => (
-                                          <div key={ri} className="flex items-center gap-1 text-xs">
-                                            <span className="text-indigo-600 font-medium shrink-0">إذا</span>
-                                            <select value={rule.question_id} onChange={(e) => { const r = [...(question.visibility_rules || [])]; r[ri] = { ...r[ri], question_id: e.target.value }; updateQuestion(qIndex, { visibility_rules: r }) }} className="flex-1 min-w-0 px-1.5 py-1 bg-white border border-indigo-200 rounded text-xs">
-                                              {(formData?.questions || []).filter((q: any) => q.id !== question.id).map((q: any) => (
-                                                <option key={q.id} value={q.id}>{q.text ? q.text.slice(0, 15) : 'سؤال'}</option>
-                                              ))}
-                                            </select>
-                                            <select value={rule.operator || 'equals'} onChange={(e) => { const r = [...(question.visibility_rules || [])]; r[ri] = { ...r[ri], operator: e.target.value }; updateQuestion(qIndex, { visibility_rules: r }) }} className="px-1.5 py-1 bg-white border border-indigo-200 rounded text-xs">
-                                              <option value="equals">=</option>
-                                              <option value="not_equals">≠</option>
-                                              <option value="contains">يحتوي</option>
-                                            </select>
-                                            <input type="text" value={rule.value || ''} onChange={(e) => { const r = [...(question.visibility_rules || [])]; r[ri] = { ...r[ri], value: e.target.value }; updateQuestion(qIndex, { visibility_rules: r }) }} placeholder="قيمة" className="w-14 px-1.5 py-1 bg-white border border-indigo-200 rounded text-xs" />
-                                            <button onClick={() => { const r = (question.visibility_rules || []).filter((_: any, i: number) => i !== ri); updateQuestion(qIndex, { visibility_rules: r.length > 0 ? r : undefined }) }} className="p-0.5 text-red-400 hover:text-red-600"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <p className="text-xs text-indigo-400 mt-0.5">بدون شروط — يظهر دائماً</p>
                                     )}
                                   </div>
-                                </div>
+
+                                )}
+                              {/* Click-away handler */}
+                              {questionMenuOpen && (
+                                <div className="fixed inset-0 z-40" onClick={() => setQuestionMenuOpen(null)} />
                               )}
-                            </div>
-                            </div>
-                          )
+                              <div className="relative flex justify-center -mt-2 mb-1">
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setQuestionMenuOpen(questionMenuOpen === q.id ? null : q.id) }}
+                                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                                    questionMenuOpen === q.id
+                                      ? 'bg-blue-100 text-blue-600 shadow-sm'
+                                      : 'bg-gray-50 border border-gray-200 text-gray-400 hover:bg-blue-50 hover:text-blue-500 hover:border-blue-200'
+                                  }`}
+                                  title="إعدادات السؤال"
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  </svg>
+                                </button>
+                                {questionMenuOpen === q.id && (
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-white rounded-xl shadow-xl border border-gray-200 py-1.5 min-w-[200px] z-50" onClick={(e) => e.stopPropagation()}>
+                                    {/* Hide/Show */}
+                                    <button onClick={() => { updateQuestion(qi, { hidden: !q.hidden }); setQuestionMenuOpen(null) }} className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right">
+                                      <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        {q.hidden ? (
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                        ) : (
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        )}
+                                      </svg>
+                                      {q.hidden ? 'إظهار' : 'إخفاء'}
+                                    </button>
+                                    <div className="h-px bg-gray-100 my-1" />
+                                    {/* Move to start */}
+                                    <button onClick={() => { moveToStart(qi); setQuestionMenuOpen(null) }} disabled={qi === 0} className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right disabled:opacity-30">
+                                      <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+                                      نقل إلى البداية
+                                    </button>
+                                    {/* Move to end */}
+                                    <button onClick={() => { moveToEnd(qi); setQuestionMenuOpen(null) }} disabled={qi === qs.length - 1} className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right disabled:opacity-30">
+                                      <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                                      نقل إلى النهاية
+                                    </button>
+                                    <div className="h-px bg-gray-100 my-1" />
+                                    {/* Page */}
+                                    <div className="px-4 py-2">
+                                      <label className="flex items-center gap-2 text-sm text-gray-700">
+                                        <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                        <span className="shrink-0">الصفحة</span>
+                                        <select value={q.page || 1} onChange={(e) => { updateQuestion(qi, { page: parseInt(e.target.value) }); setQuestionMenuOpen(null) }} className="flex-1 px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs">
+                                          {Array.from({ length: Math.max(1, ...formData.questions.map((q: any) => q.page || 1)) + 1 }, (_, i) => i + 1).map(p => (
+                                            <option key={p} value={p}>{p}</option>
+                                          ))}
+                                        </select>
+                                      </label>
+                                    </div>
+                                    <div className="h-px bg-gray-100 my-1" />
+                                    {/* Next to previous */}
+                                    {qi > 0 && formData.questions[qi - 1].page === (q.page || 1) && (
+                                      <button onClick={() => {
+                                        if (!q.row_group || formData.questions[qi - 1].row_group !== q.row_group) {
+                                          const prevQ = formData.questions[qi - 1];
+                                          const newGroupId = prevQ.row_group || Date.now();
+                                          if (!prevQ.row_group) updateQuestion(qi - 1, { row_group: newGroupId });
+                                          updateQuestion(qi, { row_group: newGroupId });
+                                        } else {
+                                          updateQuestion(qi, { row_group: null });
+                                        }
+                                        setQuestionMenuOpen(null)
+                                      }} className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right">
+                                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                                        <span className={`${!!q.row_group && formData.questions[qi - 1].row_group === q.row_group ? 'text-blue-600 font-bold' : ''}`}>
+                                          {!!q.row_group && formData.questions[qi - 1].row_group === q.row_group ? '✓ ' : ''}عرض بجوار السؤال السابق
+                                        </span>
+                                      </button>
+                                    )}
+                                    <div className="h-px bg-gray-100 my-1" />
+                                    {/* Conditional Logic */}
+                                    <div className="px-4 py-2">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <label className="flex items-center gap-2 text-sm text-gray-700">
+                                          <svg className="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                          المنطق الشرطي
+                                        </label>
+                                        <button onClick={() => {
+                                          const firstQ = (formData?.questions || []).find((q: any) => q.id !== q.id)
+                                          if (firstQ) {
+                                            updateQuestion(qi, { visibility_rules: [{ question_id: firstQ.id, operator: 'equals', value: '' }] })
+                                          }
+                                        }} className="text-xs text-indigo-600 hover:underline shrink-0">+ إضافة شرط</button>
+                                      </div>
+                                      {(q.visibility_rules || []).length > 0 ? (
+                                        <div className="space-y-1.5 mt-1">
+                                          {(q.visibility_rules || []).map((rule: any, ri: number) => (
+                                            <div key={ri} className="flex items-center gap-1 text-xs">
+                                              <span className="text-indigo-600 font-medium shrink-0">إذا</span>
+                                              <select value={rule.question_id} onChange={(e) => { const r = [...(q.visibility_rules || [])]; r[ri] = { ...r[ri], question_id: e.target.value }; updateQuestion(qi, { visibility_rules: r }) }} className="flex-1 min-w-0 px-1.5 py-1 bg-white border border-indigo-200 rounded text-xs">
+                                                {(formData?.questions || []).filter((q: any) => q.id !== q.id).map((q: any) => (
+                                                  <option key={q.id} value={q.id}>{q.text ? q.text.slice(0, 15) : 'سؤال'}</option>
+                                                ))}
+                                              </select>
+                                              <select value={rule.operator || 'equals'} onChange={(e) => { const r = [...(q.visibility_rules || [])]; r[ri] = { ...r[ri], operator: e.target.value }; updateQuestion(qi, { visibility_rules: r }) }} className="px-1.5 py-1 bg-white border border-indigo-200 rounded text-xs">
+                                                <option value="equals">=</option>
+                                                <option value="not_equals">≠</option>
+                                                <option value="contains">يحتوي</option>
+                                              </select>
+                                              <input type="text" value={rule.value || ''} onChange={(e) => { const r = [...(q.visibility_rules || [])]; r[ri] = { ...r[ri], value: e.target.value }; updateQuestion(qi, { visibility_rules: r }) }} placeholder="قيمة" className="w-14 px-1.5 py-1 bg-white border border-indigo-200 rounded text-xs" />
+                                              <button onClick={() => { const r = (q.visibility_rules || []).filter((_: any, i: number) => i !== ri); updateQuestion(qi, { visibility_rules: r.length > 0 ? r : undefined }) }} className="p-0.5 text-red-400 hover:text-red-600"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <p className="text-xs text-indigo-400 mt-0.5">بدون شروط — يظهر دائماً</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              </SortableQuestionItem>
+                            )
+                          }
+
+                          const prevQ = pi > 0 ? pageQs[pi - 1] : null
+                          const nextQ = pi < pageQs.length - 1 ? pageQs[pi + 1] : null
+                          if (question.row_group && prevQ?.row_group === question.row_group) return null
+                          if (question.row_group && nextQ?.row_group === question.row_group) {
+                            const nextPi = pi + 1
+                            const nextQIndex = indices[nextPi]
+                            const nextIsSelected = selectedQuestionIndex === nextQIndex
+                            return (
+                              <div key={`row_${question.id}`} className="flex gap-4">
+                                {renderCard(question, qIndex, isSelected)}
+                                {renderCard(nextQ, nextQIndex, nextIsSelected)}
+                              </div>
+                            )
+                          }
+                          return renderCard(question, qIndex, isSelected)
                         })}
                           </SortableContext>
                         </DndContext>
