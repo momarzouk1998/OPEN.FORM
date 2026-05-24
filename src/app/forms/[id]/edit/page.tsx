@@ -1529,7 +1529,7 @@ const params = useParams()
       </header>
 
       {/* Action Bar */}
-      <div className="bg-white border-b border-gray-200 sticky top-[73px] z-10 shadow-sm">
+      <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center sm:justify-start gap-2">
           <button
             onClick={() => setShowSettingsModal(prev => !prev)}
