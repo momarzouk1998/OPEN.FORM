@@ -223,6 +223,13 @@ export const TEMPLATE_CATEGORIES: Record<string, string> = {
   survey: 'استبيانات',
   employment: 'توظيف',
   education: 'تعليمية',
+  education_centers: 'مراكز تعليم',
+  clinics: 'عيادات',
+  restaurants: 'مطاعم',
+  shipping: 'شحن',
+  real_estate: 'عقارات',
+  schools: 'مدارس',
+  small_business: 'شركات صغيرة',
 }
 
 // Dashboard stats

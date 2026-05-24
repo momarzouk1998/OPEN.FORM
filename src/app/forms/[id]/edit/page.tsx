@@ -206,6 +206,7 @@ function EditFormContent() {
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [showActionMenu, setShowActionMenu] = useState(false)
+  const [deletedQuestions, setDeletedQuestions] = useState<Array<{ question: any; index: number }>>([])
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode)
@@ -1167,19 +1168,30 @@ const params = useParams()
 
 
   const removeQuestion = (index: number) => {
-
     if (!formData) return
-
-
-
+    const removed = formData.questions[index]
+    if (removed) {
+      setDeletedQuestions(prev => [...prev.slice(-19), { question: removed, index }])
+    }
     setFormData(prev => prev ? ({
-
       ...prev,
-
       questions: prev.questions.filter((_: any, i: number) => i !== index)
-
     }) : null)
+  }
 
+  const undoDelete = () => {
+    if (deletedQuestions.length === 0 || !formData) return
+    const last = deletedQuestions[deletedQuestions.length - 1]
+    const insertAt = Math.min(last.index, formData.questions.length)
+    setFormData(prev => prev ? ({
+      ...prev,
+      questions: [
+        ...prev.questions.slice(0, insertAt),
+        last.question,
+        ...prev.questions.slice(insertAt)
+      ]
+    }) : null)
+    setDeletedQuestions(prev => prev.slice(0, -1))
   }
 
 
@@ -1796,6 +1808,15 @@ const params = useParams()
               </div>
             )}
           </div>
+          <button
+            onClick={undoDelete}
+            disabled={deletedQuestions.length === 0}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl active:scale-95 transition-all text-xs font-medium cursor-pointer bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="استرداد آخر سؤال تم حذفه"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
+            استرداد
+          </button>
           <button
             onClick={() => setIsPreviewActive(prev => !prev)}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-xl active:scale-95 transition-all text-xs font-medium cursor-pointer ${isPreviewActive ? 'bg-blue-100 text-blue-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}

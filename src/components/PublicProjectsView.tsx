@@ -7,6 +7,7 @@ import { createClient } from '@/utils/supabase/client'
 const NAV_LINKS = [
   { id: 'hero', label: 'الرئيسية' },
   { id: 'features', label: 'المميزات' },
+  { id: 'templates', label: 'القوالب' },
   { id: 'partners', label: 'شركاؤنا' },
   { id: 'pricing', label: 'الأسعار' },
   { id: 'contact', label: 'تواصل معنا' },
@@ -184,6 +185,53 @@ export default function PublicProjectsView() {
                 <p className="text-gray-600 text-sm leading-relaxed">{f.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== TEMPLATES ===== */}
+      <section id="templates" className="py-20 px-4 bg-gradient-to-b from-white to-gray-50">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-4">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">قوالب احترافية لمجالك</h2>
+            <div className="w-20 h-1 bg-blue-600 rounded-full mx-auto mt-3 mb-6" />
+            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+              ابدأ بقالب جاهز مصمم خصيصاً لنشاطك التجاري — ووفّر ساعات من العمل
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 mt-10">
+            {[
+              { icon: '🎓', label: 'مراكز تعليم', cat: 'education_centers', color: 'from-purple-500 to-violet-600' },
+              { icon: '🏥', label: 'عيادات', cat: 'clinics', color: 'from-teal-500 to-emerald-600' },
+              { icon: '🍽️', label: 'مطاعم', cat: 'restaurants', color: 'from-orange-500 to-red-600' },
+              { icon: '📦', label: 'شحن', cat: 'shipping', color: 'from-blue-500 to-cyan-600' },
+              { icon: '🏠', label: 'عقارات', cat: 'real_estate', color: 'from-amber-500 to-yellow-600' },
+              { icon: '📚', label: 'مدارس', cat: 'schools', color: 'from-green-500 to-emerald-600' },
+              { icon: '💼', label: 'شركات صغيرة', cat: 'small_business', color: 'from-rose-500 to-pink-600' },
+            ].map((item) => (
+              <Link
+                key={item.cat}
+                href={`/templates`}
+                className="group relative overflow-hidden rounded-2xl p-5 bg-white border border-gray-100 hover:shadow-xl hover:border-gray-200 transition-all duration-300 text-center"
+              >
+                <div className={`w-14 h-14 mx-auto mb-3 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center text-2xl shadow-lg transition-transform group-hover:scale-110 group-hover:-rotate-3`}>
+                  <span>{item.icon}</span>
+                </div>
+                <h3 className="text-sm font-bold text-gray-900">{item.label}</h3>
+                <p className="text-[10px] text-gray-400 mt-1">قوالب جاهزة</p>
+              </Link>
+            ))}
+          </div>
+
+          <div className="text-center mt-10">
+            <Link
+              href="/templates"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-gradient-to-l from-blue-600 to-indigo-600 text-white font-bold text-sm hover:shadow-xl hover:shadow-blue-200/50 transition-all duration-300"
+            >
+              تصفح جميع القوالب
+              <span>←</span>
+            </Link>
           </div>
         </div>
       </section>

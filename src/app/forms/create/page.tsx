@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
@@ -15,43 +15,43 @@ import { generateShortCode } from '@/lib/shortCode'
 // Question/Item type definitions with detailed explanations
 // Organized by category for better UX
 const QUESTION_TYPES = {
-  text: { label: 'نص', icon: 'T', description: 'إجابة نصية قصيرة', explanation: 'مثال: "ما اسمك؟"', category: 'basic' },
-  textarea: { label: 'نص طويل', icon: '¶', description: 'إجابة مفصلة', explanation: 'مثال: "صف تجربتك"', category: 'basic' },
-  single_choice: { label: 'اختيار واحد', icon: '○', description: 'اختيار إجابة واحدة', explanation: 'مثال: "نعم أو لا"', category: 'basic' },
-  multiple_choice: { label: 'اختيار متعدد', icon: '☑', description: 'اختيار عدة إجابات', explanation: 'مثال: "الهوايات"', category: 'basic' },
-  dropdown: { label: 'قائمة منسدلة', icon: '▼', description: 'اختيار من قائمة', explanation: 'قائمة مضغوطة لتوفير المساحة', category: 'basic' },
-  scale: { label: 'تقييم', icon: '⭐', description: 'تقييم من 1 إلى 10', explanation: 'مثال: تقييم الأداء', category: 'advanced' },
-  ranking: { label: 'ترتيب', icon: '#', description: 'ترتيب العناصر', explanation: 'ترتيب العناصر حسب الأولوية', category: 'advanced' },
-  matrix: { label: 'مصفوفة', icon: '⊞', description: 'خيارات مشتركة', explanation: 'عدة أسئلة مع نفس الخيارات', category: 'advanced' },
-  date: { label: 'تاريخ', icon: '📅', description: 'إدخال تاريخ', explanation: 'مثال: "تاريخ الميلاد"', category: 'advanced' },
-  time: { label: 'وقت', icon: '⏰', description: 'إدخال وقت', explanation: 'مثال: "وقت الحضور"', category: 'advanced' },
-  date_range: { label: 'نطاق وقت وتاريخ', icon: '📆', description: 'من وقت/تاريخ إلى وقت/تاريخ', explanation: 'مثال: فترة حجز أو إجازة', category: 'advanced' },
-  slider: { label: 'شريط رقمي', icon: '🎚️', description: 'اختيار قيمة بالسحب', explanation: 'مثال: تحديد ميزانية أو عمر', category: 'advanced' },
-  button_choice: { label: 'اختيار بأزرار', icon: '🔘', description: 'خيارات كأزرار مرئية', explanation: 'بديل جميل للاختيار الواحد', category: 'advanced' },
-  star_rating: { label: 'تقييم بالنجوم', icon: '⭐', description: 'تقييم باستخدام النجوم', explanation: 'بديل مرئي للتقييم الرقمي', category: 'advanced' },
-  appointment: { label: 'حجز موعد', icon: '📅', description: 'اختيار تاريخ ووقت للحجز', explanation: 'مثال: حجز موعد استشارة', category: 'advanced' },
-  match_items: { label: 'توصيل العناصر', icon: '🔗', description: 'مطابقة عمودين', explanation: 'مثال: وصّل الكلمة بمعناها', category: 'advanced' },
-  file_upload: { label: 'رفع ملف', icon: '📎', description: 'إرفاق ملف أو صورة', explanation: 'مثال: رفع السيرة الذاتية أو صورة', category: 'advanced' },
-  email_confirm: { label: 'تأكيد البريد', icon: '✉️', description: 'إدخال الإيميل مرتين', explanation: 'للتأكد من صحة البريد الإلكتروني', category: 'advanced' },
-  // عناصر عرض (Display/Content)
-  static_text: { label: 'فقرة (نص ثابت)', icon: '📝', description: 'نص للقراءة فقط', explanation: 'لعرض تعليمات أو معلومات', category: 'display' },
-  static_image: { label: 'صورة ثابتة', icon: '🖼️', description: 'عرض صورة', explanation: 'لعرض شعار أو توضيح', category: 'display' },
-  youtube: { label: 'فيديو يوتيوب', icon: '▶️', description: 'تضمين فيديو يوتيوب', explanation: 'لعرض فيديو توضيحي داخل النموذج', category: 'display' },
-  divider: { label: 'فاصل', icon: '➖', description: 'خط فاصل', explanation: 'للفصل بين الأقسام', category: 'display' },
-  terms: { label: 'الشروط والأحكام', icon: '📋', description: 'موافقة على الشروط', explanation: 'المستخدم يقرأ ويوافق على نص', category: 'display' },
-  signature: { label: 'التوقيع', icon: '✍️', description: 'حقل توقيع', explanation: 'للحصول على توقيع رقمي', category: 'display' },
-  // إضافات (Widgets)
-  countdown_timer: { label: 'العد التنازلي', icon: '⏳', description: 'عرض العد التنازلي', explanation: 'مؤقت لانتهاء العرض', category: 'widgets' },
-  products_block: { label: 'المنتجات', icon: '📦', description: 'قائمة منتجات', explanation: 'عرض منتجات للاختيار والطلب', category: 'widgets' },
-  payment_info_block: { label: 'بيانات الدفع', icon: '💳', description: 'عرض طرق الدفع', explanation: 'عرض معلومات الدفع', category: 'widgets' }
+  text: { label: '┘å╪╡', icon: 'T', description: '╪Ñ╪¼╪º╪¿╪⌐ ┘å╪╡┘è╪⌐ ┘é╪╡┘è╪▒╪⌐', explanation: '┘à╪½╪º┘ä: "┘à╪º ╪º╪│┘à┘â╪ƒ"', category: 'basic' },
+  textarea: { label: '┘å╪╡ ╪╖┘ê┘è┘ä', icon: '┬╢', description: '╪Ñ╪¼╪º╪¿╪⌐ ┘à┘ü╪╡┘ä╪⌐', explanation: '┘à╪½╪º┘ä: "╪╡┘ü ╪¬╪¼╪▒╪¿╪¬┘â"', category: 'basic' },
+  single_choice: { label: '╪º╪«╪¬┘è╪º╪▒ ┘ê╪º╪¡╪»', icon: 'Γùï', description: '╪º╪«╪¬┘è╪º╪▒ ╪Ñ╪¼╪º╪¿╪⌐ ┘ê╪º╪¡╪»╪⌐', explanation: '┘à╪½╪º┘ä: "┘å╪╣┘à ╪ú┘ê ┘ä╪º"', category: 'basic' },
+  multiple_choice: { label: '╪º╪«╪¬┘è╪º╪▒ ┘à╪¬╪╣╪»╪»', icon: 'Γÿæ', description: '╪º╪«╪¬┘è╪º╪▒ ╪╣╪»╪⌐ ╪Ñ╪¼╪º╪¿╪º╪¬', explanation: '┘à╪½╪º┘ä: "╪º┘ä┘ç┘ê╪º┘è╪º╪¬"', category: 'basic' },
+  dropdown: { label: '┘é╪º╪ª┘à╪⌐ ┘à┘å╪│╪»┘ä╪⌐', icon: 'Γû╝', description: '╪º╪«╪¬┘è╪º╪▒ ┘à┘å ┘é╪º╪ª┘à╪⌐', explanation: '┘é╪º╪ª┘à╪⌐ ┘à╪╢╪║┘ê╪╖╪⌐ ┘ä╪¬┘ê┘ü┘è╪▒ ╪º┘ä┘à╪│╪º╪¡╪⌐', category: 'basic' },
+  scale: { label: '╪¬┘é┘è┘è┘à', icon: 'Γ¡É', description: '╪¬┘é┘è┘è┘à ┘à┘å 1 ╪Ñ┘ä┘ë 10', explanation: '┘à╪½╪º┘ä: ╪¬┘é┘è┘è┘à ╪º┘ä╪ú╪»╪º╪í', category: 'advanced' },
+  ranking: { label: '╪¬╪▒╪¬┘è╪¿', icon: '#', description: '╪¬╪▒╪¬┘è╪¿ ╪º┘ä╪╣┘å╪º╪╡╪▒', explanation: '╪¬╪▒╪¬┘è╪¿ ╪º┘ä╪╣┘å╪º╪╡╪▒ ╪¡╪│╪¿ ╪º┘ä╪ú┘ê┘ä┘ê┘è╪⌐', category: 'advanced' },
+  matrix: { label: '┘à╪╡┘ü┘ê┘ü╪⌐', icon: 'Γè₧', description: '╪«┘è╪º╪▒╪º╪¬ ┘à╪┤╪¬╪▒┘â╪⌐', explanation: '╪╣╪»╪⌐ ╪ú╪│╪ª┘ä╪⌐ ┘à╪╣ ┘å┘ü╪│ ╪º┘ä╪«┘è╪º╪▒╪º╪¬', category: 'advanced' },
+  date: { label: '╪¬╪º╪▒┘è╪«', icon: '≡ƒôà', description: '╪Ñ╪»╪«╪º┘ä ╪¬╪º╪▒┘è╪«', explanation: '┘à╪½╪º┘ä: "╪¬╪º╪▒┘è╪« ╪º┘ä┘à┘è┘ä╪º╪»"', category: 'advanced' },
+  time: { label: '┘ê┘é╪¬', icon: 'ΓÅ░', description: '╪Ñ╪»╪«╪º┘ä ┘ê┘é╪¬', explanation: '┘à╪½╪º┘ä: "┘ê┘é╪¬ ╪º┘ä╪¡╪╢┘ê╪▒"', category: 'advanced' },
+  date_range: { label: '┘å╪╖╪º┘é ┘ê┘é╪¬ ┘ê╪¬╪º╪▒┘è╪«', icon: '≡ƒôå', description: '┘à┘å ┘ê┘é╪¬/╪¬╪º╪▒┘è╪« ╪Ñ┘ä┘ë ┘ê┘é╪¬/╪¬╪º╪▒┘è╪«', explanation: '┘à╪½╪º┘ä: ┘ü╪¬╪▒╪⌐ ╪¡╪¼╪▓ ╪ú┘ê ╪Ñ╪¼╪º╪▓╪⌐', category: 'advanced' },
+  slider: { label: '╪┤╪▒┘è╪╖ ╪▒┘é┘à┘è', icon: '≡ƒÄÜ∩╕Å', description: '╪º╪«╪¬┘è╪º╪▒ ┘é┘è┘à╪⌐ ╪¿╪º┘ä╪│╪¡╪¿', explanation: '┘à╪½╪º┘ä: ╪¬╪¡╪»┘è╪» ┘à┘è╪▓╪º┘å┘è╪⌐ ╪ú┘ê ╪╣┘à╪▒', category: 'advanced' },
+  button_choice: { label: '╪º╪«╪¬┘è╪º╪▒ ╪¿╪ú╪▓╪▒╪º╪▒', icon: '≡ƒöÿ', description: '╪«┘è╪º╪▒╪º╪¬ ┘â╪ú╪▓╪▒╪º╪▒ ┘à╪▒╪ª┘è╪⌐', explanation: '╪¿╪»┘è┘ä ╪¼┘à┘è┘ä ┘ä┘ä╪º╪«╪¬┘è╪º╪▒ ╪º┘ä┘ê╪º╪¡╪»', category: 'advanced' },
+  star_rating: { label: '╪¬┘é┘è┘è┘à ╪¿╪º┘ä┘å╪¼┘ê┘à', icon: 'Γ¡É', description: '╪¬┘é┘è┘è┘à ╪¿╪º╪│╪¬╪«╪»╪º┘à ╪º┘ä┘å╪¼┘ê┘à', explanation: '╪¿╪»┘è┘ä ┘à╪▒╪ª┘è ┘ä┘ä╪¬┘é┘è┘è┘à ╪º┘ä╪▒┘é┘à┘è', category: 'advanced' },
+  appointment: { label: '╪¡╪¼╪▓ ┘à┘ê╪╣╪»', icon: '≡ƒôà', description: '╪º╪«╪¬┘è╪º╪▒ ╪¬╪º╪▒┘è╪« ┘ê┘ê┘é╪¬ ┘ä┘ä╪¡╪¼╪▓', explanation: '┘à╪½╪º┘ä: ╪¡╪¼╪▓ ┘à┘ê╪╣╪» ╪º╪│╪¬╪┤╪º╪▒╪⌐', category: 'advanced' },
+  match_items: { label: '╪¬┘ê╪╡┘è┘ä ╪º┘ä╪╣┘å╪º╪╡╪▒', icon: '≡ƒöù', description: '┘à╪╖╪º╪¿┘é╪⌐ ╪╣┘à┘ê╪»┘è┘å', explanation: '┘à╪½╪º┘ä: ┘ê╪╡┘æ┘ä ╪º┘ä┘â┘ä┘à╪⌐ ╪¿┘à╪╣┘å╪º┘ç╪º', category: 'advanced' },
+  file_upload: { label: '╪▒┘ü╪╣ ┘à┘ä┘ü', icon: '≡ƒôÄ', description: '╪Ñ╪▒┘ü╪º┘é ┘à┘ä┘ü ╪ú┘ê ╪╡┘ê╪▒╪⌐', explanation: '┘à╪½╪º┘ä: ╪▒┘ü╪╣ ╪º┘ä╪│┘è╪▒╪⌐ ╪º┘ä╪░╪º╪¬┘è╪⌐ ╪ú┘ê ╪╡┘ê╪▒╪⌐', category: 'advanced' },
+  email_confirm: { label: '╪¬╪ú┘â┘è╪» ╪º┘ä╪¿╪▒┘è╪»', icon: 'Γ£ë∩╕Å', description: '╪Ñ╪»╪«╪º┘ä ╪º┘ä╪Ñ┘è┘à┘è┘ä ┘à╪▒╪¬┘è┘å', explanation: '┘ä┘ä╪¬╪ú┘â╪» ┘à┘å ╪╡╪¡╪⌐ ╪º┘ä╪¿╪▒┘è╪» ╪º┘ä╪Ñ┘ä┘â╪¬╪▒┘ê┘å┘è', category: 'advanced' },
+  // ╪╣┘å╪º╪╡╪▒ ╪╣╪▒╪╢ (Display/Content)
+  static_text: { label: '┘ü┘é╪▒╪⌐ (┘å╪╡ ╪½╪º╪¿╪¬)', icon: '≡ƒô¥', description: '┘å╪╡ ┘ä┘ä┘é╪▒╪º╪í╪⌐ ┘ü┘é╪╖', explanation: '┘ä╪╣╪▒╪╢ ╪¬╪╣┘ä┘è┘à╪º╪¬ ╪ú┘ê ┘à╪╣┘ä┘ê┘à╪º╪¬', category: 'display' },
+  static_image: { label: '╪╡┘ê╪▒╪⌐ ╪½╪º╪¿╪¬╪⌐', icon: '≡ƒû╝∩╕Å', description: '╪╣╪▒╪╢ ╪╡┘ê╪▒╪⌐', explanation: '┘ä╪╣╪▒╪╢ ╪┤╪╣╪º╪▒ ╪ú┘ê ╪¬┘ê╪╢┘è╪¡', category: 'display' },
+  youtube: { label: '┘ü┘è╪»┘è┘ê ┘è┘ê╪¬┘è┘ê╪¿', icon: 'Γû╢∩╕Å', description: '╪¬╪╢┘à┘è┘å ┘ü┘è╪»┘è┘ê ┘è┘ê╪¬┘è┘ê╪¿', explanation: '┘ä╪╣╪▒╪╢ ┘ü┘è╪»┘è┘ê ╪¬┘ê╪╢┘è╪¡┘è ╪»╪º╪«┘ä ╪º┘ä┘å┘à┘ê╪░╪¼', category: 'display' },
+  divider: { label: '┘ü╪º╪╡┘ä', icon: 'Γ₧û', description: '╪«╪╖ ┘ü╪º╪╡┘ä', explanation: '┘ä┘ä┘ü╪╡┘ä ╪¿┘è┘å ╪º┘ä╪ú┘é╪│╪º┘à', category: 'display' },
+  terms: { label: '╪º┘ä╪┤╪▒┘ê╪╖ ┘ê╪º┘ä╪ú╪¡┘â╪º┘à', icon: '≡ƒôï', description: '┘à┘ê╪º┘ü┘é╪⌐ ╪╣┘ä┘ë ╪º┘ä╪┤╪▒┘ê╪╖', explanation: '╪º┘ä┘à╪│╪¬╪«╪»┘à ┘è┘é╪▒╪ú ┘ê┘è┘ê╪º┘ü┘é ╪╣┘ä┘ë ┘å╪╡', category: 'display' },
+  signature: { label: '╪º┘ä╪¬┘ê┘é┘è╪╣', icon: 'Γ£ì∩╕Å', description: '╪¡┘é┘ä ╪¬┘ê┘é┘è╪╣', explanation: '┘ä┘ä╪¡╪╡┘ê┘ä ╪╣┘ä┘ë ╪¬┘ê┘é┘è╪╣ ╪▒┘é┘à┘è', category: 'display' },
+  // ╪Ñ╪╢╪º┘ü╪º╪¬ (Widgets)
+  countdown_timer: { label: '╪º┘ä╪╣╪» ╪º┘ä╪¬┘å╪º╪▓┘ä┘è', icon: 'ΓÅ│', description: '╪╣╪▒╪╢ ╪º┘ä╪╣╪» ╪º┘ä╪¬┘å╪º╪▓┘ä┘è', explanation: '┘à╪ñ┘é╪¬ ┘ä╪º┘å╪¬┘ç╪º╪í ╪º┘ä╪╣╪▒╪╢', category: 'widgets' },
+  products_block: { label: '╪º┘ä┘à┘å╪¬╪¼╪º╪¬', icon: '≡ƒôª', description: '┘é╪º╪ª┘à╪⌐ ┘à┘å╪¬╪¼╪º╪¬', explanation: '╪╣╪▒╪╢ ┘à┘å╪¬╪¼╪º╪¬ ┘ä┘ä╪º╪«╪¬┘è╪º╪▒ ┘ê╪º┘ä╪╖┘ä╪¿', category: 'widgets' },
+  payment_info_block: { label: '╪¿┘è╪º┘å╪º╪¬ ╪º┘ä╪»┘ü╪╣', icon: '≡ƒÆ│', description: '╪╣╪▒╪╢ ╪╖╪▒┘é ╪º┘ä╪»┘ü╪╣', explanation: '╪╣╪▒╪╢ ┘à╪╣┘ä┘ê┘à╪º╪¬ ╪º┘ä╪»┘ü╪╣', category: 'widgets' }
 } as const
 
 // Category definitions
 const ITEM_CATEGORIES = {
-  basic: { label: 'أسئلة أساسية', icon: '❓', color: 'blue' },
-  advanced: { label: 'أسئلة متقدمة', icon: '🔬', color: 'purple' },
-  display: { label: 'عناصر عرض', icon: '👁️', color: 'green' },
-  widgets: { label: 'إضافات', icon: '⚙️', color: 'amber' }
+  basic: { label: '╪ú╪│╪ª┘ä╪⌐ ╪ú╪│╪º╪│┘è╪⌐', icon: 'Γ¥ô', color: 'blue' },
+  advanced: { label: '╪ú╪│╪ª┘ä╪⌐ ┘à╪¬┘é╪»┘à╪⌐', icon: '≡ƒö¼', color: 'purple' },
+  display: { label: '╪╣┘å╪º╪╡╪▒ ╪╣╪▒╪╢', icon: '≡ƒæü∩╕Å', color: 'green' },
+  widgets: { label: '╪Ñ╪╢╪º┘ü╪º╪¬', icon: 'ΓÜÖ∩╕Å', color: 'amber' }
 } as const
 
 const DISPLAY_ONLY_QUESTION_TYPES: QuestionType[] = [
@@ -64,20 +64,20 @@ const DISPLAY_ONLY_QUESTION_TYPES: QuestionType[] = [
 ]
 
 const DATE_RANGE_MODE_OPTIONS = [
-  { value: 'time', label: 'نطاق وقت' },
-  { value: 'date', label: 'نطاق تاريخ' },
-  { value: 'datetime', label: 'نطاق وقت وتاريخ' },
+  { value: 'time', label: '┘å╪╖╪º┘é ┘ê┘é╪¬' },
+  { value: 'date', label: '┘å╪╖╪º┘é ╪¬╪º╪▒┘è╪«' },
+  { value: 'datetime', label: '┘å╪╖╪º┘é ┘ê┘é╪¬ ┘ê╪¬╪º╪▒┘è╪«' },
 ]
 
 const APPOINTMENT_META_ID = 'appointment_settings'
 const WEEKDAY_OPTIONS = [
-  { value: '0', label: 'الأحد' },
-  { value: '1', label: 'الإثنين' },
-  { value: '2', label: 'الثلاثاء' },
-  { value: '3', label: 'الأربعاء' },
-  { value: '4', label: 'الخميس' },
-  { value: '5', label: 'الجمعة' },
-  { value: '6', label: 'السبت' },
+  { value: '0', label: '╪º┘ä╪ú╪¡╪»' },
+  { value: '1', label: '╪º┘ä╪Ñ╪½┘å┘è┘å' },
+  { value: '2', label: '╪º┘ä╪½┘ä╪º╪½╪º╪í' },
+  { value: '3', label: '╪º┘ä╪ú╪▒╪¿╪╣╪º╪í' },
+  { value: '4', label: '╪º┘ä╪«┘à┘è╪│' },
+  { value: '5', label: '╪º┘ä╪¼┘à╪╣╪⌐' },
+  { value: '6', label: '╪º┘ä╪│╪¿╪¬' },
 ]
 
 interface MatrixRow {
@@ -191,7 +191,7 @@ function CreateFormContent() {
     }
     return [{
       id: 'g_default',
-      name: 'المنتجات',
+      name: '╪º┘ä┘à┘å╪¬╪¼╪º╪¬',
       items: value.map((item: any) => ({
         id: item.id || `p_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         name: item.name || item.text || '',
@@ -443,27 +443,27 @@ const supabase = createClient()
     } else if (type === 'star_rating') {
       newQuestion.options = Array.from({ length: 5 }).map((_, i) => ({ id: `opt_${Date.now()}_${i}`, text: String(i+1), points: i+1 }))
     } else if (type === 'countdown_timer') {
-      newQuestion.text = 'العد التنازلي للعرض'
+      newQuestion.text = '╪º┘ä╪╣╪» ╪º┘ä╪¬┘å╪º╪▓┘ä┘è ┘ä┘ä╪╣╪▒╪╢'
       newQuestion.options = [{
         id: `timer_${Date.now()}`,
         text: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
-        validation_value: 'العرض ينتهي خلال',
+        validation_value: '╪º┘ä╪╣╪▒╪╢ ┘è┘å╪¬┘ç┘è ╪«┘ä╪º┘ä',
         validation_min: ''
       }] as any
     } else if (type === 'products_block') {
-      newQuestion.text = 'المنتجات'
+      newQuestion.text = '╪º┘ä┘à┘å╪¬╪¼╪º╪¬'
       newQuestion.options = [{ id: `g_${Date.now()}`, name: '', items: [] }] as any
     } else if (type === 'payment_info_block') {
-      newQuestion.text = 'بيانات الدفع'
+      newQuestion.text = '╪¿┘è╪º┘å╪º╪¬ ╪º┘ä╪»┘ü╪╣'
       newQuestion.options = [{ id: `pm_${Date.now()}`, method: 'bank', label: '', value: '', details: '' }] as any
     } else if (type === 'match_items') {
       newQuestion.matrix_rows = [
-        { id: `left_${Date.now()}_1`, text: 'عنصر 1', required: true },
-        { id: `left_${Date.now()}_2`, text: 'عنصر 2', required: true }
+        { id: `left_${Date.now()}_1`, text: '╪╣┘å╪╡╪▒ 1', required: true },
+        { id: `left_${Date.now()}_2`, text: '╪╣┘å╪╡╪▒ 2', required: true }
       ]
       newQuestion.matrix_columns = [
-        { id: `right_${Date.now()}_1`, text: 'إجابة 1', points: 0 },
-        { id: `right_${Date.now()}_2`, text: 'إجابة 2', points: 0 }
+        { id: `right_${Date.now()}_1`, text: '╪Ñ╪¼╪º╪¿╪⌐ 1', points: 0 },
+        { id: `right_${Date.now()}_2`, text: '╪Ñ╪¼╪º╪¿╪⌐ 2', points: 0 }
       ]
     }
 
@@ -482,11 +482,32 @@ const supabase = createClient()
     }))
   }
 
+  const [deletedQuestions, setDeletedQuestions] = useState<Array<{ question: any; index: number }>>([])
+
   const removeQuestion = (index: number) => {
+    const removed = formData.questions[index]
+    if (removed) {
+      setDeletedQuestions(prev => [...prev.slice(-19), { question: removed, index }])
+    }
     setFormData(prev => ({
       ...prev,
       questions: prev.questions.filter((_: any, i: number) => i !== index)
     }))
+  }
+
+  const undoDelete = () => {
+    if (deletedQuestions.length === 0) return
+    const last = deletedQuestions[deletedQuestions.length - 1]
+    const insertAt = Math.min(last.index, formData.questions.length)
+    setFormData(prev => ({
+      ...prev,
+      questions: [
+        ...prev.questions.slice(0, insertAt),
+        last.question,
+        ...prev.questions.slice(insertAt)
+      ]
+    }))
+    setDeletedQuestions(prev => prev.slice(0, -1))
   }
 
   const addOption = (questionIndex: number) => {
@@ -652,12 +673,12 @@ const supabase = createClient()
 
   const saveForm = async () => {
     if (!formData.name.trim()) {
-      alert('يرجن إدخال اسم الفورم')
+      alert('┘è╪▒╪¼┘å ╪Ñ╪»╪«╪º┘ä ╪º╪│┘à ╪º┘ä┘ü┘ê╪▒┘à')
       return
     }
 
     if ((formData.questions || []).length === 0) {
-      alert('يرجن إضافة سؤال واحد على الأقل')
+      alert('┘è╪▒╪¼┘å ╪Ñ╪╢╪º┘ü╪⌐ ╪│╪ñ╪º┘ä ┘ê╪º╪¡╪» ╪╣┘ä┘ë ╪º┘ä╪ú┘é┘ä')
       return
     }
 
@@ -762,7 +783,7 @@ const supabase = createClient()
       router.push(`/forms/${form.serial_number}/edit`)
     } catch (error) {
       console.error('Error saving form:', error)
-      alert('حدث خطأ أثناء حفظ الفورم')
+      alert('╪¡╪»╪½ ╪«╪╖╪ú ╪ú╪½┘å╪º╪í ╪¡┘ü╪╕ ╪º┘ä┘ü┘ê╪▒┘à')
     } finally {
       setSaving(false)
     }
@@ -800,7 +821,7 @@ const supabase = createClient()
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-              رجوع
+              ╪▒╪¼┘ê╪╣
             </button>
             <Link
               href="/templates"
@@ -809,10 +830,19 @@ const supabase = createClient()
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
               </svg>
-              قوالب جاهزة
+              ┘é┘ê╪º┘ä╪¿ ╪¼╪º┘ç╪▓╪⌐
             </Link>
           </div>
-          <h1 className="text-lg font-bold text-blue-700">إنشاء فورم جديد</h1>
+          <h1 className="text-lg font-bold text-blue-700">╪Ñ┘å╪┤╪º╪í ┘ü┘ê╪▒┘à ╪¼╪»┘è╪»</h1>
+          <button
+            onClick={undoDelete}
+            disabled={deletedQuestions.length === 0}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl active:scale-95 transition-all text-xs font-medium cursor-pointer bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="استرداد آخر سؤال تم حذفه"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
+            استرداد
+          </button>
           <button
             onClick={saveForm}
             disabled={saving}
@@ -821,14 +851,14 @@ const supabase = createClient()
             {saving ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                جاري الحفظ...
+                ╪¼╪º╪▒┘è ╪º┘ä╪¡┘ü╪╕...
               </>
             ) : (
               <>
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                حفظ
+                ╪¡┘ü╪╕
               </>
             )}
           </button>
@@ -838,7 +868,7 @@ const supabase = createClient()
       <main className="max-w-4xl mx-auto px-4 py-6">
         {/* Form Basic Info */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">معلومات الفورم</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">┘à╪╣┘ä┘ê┘à╪º╪¬ ╪º┘ä┘ü┘ê╪▒┘à</h2>
 
           {(() => {
             const questions = formData.questions || []
@@ -874,12 +904,12 @@ const supabase = createClient()
             return (
               <div className="flex items-center gap-4 mb-6 p-3 bg-gradient-to-l from-blue-50 to-purple-50 rounded-xl border border-blue-100">
                 <div className="flex-1 flex items-center gap-2">
-                  <span className="text-sm text-gray-600">عدد الأسئلة:</span>
+                  <span className="text-sm text-gray-600">╪╣╪»╪» ╪º┘ä╪ú╪│╪ª┘ä╪⌐:</span>
                   <span className="font-bold text-gray-900">{questions.length}</span>
                 </div>
                 {!!((formData as any)._is_test) && (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">إجمالي النقاط:</span>
+                  <span className="text-sm text-gray-600">╪Ñ╪¼┘à╪º┘ä┘è ╪º┘ä┘å┘é╪º╪╖:</span>
                   <span className="font-bold text-blue-700">{totalPoints}</span>
                 </div>
                 )}
@@ -895,24 +925,24 @@ const supabase = createClient()
             />
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">اسم الفورم *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">╪º╪│┘à ╪º┘ä┘ü┘ê╪▒┘à *</label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="مثال: تقييم أداء الصلاة"
+                placeholder="┘à╪½╪º┘ä: ╪¬┘é┘è┘è┘à ╪ú╪»╪º╪í ╪º┘ä╪╡┘ä╪º╪⌐"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">الوصف</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">╪º┘ä┘ê╪╡┘ü</label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 rows={2}
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="وصف مختصر للنموذج..."
+                placeholder="┘ê╪╡┘ü ┘à╪«╪¬╪╡╪▒ ┘ä┘ä┘å┘à┘ê╪░╪¼..."
               />
             </div>
 
@@ -926,8 +956,8 @@ const supabase = createClient()
                   className="w-5 h-5 mt-1 text-cyan-600 rounded focus:ring-cyan-500"
                 />
                 <div>
-                  <span className="font-medium text-gray-800 block">اختبار</span>
-                  <span className="text-sm text-gray-600">إظهار حقول النقاط والدرجات للتقييم والتصحيح</span>
+                  <span className="font-medium text-gray-800 block">╪º╪«╪¬╪¿╪º╪▒</span>
+                  <span className="text-sm text-gray-600">╪Ñ╪╕┘ç╪º╪▒ ╪¡┘é┘ê┘ä ╪º┘ä┘å┘é╪º╪╖ ┘ê╪º┘ä╪»╪▒╪¼╪º╪¬ ┘ä┘ä╪¬┘é┘è┘è┘à ┘ê╪º┘ä╪¬╪╡╪¡┘è╪¡</span>
                 </div>
               </label>
             </div>
@@ -942,8 +972,8 @@ const supabase = createClient()
                   className="w-5 h-5 mt-1 text-blue-600 rounded focus:ring-blue-500"
                 />
                 <div>
-                  <span className="font-medium text-gray-800 block">السماح بالتسجيل المتعدد</span>
-                  <span className="text-sm text-gray-600">تفعيل هذا الخيار يسمح للمستخدم بإعادة ملء النموذج عدة مرات يومياً</span>
+                  <span className="font-medium text-gray-800 block">╪º┘ä╪│┘à╪º╪¡ ╪¿╪º┘ä╪¬╪│╪¼┘è┘ä ╪º┘ä┘à╪¬╪╣╪»╪»</span>
+                  <span className="text-sm text-gray-600">╪¬┘ü╪╣┘è┘ä ┘ç╪░╪º ╪º┘ä╪«┘è╪º╪▒ ┘è╪│┘à╪¡ ┘ä┘ä┘à╪│╪¬╪«╪»┘à ╪¿╪Ñ╪╣╪º╪»╪⌐ ┘à┘ä╪í ╪º┘ä┘å┘à┘ê╪░╪¼ ╪╣╪»╪⌐ ┘à╪▒╪º╪¬ ┘è┘ê┘à┘è╪º┘ï</span>
                 </div>
               </label>
             </div>
@@ -958,11 +988,11 @@ const supabase = createClient()
                   className="w-5 h-5 mt-1 text-green-600 rounded focus:ring-green-500"
                 />
                 <div className="flex-1">
-                  <span className="font-medium text-gray-800 block">تحديد وقت للإجابة</span>
-                  <span className="text-sm text-gray-600">تفعيل عداد تنازلي للمستخدمين لإكمال النموذج خلال مدة محددة</span>
+                  <span className="font-medium text-gray-800 block">╪¬╪¡╪»┘è╪» ┘ê┘é╪¬ ┘ä┘ä╪Ñ╪¼╪º╪¿╪⌐</span>
+                  <span className="text-sm text-gray-600">╪¬┘ü╪╣┘è┘ä ╪╣╪»╪º╪» ╪¬┘å╪º╪▓┘ä┘è ┘ä┘ä┘à╪│╪¬╪«╪»┘à┘è┘å ┘ä╪Ñ┘â┘à╪º┘ä ╪º┘ä┘å┘à┘ê╪░╪¼ ╪«┘ä╪º┘ä ┘à╪»╪⌐ ┘à╪¡╪»╪»╪⌐</span>
                   {formData.time_limit !== null && formData.time_limit !== undefined && (
                     <div className="mt-2">
-                      <label className="text-sm text-gray-600 ml-2">الوقت (بالدقائق):</label>
+                      <label className="text-sm text-gray-600 ml-2">╪º┘ä┘ê┘é╪¬ (╪¿╪º┘ä╪»┘é╪º╪ª┘é):</label>
                       <input
                         type="number"
                         min="1"
@@ -990,16 +1020,16 @@ const supabase = createClient()
                         className="w-5 h-5 mt-1 text-blue-600 rounded focus:ring-blue-500"
                       />
                       <div>
-                        <span className="font-medium text-gray-800 block">جدول تشغيل النموذج</span>
-                        <span className="text-sm text-gray-600">افتح وأغلق النموذج تلقائيًا حسب أيام الأسبوع أو حسب تاريخ ووقت محددين.</span>
+                        <span className="font-medium text-gray-800 block">╪¼╪»┘ê┘ä ╪¬╪┤╪║┘è┘ä ╪º┘ä┘å┘à┘ê╪░╪¼</span>
+                        <span className="text-sm text-gray-600">╪º┘ü╪¬╪¡ ┘ê╪ú╪║┘ä┘é ╪º┘ä┘å┘à┘ê╪░╪¼ ╪¬┘ä┘é╪º╪ª┘è┘ï╪º ╪¡╪│╪¿ ╪ú┘è╪º┘à ╪º┘ä╪ú╪│╪¿┘ê╪╣ ╪ú┘ê ╪¡╪│╪¿ ╪¬╪º╪▒┘è╪« ┘ê┘ê┘é╪¬ ┘à╪¡╪»╪»┘è┘å.</span>
                       </div>
                     </label>
 
                     {availability.enabled && (
                       <div className="space-y-3 pr-8">
                         <div className="grid gap-2 sm:grid-cols-2">
-                          <button type="button" onClick={() => updateAvailabilitySettings({ mode: 'weekly' })} className={`px-3 py-2 rounded-lg border text-sm ${availability.mode === 'weekly' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}>حسب أيام الأسبوع</button>
-                          <button type="button" onClick={() => updateAvailabilitySettings({ mode: 'range' })} className={`px-3 py-2 rounded-lg border text-sm ${availability.mode === 'range' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}>حسب تاريخ ووقت</button>
+                          <button type="button" onClick={() => updateAvailabilitySettings({ mode: 'weekly' })} className={`px-3 py-2 rounded-lg border text-sm ${availability.mode === 'weekly' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}>╪¡╪│╪¿ ╪ú┘è╪º┘à ╪º┘ä╪ú╪│╪¿┘ê╪╣</button>
+                          <button type="button" onClick={() => updateAvailabilitySettings({ mode: 'range' })} className={`px-3 py-2 rounded-lg border text-sm ${availability.mode === 'range' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}>╪¡╪│╪¿ ╪¬╪º╪▒┘è╪« ┘ê┘ê┘é╪¬</button>
                         </div>
 
                         {availability.mode === 'weekly' ? (
@@ -1016,16 +1046,16 @@ const supabase = createClient()
                                 </button>
                               </div>
                             ))}
-                            <button type="button" onClick={addWeeklyAvailability} className="w-full py-2 border-2 border-dashed border-blue-200 text-blue-600 rounded-lg hover:border-blue-400 text-sm">+ إضافة يوم تشغيل</button>
+                            <button type="button" onClick={addWeeklyAvailability} className="w-full py-2 border-2 border-dashed border-blue-200 text-blue-600 rounded-lg hover:border-blue-400 text-sm">+ ╪Ñ╪╢╪º┘ü╪⌐ ┘è┘ê┘à ╪¬╪┤╪║┘è┘ä</button>
                           </div>
                         ) : (
                           <div className="grid gap-3 sm:grid-cols-2">
                             <label className="block">
-                              <span className="block text-sm text-gray-600 mb-1">يفتح في</span>
+                              <span className="block text-sm text-gray-600 mb-1">┘è┘ü╪¬╪¡ ┘ü┘è</span>
                               <input type="datetime-local" value={availability.starts_at || ''} onChange={(e) => updateAvailabilitySettings({ starts_at: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg" />
                             </label>
                             <label className="block">
-                              <span className="block text-sm text-gray-600 mb-1">يقفل في</span>
+                              <span className="block text-sm text-gray-600 mb-1">┘è┘é┘ü┘ä ┘ü┘è</span>
                               <input type="datetime-local" value={availability.ends_at || ''} onChange={(e) => updateAvailabilitySettings({ ends_at: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg" />
                             </label>
                           </div>
@@ -1047,8 +1077,8 @@ const supabase = createClient()
                   className="w-5 h-5 mt-1 text-orange-600 rounded focus:ring-orange-500"
                 />
                 <div>
-                  <span className="font-medium text-gray-800 block">السماح بحذف الردود</span>
-                  <span className="text-sm text-gray-600">إظهار زر حذف بجانب كل تسجيل ليتمكن المستخدم من حذف ردوده بنفسه</span>
+                  <span className="font-medium text-gray-800 block">╪º┘ä╪│┘à╪º╪¡ ╪¿╪¡╪░┘ü ╪º┘ä╪▒╪»┘ê╪»</span>
+                  <span className="text-sm text-gray-600">╪Ñ╪╕┘ç╪º╪▒ ╪▓╪▒ ╪¡╪░┘ü ╪¿╪¼╪º┘å╪¿ ┘â┘ä ╪¬╪│╪¼┘è┘ä ┘ä┘è╪¬┘à┘â┘å ╪º┘ä┘à╪│╪¬╪«╪»┘à ┘à┘å ╪¡╪░┘ü ╪▒╪»┘ê╪»┘ç ╪¿┘å┘ü╪│┘ç</span>
                 </div>
               </label>
             </div>
@@ -1063,8 +1093,8 @@ const supabase = createClient()
                   className="w-5 h-5 mt-1 text-purple-600 rounded focus:ring-purple-500"
                 />
                 <div>
-                  <span className="font-medium text-gray-800 block">ترتيب عشوائي للأسئلة</span>
-                  <span className="text-sm text-gray-600">عرض الأسئلة بترتيب مختلف لكل مستخدم لمنع الغش</span>
+                  <span className="font-medium text-gray-800 block">╪¬╪▒╪¬┘è╪¿ ╪╣╪┤┘ê╪º╪ª┘è ┘ä┘ä╪ú╪│╪ª┘ä╪⌐</span>
+                  <span className="text-sm text-gray-600">╪╣╪▒╪╢ ╪º┘ä╪ú╪│╪ª┘ä╪⌐ ╪¿╪¬╪▒╪¬┘è╪¿ ┘à╪«╪¬┘ä┘ü ┘ä┘â┘ä ┘à╪│╪¬╪«╪»┘à ┘ä┘à┘å╪╣ ╪º┘ä╪║╪┤</span>
                 </div>
               </label>
             </div>
@@ -1077,12 +1107,12 @@ const supabase = createClient()
         {!templatesLoading && templates.length > 0 && (
           <div className={`bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 ${(formData.questions || []).length > 0 ? 'hidden' : ''}`}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">ابدأ من قالب جاهز</h2>
+              <h2 className="text-xl font-bold text-gray-900">╪º╪¿╪»╪ú ┘à┘å ┘é╪º┘ä╪¿ ╪¼╪º┘ç╪▓</h2>
               <Link
                 href="/templates"
                 className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
               >
-                تصفح الكل
+                ╪¬╪╡┘ü╪¡ ╪º┘ä┘â┘ä
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
@@ -1112,7 +1142,7 @@ const supabase = createClient()
                         <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">
                           {TEMPLATE_CATEGORIES[template.category] || template.category}
                         </span>
-                        <span className="text-xs text-gray-400">{(template.questions_data || []).length} سؤال</span>
+                        <span className="text-xs text-gray-400">{(template.questions_data || []).length} ╪│╪ñ╪º┘ä</span>
                       </div>
                     </div>
                   </div>
@@ -1126,7 +1156,7 @@ const supabase = createClient()
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">
-              الأسئلة ({(formData.questions || []).length})
+              ╪º┘ä╪ú╪│╪ª┘ä╪⌐ ({(formData.questions || []).length})
             </h2>
           </div>
 
@@ -1144,13 +1174,13 @@ const supabase = createClient()
                       <RichTextEditor
                         value={question.text}
                         onChange={(html) => updateQuestion(qIndex, { text: html })}
-                        placeholder="اكتب النص هنا..."
+                        placeholder="╪º┘â╪¬╪¿ ╪º┘ä┘å╪╡ ┘ç┘å╪º..."
                       />
                     ) : ['terms'].includes(question.type) ? (
                       <textarea
                         value={question.text}
                         onChange={(e) => updateQuestion(qIndex, { text: e.target.value })}
-                        placeholder="اكتب النص هنا..."
+                        placeholder="╪º┘â╪¬╪¿ ╪º┘ä┘å╪╡ ┘ç┘å╪º..."
                         rows={4}
                         className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
@@ -1159,7 +1189,7 @@ const supabase = createClient()
                         type="text"
                         value={question.text}
                         onChange={(e) => updateQuestion(qIndex, { text: e.target.value })}
-                        placeholder="اكتب السؤال هنا..."
+                        placeholder="╪º┘â╪¬╪¿ ╪º┘ä╪│╪ñ╪º┘ä ┘ç┘å╪º..."
                         className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     )}
@@ -1204,13 +1234,13 @@ const supabase = createClient()
                         onChange={(e) => updateQuestion(qIndex, { required: e.target.checked })}
                         className="w-4 h-4 text-blue-600 rounded"
                       />
-                      <span className="text-sm text-gray-700">مطلوب</span>
+                      <span className="text-sm text-gray-700">┘à╪╖┘ä┘ê╪¿</span>
                     </label>
                   )}
                   
                   {!!((formData as any)._is_test) && !['single_choice', 'multiple_choice', 'dropdown', 'ranking', 'matrix', 'button_choice', 'match_items', 'static_text', 'static_image', 'divider', 'terms', 'youtube'].includes(question.type) && (
                   <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-700">النقاط:</label>
+                    <label className="text-sm text-gray-700">╪º┘ä┘å┘é╪º╪╖:</label>
                     <input
                       type="number"
                       min="0"
@@ -1252,7 +1282,7 @@ const supabase = createClient()
                     } else {
                       total = question.points || 0
                     }
-                    return <span className="text-xs text-blue-600 font-medium me-2">({total} نقطة)</span>
+                    return <span className="text-xs text-blue-600 font-medium me-2">({total} ┘å┘é╪╖╪⌐)</span>
                   })()}
                 </div>
 
@@ -1263,12 +1293,12 @@ const supabase = createClient()
                   const vt = meta.validation_type || ''
                   const vcat = meta.validation_category || ''
                   const firstOptions = [
-                    { value: 'name', label: 'اسم' },
-                    { value: 'email', label: 'ايميل' },
-                    { value: 'phone', label: 'رقم هاتف' },
-                    { value: 'number', label: 'رقم' },
-                    { value: 'plain', label: 'نص بدون تحقق' },
-                    { value: 'text_check', label: 'نص بتحقق' },
+                    { value: 'name', label: '╪º╪│┘à' },
+                    { value: 'email', label: '╪º┘è┘à┘è┘ä' },
+                    { value: 'phone', label: '╪▒┘é┘à ┘ç╪º╪¬┘ü' },
+                    { value: 'number', label: '╪▒┘é┘à' },
+                    { value: 'plain', label: '┘å╪╡ ╪¿╪»┘ê┘å ╪¬╪¡┘é┘é' },
+                    { value: 'text_check', label: '┘å╪╡ ╪¿╪¬╪¡┘é┘é' },
                   ]
                   const currentFirst = firstOptions.find(o => {
                     if (vcat) return o.value === vcat
@@ -1279,27 +1309,27 @@ const supabase = createClient()
 
                   const secondOptions = (() => {
                     if (currentFirst.value === 'name') return [
-                      { value: 'name_2', label: 'ثنائي' },
-                      { value: 'name_3', label: 'ثلاثي' },
-                      { value: 'name_4', label: 'رباعي' },
+                      { value: 'name_2', label: '╪½┘å╪º╪ª┘è' },
+                      { value: 'name_3', label: '╪½┘ä╪º╪½┘è' },
+                      { value: 'name_4', label: '╪▒╪¿╪º╪╣┘è' },
                     ]
                     if (currentFirst.value === 'number') return [
-                      { value: 'equal_to', label: 'يساوي' },
-                      { value: 'not_equal_to', label: 'لا يساوي' },
-                      { value: 'less_than', label: 'أقل من' },
-                      { value: 'less_than_or_equal', label: 'أقل من أو يساوي' },
-                      { value: 'greater_than', label: 'أكبر من' },
-                      { value: 'greater_than_or_equal', label: 'أكبر من أو يساوي' },
-                      { value: 'between', label: 'بين' },
-                      { value: 'not_between', label: 'ليس بين' },
-                      { value: 'whole_number', label: 'عدد صحيح' },
-                      { value: 'is_number', label: 'اعداد عشرية' },
+                      { value: 'equal_to', label: '┘è╪│╪º┘ê┘è' },
+                      { value: 'not_equal_to', label: '┘ä╪º ┘è╪│╪º┘ê┘è' },
+                      { value: 'less_than', label: '╪ú┘é┘ä ┘à┘å' },
+                      { value: 'less_than_or_equal', label: '╪ú┘é┘ä ┘à┘å ╪ú┘ê ┘è╪│╪º┘ê┘è' },
+                      { value: 'greater_than', label: '╪ú┘â╪¿╪▒ ┘à┘å' },
+                      { value: 'greater_than_or_equal', label: '╪ú┘â╪¿╪▒ ┘à┘å ╪ú┘ê ┘è╪│╪º┘ê┘è' },
+                      { value: 'between', label: '╪¿┘è┘å' },
+                      { value: 'not_between', label: '┘ä┘è╪│ ╪¿┘è┘å' },
+                      { value: 'whole_number', label: '╪╣╪»╪» ╪╡╪¡┘è╪¡' },
+                      { value: 'is_number', label: '╪º╪╣╪»╪º╪» ╪╣╪┤╪▒┘è╪⌐' },
                     ]
                     if (currentFirst.value === 'text_check') return [
-                      { value: 'equal_to', label: 'يساوي' },
-                      { value: 'not_equal_to', label: 'لا يساوي' },
-                      { value: 'contains_word', label: 'يحتوى على' },
-                      { value: 'does_not_contain', label: 'لا يحتوى على' },
+                      { value: 'equal_to', label: '┘è╪│╪º┘ê┘è' },
+                      { value: 'not_equal_to', label: '┘ä╪º ┘è╪│╪º┘ê┘è' },
+                      { value: 'contains_word', label: '┘è╪¡╪¬┘ê┘ë ╪╣┘ä┘ë' },
+                      { value: 'does_not_contain', label: '┘ä╪º ┘è╪¡╪¬┘ê┘ë ╪╣┘ä┘ë' },
                     ]
                     return []
                   })()
@@ -1332,7 +1362,7 @@ const supabase = createClient()
 
                   return (
                     <div className="ms-2 sm:ms-11 mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                      <p className="text-sm font-medium text-purple-700 mb-2">نوع التحقق من الإجابة:</p>
+                      <p className="text-sm font-medium text-purple-700 mb-2">┘å┘ê╪╣ ╪º┘ä╪¬╪¡┘é┘é ┘à┘å ╪º┘ä╪Ñ╪¼╪º╪¿╪⌐:</p>
                       <div className="flex flex-wrap gap-2">
                         <select
                           value={currentFirst.value}
@@ -1353,7 +1383,7 @@ const supabase = createClient()
                             }}
                             className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500"
                           >
-                            <option value="">اختر...</option>
+                            <option value="">╪º╪«╪¬╪▒...</option>
                             {secondOptions.map(o => (
                               <option key={o.value} value={o.value}>{o.label}</option>
                             ))}
@@ -1364,7 +1394,7 @@ const supabase = createClient()
                             type="text"
                             value={meta.validation_value || ''}
                             onChange={(e) => updateQuestion(qIndex, { options: [{ validation_type: vt, validation_value: e.target.value, validation_min: '', validation_max: '' }] as any })}
-                            placeholder="أدخل النص..."
+                            placeholder="╪ú╪»╪«┘ä ╪º┘ä┘å╪╡..."
                             className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500 w-40"
                           />
                         )}
@@ -1374,7 +1404,7 @@ const supabase = createClient()
                             step="any"
                             value={meta.validation_value ?? ''}
                             onChange={(e) => updateQuestion(qIndex, { options: [{ validation_type: vt, validation_value: e.target.value, validation_min: '', validation_max: '' }] as any })}
-                            placeholder="القيمة..."
+                            placeholder="╪º┘ä┘é┘è┘à╪⌐..."
                             className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500 w-32"
                           />
                         )}
@@ -1385,7 +1415,7 @@ const supabase = createClient()
                               step="any"
                               value={meta.validation_min ?? ''}
                               onChange={(e) => updateQuestion(qIndex, { options: [{ validation_type: vt, validation_min: e.target.value, validation_max: meta.validation_max || '', validation_value: '' }] as any })}
-                              placeholder="الصغرى..."
+                              placeholder="╪º┘ä╪╡╪║╪▒┘ë..."
                               className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500 w-28"
                             />
                             <input
@@ -1393,7 +1423,7 @@ const supabase = createClient()
                               step="any"
                               value={meta.validation_max ?? ''}
                               onChange={(e) => updateQuestion(qIndex, { options: [{ validation_type: vt, validation_min: meta.validation_min || '', validation_max: e.target.value, validation_value: '' }] as any })}
-                              placeholder="العظمى..."
+                              placeholder="╪º┘ä╪╣╪╕┘à┘ë..."
                               className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-sm focus:ring-1 focus:ring-purple-500 w-28"
                             />
                           </>
@@ -1408,16 +1438,16 @@ const supabase = createClient()
                   <div className="ms-2 sm:ms-11 space-y-6">
                     {/* Rows */}
                     <div>
-                      <p className="text-sm font-medium text-gray-700 mb-3">الصفوف:</p>
+                      <p className="text-sm font-medium text-gray-700 mb-3">╪º┘ä╪╡┘ü┘ê┘ü:</p>
                       <div className="space-y-2">
                         {(question.matrix_rows || []).map((row: any, rIndex: number) => (
                           <div key={row.id} className="flex flex-wrap sm:flex-nowrap items-center gap-2 bg-white rounded-lg p-3 border border-gray-200">
-                            <span className="text-gray-400">⊞</span>
+                            <span className="text-gray-400">Γè₧</span>
                             <input
                               type="text"
                               value={row.text}
                               onChange={(e) => updateMatrixRow(qIndex, rIndex, { text: e.target.value })}
-                              placeholder="نص السؤال..."
+                              placeholder="┘å╪╡ ╪º┘ä╪│╪ñ╪º┘ä..."
                               className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-500"
                             />
                             <label className="flex items-center gap-1 text-sm whitespace-nowrap">
@@ -1427,7 +1457,7 @@ const supabase = createClient()
                                 onChange={(e) => updateMatrixRow(qIndex, rIndex, { required: e.target.checked })}
                                 className="w-4 h-4 text-blue-600 rounded"
                               />
-                              إجباري
+                              ╪Ñ╪¼╪¿╪º╪▒┘è
                             </label>
                             <button
                               onClick={() => removeMatrixRow(qIndex, rIndex)}
@@ -1446,26 +1476,26 @@ const supabase = createClient()
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                           </svg>
-                          إضافة صف
+                          ╪Ñ╪╢╪º┘ü╪⌐ ╪╡┘ü
                         </button>
                       </div>
                     </div>
                     {/* Columns */}
                     <div>
-                      <p className="text-sm font-medium text-gray-700 mb-3">رؤوس الأعمدة:</p>
+                      <p className="text-sm font-medium text-gray-700 mb-3">╪▒╪ñ┘ê╪│ ╪º┘ä╪ú╪╣┘à╪»╪⌐:</p>
                       <div className="space-y-2">
                         {(question.matrix_columns || []).map((col: any, cIndex: number) => (
                           <div key={col.id} className="flex flex-wrap sm:flex-nowrap items-center gap-2 bg-amber-50 rounded-lg p-3 border border-amber-200">
-                            <span className="text-gray-400">☐</span>
+                            <span className="text-gray-400">ΓÿÉ</span>
                             <input
                               type="text"
                               value={col.text}
                               onChange={(e) => updateMatrixColumn(qIndex, cIndex, { text: e.target.value })}
-                              placeholder="عنوان العمود..."
+                              placeholder="╪╣┘å┘ê╪º┘å ╪º┘ä╪╣┘à┘ê╪»..."
                               className="flex-1 px-3 py-2 border border-amber-200 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white"
                             />
                             <div className={`flex items-center gap-1 ${!!((formData as any)._is_test) ? '' : 'hidden'}`}>
-                              <span className="text-xs text-gray-500">الدرجة:</span>
+                              <span className="text-xs text-gray-500">╪º┘ä╪»╪▒╪¼╪⌐:</span>
                               <input
                                 type="number"
                                 min="0"
@@ -1491,7 +1521,7 @@ const supabase = createClient()
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                           </svg>
-                          إضافة عمود
+                          ╪Ñ╪╢╪º┘ü╪⌐ ╪╣┘à┘ê╪»
                         </button>
                       </div>
                     </div>
@@ -1508,27 +1538,27 @@ const supabase = createClient()
                         onClick={() => updateQuestion(qIndex, { dropdown_type: 'single', correct_option_ids: [], correct_option_id: undefined })}
                         className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${question.dropdown_type === 'single' ? 'bg-white text-blue-700 shadow-sm border border-blue-200' : 'text-gray-600 hover:text-gray-800'}`}
                       >
-                        اختيار واحد
+                        ╪º╪«╪¬┘è╪º╪▒ ┘ê╪º╪¡╪»
                       </button>
                       <button
                         type="button"
                         onClick={() => updateQuestion(qIndex, { dropdown_type: 'multiple', correct_option_id: undefined })}
                         className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${question.dropdown_type === 'multiple' ? 'bg-white text-blue-700 shadow-sm border border-blue-200' : 'text-gray-600 hover:text-gray-800'}`}
                       >
-                        اختيار متعدد
+                        ╪º╪«╪¬┘è╪º╪▒ ┘à╪¬╪╣╪»╪»
                       </button>
                     </div>
 
-                    <p className="text-sm font-medium text-gray-700">الخيارات:</p>
+                    <p className="text-sm font-medium text-gray-700">╪º┘ä╪«┘è╪º╪▒╪º╪¬:</p>
                     {/* Bulk import */}
                     <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                      <p className="text-xs text-blue-700 mb-2">إضافة خيارات دفعة واحدة (كل سطر خيار):</p>
+                      <p className="text-xs text-blue-700 mb-2">╪Ñ╪╢╪º┘ü╪⌐ ╪«┘è╪º╪▒╪º╪¬ ╪»┘ü╪╣╪⌐ ┘ê╪º╪¡╪»╪⌐ (┘â┘ä ╪│╪╖╪▒ ╪«┘è╪º╪▒):</p>
                       <textarea
                         value={question.bulk_text || ''}
                         onChange={(e) => updateQuestion(qIndex, { bulk_text: e.target.value })}
-                        placeholder="الخيار الأول
-الخيار الثاني
-الخيار الثالث"
+                        placeholder="╪º┘ä╪«┘è╪º╪▒ ╪º┘ä╪ú┘ê┘ä
+╪º┘ä╪«┘è╪º╪▒ ╪º┘ä╪½╪º┘å┘è
+╪º┘ä╪«┘è╪º╪▒ ╪º┘ä╪½╪º┘ä╪½"
                         rows={3}
                         className="w-full px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500"
                       />
@@ -1537,7 +1567,7 @@ const supabase = createClient()
                         disabled={!question.bulk_text?.trim()}
                         className="mt-2 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
                       >
-                        إضافة الخيارات
+                        ╪Ñ╪╢╪º┘ü╪⌐ ╪º┘ä╪«┘è╪º╪▒╪º╪¬
                       </button>
                     </div>
                     {/* Options list */}
@@ -1548,12 +1578,12 @@ const supabase = createClient()
                       return (
                       <div key={option.id} className="bg-white rounded-lg p-3 border border-gray-200">
                         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3">
-                          <span className="text-gray-400">▼</span>
+                          <span className="text-gray-400">Γû╝</span>
                           <input
                             type="text"
                             value={option.text}
                             onChange={(e) => updateOption(qIndex, oIndex, { text: e.target.value })}
-                            placeholder="نص الخيار..."
+                            placeholder="┘å╪╡ ╪º┘ä╪«┘è╪º╪▒..."
                             className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-500"
                           />
                           <div className="flex items-center gap-2">
@@ -1574,14 +1604,14 @@ const supabase = createClient()
                                 }}
                                 className="w-4 h-4 text-green-600"
                               />
-                              <span className="text-green-700 text-xs">صحيح</span>
+                              <span className="text-green-700 text-xs">╪╡╪¡┘è╪¡</span>
                             </label>
                             <input
                               type="number"
                               min="0"
                               value={option.points}
                               onChange={(e) => updateOption(qIndex, oIndex, { points: Number(e.target.value) })}
-                              placeholder="الدرجة"
+                              placeholder="╪º┘ä╪»╪▒╪¼╪⌐"
                               className={`w-16 px-2 py-2 border border-gray-200 rounded-lg text-center ${!!((formData as any)._is_test) ? '' : 'hidden'}`}
                             />
                           </div>
@@ -1603,7 +1633,7 @@ const supabase = createClient()
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
-                      إضافة خيار
+                      ╪Ñ╪╢╪º┘ü╪⌐ ╪«┘è╪º╪▒
                     </button>
                   </div>
                 )}
@@ -1619,21 +1649,21 @@ const supabase = createClient()
                           onChange={(e) => updateQuestion(qIndex, { has_counter: e.target.checked })}
                           className="w-4 h-4 text-blue-600 rounded"
                         />
-                        تفعيل العداد (سبحة التسبيح)
+                        ╪¬┘ü╪╣┘è┘ä ╪º┘ä╪╣╪»╪º╪» (╪│╪¿╪¡╪⌐ ╪º┘ä╪¬╪│╪¿┘è╪¡)
                       </label>
                     )}
-                    <p className="text-sm font-medium text-gray-700">الخيارات:</p>
+                    <p className="text-sm font-medium text-gray-700">╪º┘ä╪«┘è╪º╪▒╪º╪¬:</p>
                     {parseOptions(question.options).map((option: any, oIndex: number) => (
                       <div key={option.id} className="bg-white rounded-lg p-3 border border-gray-200">
                         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3">
                           <span className="text-gray-400">
-                            {question.type === 'single_choice' ? '○' : question.type === 'ranking' ? '#' : '☑'}
+                            {question.type === 'single_choice' ? 'Γùï' : question.type === 'ranking' ? '#' : 'Γÿæ'}
                           </span>
                           <input
                             type="text"
                             value={option.text}
                             onChange={(e) => updateOption(qIndex, oIndex, { text: e.target.value })}
-                            placeholder="نص الخيار..."
+                            placeholder="┘å╪╡ ╪º┘ä╪«┘è╪º╪▒..."
                             className="w-full sm:flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-500"
                           />
                           <input
@@ -1641,9 +1671,9 @@ const supabase = createClient()
                             min="0"
                             value={option.points}
                             onChange={(e) => updateOption(qIndex, oIndex, { points: Number(e.target.value) })}
-                            placeholder="النقاط"
+                            placeholder="╪º┘ä┘å┘é╪º╪╖"
                             className={`w-20 px-2 py-2 border border-gray-200 rounded-lg text-center ${!!((formData as any)._is_test) ? '' : 'hidden'}`}
-                            title="النقاط"
+                            title="╪º┘ä┘å┘é╪º╪╖"
                           />
                           {question.has_counter && (
                             <input
@@ -1651,9 +1681,9 @@ const supabase = createClient()
                               min="1"
                               value={option.counter_target || ''}
                               onChange={(e) => updateOption(qIndex, oIndex, { counter_target: parseInt(e.target.value) || null })}
-                              placeholder="الهدف"
+                              placeholder="╪º┘ä┘ç╪»┘ü"
                               className="w-20 px-2 py-2 border border-emerald-200 rounded-lg text-center text-sm"
-                              title="العدد المستهدف للتسبيح"
+                              title="╪º┘ä╪╣╪»╪» ╪º┘ä┘à╪│╪¬┘ç╪»┘ü ┘ä┘ä╪¬╪│╪¿┘è╪¡"
                             />
                           )}
                           <button
@@ -1675,7 +1705,7 @@ const supabase = createClient()
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
-                      إضافة خيار
+                      ╪Ñ╪╢╪º┘ü╪⌐ ╪«┘è╪º╪▒
                     </button>
                   </div>
                 )}
@@ -1683,44 +1713,44 @@ const supabase = createClient()
                 {question.type === 'match_items' && (
                   <div className="ms-2 sm:ms-11 space-y-3">
                     <div>
-                      <p className="text-sm font-medium text-gray-700 mb-3">العمود الأيمن (الخيارات):</p>
+                      <p className="text-sm font-medium text-gray-700 mb-3">╪º┘ä╪╣┘à┘ê╪» ╪º┘ä╪ú┘è┘à┘å (╪º┘ä╪«┘è╪º╪▒╪º╪¬):</p>
                       <div className="space-y-2">
                         {(question.matrix_rows || []).map((row: any, ri: number) => (
                           <div key={ri} className="flex items-center gap-2">
-                            <input type="text" value={row.text} onChange={(e) => updateMatrixRow(qIndex, ri, { text: e.target.value })} placeholder={`عنصر ${ri + 1}`} className="flex-1 px-3 py-2 border border-gray-200 rounded-lg" />
+                            <input type="text" value={row.text} onChange={(e) => updateMatrixRow(qIndex, ri, { text: e.target.value })} placeholder={`╪╣┘å╪╡╪▒ ${ri + 1}`} className="flex-1 px-3 py-2 border border-gray-200 rounded-lg" />
                             <button onClick={() => removeMatrixRow(qIndex, ri)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
                           </div>
                         ))}
                       </div>
-                      <button onClick={() => addMatrixRow(qIndex)} className="mt-2 text-sm text-blue-600 hover:text-blue-700">+ إضافة عنصر</button>
+                      <button onClick={() => addMatrixRow(qIndex)} className="mt-2 text-sm text-blue-600 hover:text-blue-700">+ ╪Ñ╪╢╪º┘ü╪⌐ ╪╣┘å╪╡╪▒</button>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-700 mb-3">العمود الأيسر (الإجابات):</p>
+                      <p className="text-sm font-medium text-gray-700 mb-3">╪º┘ä╪╣┘à┘ê╪» ╪º┘ä╪ú┘è╪│╪▒ (╪º┘ä╪Ñ╪¼╪º╪¿╪º╪¬):</p>
                       <div className="space-y-2">
                         {(question.matrix_columns || []).map((col: any, ci: number) => (
                           <div key={ci} className="flex items-center gap-2">
-                            <input type="text" value={col.text} onChange={(e) => updateMatrixColumn(qIndex, ci, { text: e.target.value })} placeholder={`إجابة ${ci + 1}`} className="flex-1 px-3 py-2 border border-gray-200 rounded-lg" />
-                            <input type="number" min="0" value={col.points} onChange={(e) => updateMatrixColumn(qIndex, ci, { points: Number(e.target.value) })} className={`w-16 px-2 py-2 border border-gray-200 rounded-lg text-center ${!!((formData as any)._is_test) ? '' : 'hidden'}`} placeholder="نقاط" />
+                            <input type="text" value={col.text} onChange={(e) => updateMatrixColumn(qIndex, ci, { text: e.target.value })} placeholder={`╪Ñ╪¼╪º╪¿╪⌐ ${ci + 1}`} className="flex-1 px-3 py-2 border border-gray-200 rounded-lg" />
+                            <input type="number" min="0" value={col.points} onChange={(e) => updateMatrixColumn(qIndex, ci, { points: Number(e.target.value) })} className={`w-16 px-2 py-2 border border-gray-200 rounded-lg text-center ${!!((formData as any)._is_test) ? '' : 'hidden'}`} placeholder="┘å┘é╪º╪╖" />
                             <button onClick={() => removeMatrixColumn(qIndex, ci)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
                           </div>
                         ))}
                       </div>
-                      <button onClick={() => addMatrixColumn(qIndex)} className="mt-2 text-sm text-blue-600 hover:text-blue-700">+ إضافة إجابة</button>
+                      <button onClick={() => addMatrixColumn(qIndex)} className="mt-2 text-sm text-blue-600 hover:text-blue-700">+ ╪Ñ╪╢╪º┘ü╪⌐ ╪Ñ╪¼╪º╪¿╪⌐</button>
                     </div>
                   </div>
                 )}
 
                 {question.type === 'slider' && (
                   <div className="ms-2 sm:ms-11">
-                    <p className="text-sm font-medium text-gray-700 mb-3">إعدادات الشريط الرقمي (Min|Max|Step):</p>
+                    <p className="text-sm font-medium text-gray-700 mb-3">╪Ñ╪╣╪»╪º╪»╪º╪¬ ╪º┘ä╪┤╪▒┘è╪╖ ╪º┘ä╪▒┘é┘à┘è (Min|Max|Step):</p>
                     <input type="text" value={(parseOptions(question.options)[0] || {}).text || '0|100|1'} onChange={(e) => { if(parseOptions(question.options).length===0) addOption(qIndex); updateOption(qIndex, 0, { text: e.target.value }) }} className="w-full px-3 py-2 border border-gray-200 rounded-lg" dir="ltr" placeholder="0|100|1" />
-                    <p className="text-xs text-gray-500 mt-1">أدخل الحد الأدنى | الحد الأقصى | مقدار الزيادة</p>
+                    <p className="text-xs text-gray-500 mt-1">╪ú╪»╪«┘ä ╪º┘ä╪¡╪» ╪º┘ä╪ú╪»┘å┘ë | ╪º┘ä╪¡╪» ╪º┘ä╪ú┘é╪╡┘ë | ┘à┘é╪»╪º╪▒ ╪º┘ä╪▓┘è╪º╪»╪⌐</p>
                   </div>
                 )}
 
                 {question.type === 'youtube' && (
                   <div className="ms-2 sm:ms-11">
-                    <p className="text-sm font-medium text-gray-700 mb-3">رابط يوتيوب:</p>
+                    <p className="text-sm font-medium text-gray-700 mb-3">╪▒╪º╪¿╪╖ ┘è┘ê╪¬┘è┘ê╪¿:</p>
                     <input type="text" value={(parseOptions(question.options)[0] || {}).text || ''} onChange={(e) => { if(parseOptions(question.options).length===0) addOption(qIndex); updateOption(qIndex, 0, { text: e.target.value }) }} className="w-full px-3 py-2 border border-gray-200 rounded-lg" dir="ltr" placeholder="https://youtube.com/watch?v=..." />
                   </div>
                 )}
@@ -1731,12 +1761,12 @@ const supabase = createClient()
                   return (
                     <div className="ms-2 sm:ms-11 space-y-4">
                       <div>
-                        <p className="text-sm font-medium text-gray-700 mb-2">نوع المواعيد</p>
+                        <p className="text-sm font-medium text-gray-700 mb-2">┘å┘ê╪╣ ╪º┘ä┘à┘ê╪º╪╣┘è╪»</p>
                         <div className="grid gap-2 sm:grid-cols-2">
                           {[
-                            { value: 'fixed', label: 'مواعيد ثابتة', hint: 'نفس المواعيد متاحة كل يوم.' },
-                            { value: 'custom', label: 'مواعيد مخصصة', hint: 'مواعيد مختلفة حسب اليوم أو التاريخ.' },
-                            { value: 'auto', label: 'موعد تلقائي', hint: 'يعرض أقرب موعد تلقائيًا، وكل حجز جديد يزيد بعدد دقائق تحدده.' },
+                            { value: 'fixed', label: '┘à┘ê╪º╪╣┘è╪» ╪½╪º╪¿╪¬╪⌐', hint: '┘å┘ü╪│ ╪º┘ä┘à┘ê╪º╪╣┘è╪» ┘à╪¬╪º╪¡╪⌐ ┘â┘ä ┘è┘ê┘à.' },
+                            { value: 'custom', label: '┘à┘ê╪º╪╣┘è╪» ┘à╪«╪╡╪╡╪⌐', hint: '┘à┘ê╪º╪╣┘è╪» ┘à╪«╪¬┘ä┘ü╪⌐ ╪¡╪│╪¿ ╪º┘ä┘è┘ê┘à ╪ú┘ê ╪º┘ä╪¬╪º╪▒┘è╪«.' },
+                            { value: 'auto', label: '┘à┘ê╪╣╪» ╪¬┘ä┘é╪º╪ª┘è', hint: '┘è╪╣╪▒╪╢ ╪ú┘é╪▒╪¿ ┘à┘ê╪╣╪» ╪¬┘ä┘é╪º╪ª┘è┘ï╪º╪î ┘ê┘â┘ä ╪¡╪¼╪▓ ╪¼╪»┘è╪» ┘è╪▓┘è╪» ╪¿╪╣╪»╪» ╪»┘é╪º╪ª┘é ╪¬╪¡╪»╪»┘ç.' },
                           ].map((mode) => (
                             <button
                               key={mode.value}
@@ -1753,10 +1783,10 @@ const supabase = createClient()
 
                       {appointmentConfig.mode === 'custom' && (
                         <div>
-                          <p className="text-sm font-medium text-gray-700 mb-2">تخصيص المواعيد حسب</p>
+                          <p className="text-sm font-medium text-gray-700 mb-2">╪¬╪«╪╡┘è╪╡ ╪º┘ä┘à┘ê╪º╪╣┘è╪» ╪¡╪│╪¿</p>
                           <div className="grid gap-2 sm:grid-cols-2">
-                            <button type="button" onClick={() => setAppointmentOptions(qIndex, { customBy: 'weekday' })} className={`px-3 py-2 rounded-lg border text-sm ${appointmentConfig.customBy === 'weekday' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}>أيام الأسبوع</button>
-                            <button type="button" onClick={() => setAppointmentOptions(qIndex, { customBy: 'date' })} className={`px-3 py-2 rounded-lg border text-sm ${appointmentConfig.customBy === 'date' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}>تاريخ محدد</button>
+                            <button type="button" onClick={() => setAppointmentOptions(qIndex, { customBy: 'weekday' })} className={`px-3 py-2 rounded-lg border text-sm ${appointmentConfig.customBy === 'weekday' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}>╪ú┘è╪º┘à ╪º┘ä╪ú╪│╪¿┘ê╪╣</button>
+                            <button type="button" onClick={() => setAppointmentOptions(qIndex, { customBy: 'date' })} className={`px-3 py-2 rounded-lg border text-sm ${appointmentConfig.customBy === 'date' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}>╪¬╪º╪▒┘è╪« ┘à╪¡╪»╪»</button>
                           </div>
                         </div>
                       )}
@@ -1764,7 +1794,7 @@ const supabase = createClient()
                       {appointmentConfig.mode === 'auto' && (
                         <div className="grid gap-3 sm:grid-cols-2">
                           <label className="block">
-                            <span className="block text-sm font-medium text-gray-700 mb-1.5">بداية أول موعد</span>
+                            <span className="block text-sm font-medium text-gray-700 mb-1.5">╪¿╪»╪º┘è╪⌐ ╪ú┘ê┘ä ┘à┘ê╪╣╪»</span>
                             <input
                               type="datetime-local"
                               value={appointmentSlots[0]?.validation_value || ''}
@@ -1776,7 +1806,7 @@ const supabase = createClient()
                             />
                           </label>
                           <label className="block">
-                            <span className="block text-sm font-medium text-gray-700 mb-1.5">فرق الدقائق بين كل حالة</span>
+                            <span className="block text-sm font-medium text-gray-700 mb-1.5">┘ü╪▒┘é ╪º┘ä╪»┘é╪º╪ª┘é ╪¿┘è┘å ┘â┘ä ╪¡╪º┘ä╪⌐</span>
                             <input
                               type="number"
                               min="1"
@@ -1788,7 +1818,7 @@ const supabase = createClient()
                               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
                             />
                           </label>
-                          <p className="sm:col-span-2 text-xs text-gray-500">مثال: لو أول موعد 10:00 والفرق 15 دقيقة، أول حجز يكون 10:00 والثاني 10:15 والثالث 10:30.</p>
+                          <p className="sm:col-span-2 text-xs text-gray-500">┘à╪½╪º┘ä: ┘ä┘ê ╪ú┘ê┘ä ┘à┘ê╪╣╪» 10:00 ┘ê╪º┘ä┘ü╪▒┘é 15 ╪»┘é┘è┘é╪⌐╪î ╪ú┘ê┘ä ╪¡╪¼╪▓ ┘è┘â┘ê┘å 10:00 ┘ê╪º┘ä╪½╪º┘å┘è 10:15 ┘ê╪º┘ä╪½╪º┘ä╪½ 10:30.</p>
                         </div>
                       )}
 
@@ -1800,13 +1830,13 @@ const supabase = createClient()
                           className="w-4 h-4 mt-0.5 text-amber-600 rounded"
                         />
                         <span>
-                          <span className="block text-sm font-medium text-amber-800">مواعيد منفردة</span>
-                          <span className="block text-xs text-amber-700 mt-1">لو مستخدم اختار موعد، يختفي هذا الموعد من الاختيارات المتاحة لباقي المستخدمين.</span>
+                          <span className="block text-sm font-medium text-amber-800">┘à┘ê╪º╪╣┘è╪» ┘à┘å┘ü╪▒╪»╪⌐</span>
+                          <span className="block text-xs text-amber-700 mt-1">┘ä┘ê ┘à╪│╪¬╪«╪»┘à ╪º╪«╪¬╪º╪▒ ┘à┘ê╪╣╪»╪î ┘è╪«╪¬┘ü┘è ┘ç╪░╪º ╪º┘ä┘à┘ê╪╣╪» ┘à┘å ╪º┘ä╪º╪«╪¬┘è╪º╪▒╪º╪¬ ╪º┘ä┘à╪¬╪º╪¡╪⌐ ┘ä╪¿╪º┘é┘è ╪º┘ä┘à╪│╪¬╪«╪»┘à┘è┘å.</span>
                         </span>
                       </label>}
 
                       {appointmentConfig.mode !== 'auto' && <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-700">المواعيد المتاحة</p>
+                        <p className="text-sm font-medium text-gray-700">╪º┘ä┘à┘ê╪º╪╣┘è╪» ╪º┘ä┘à╪¬╪º╪¡╪⌐</p>
                         {appointmentSlots.map((slot: any, slotIndex: number) => (
                           <div key={slot.id || slotIndex} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] items-center bg-white border border-gray-200 rounded-xl p-2">
                             {appointmentConfig.mode === 'custom' && appointmentConfig.customBy === 'weekday' && (
@@ -1824,7 +1854,7 @@ const supabase = createClient()
                           </div>
                         ))}
                         <button type="button" onClick={() => addAppointmentSlot(qIndex)} className="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors text-sm">
-                          + إضافة موعد
+                          + ╪Ñ╪╢╪º┘ü╪⌐ ┘à┘ê╪╣╪»
                         </button>
                       </div>}
                     </div>
@@ -1833,7 +1863,7 @@ const supabase = createClient()
 
                 {question.type === 'date_range' && (
                   <div className="ms-2 sm:ms-11">
-                    <p className="text-sm font-medium text-gray-700 mb-3">نوع النطاق:</p>
+                    <p className="text-sm font-medium text-gray-700 mb-3">┘å┘ê╪╣ ╪º┘ä┘å╪╖╪º┘é:</p>
                     <div className="grid gap-2 sm:grid-cols-3">
                       {DATE_RANGE_MODE_OPTIONS.map((mode) => {
                         const currentMode = parseOptions(question.options)[0]?.validation_type || 'datetime'
@@ -1859,18 +1889,18 @@ const supabase = createClient()
                 {question.type === 'countdown_timer' && (
                   <div className="ms-2 sm:ms-11 space-y-3">
                     <div>
-                      <p className="text-sm font-medium text-gray-700 mb-1">العد التنازلي للعرض</p>
-                      <p className="text-xs text-gray-500">حدد وقت انتهاء العرض والنص الذي سيظهر للمستخدم.</p>
+                      <p className="text-sm font-medium text-gray-700 mb-1">╪º┘ä╪╣╪» ╪º┘ä╪¬┘å╪º╪▓┘ä┘è ┘ä┘ä╪╣╪▒╪╢</p>
+                      <p className="text-xs text-gray-500">╪¡╪»╪» ┘ê┘é╪¬ ╪º┘å╪¬┘ç╪º╪í ╪º┘ä╪╣╪▒╪╢ ┘ê╪º┘ä┘å╪╡ ╪º┘ä╪░┘è ╪│┘è╪╕┘ç╪▒ ┘ä┘ä┘à╪│╪¬╪«╪»┘à.</p>
                     </div>
                     <input
                       type="text"
-                      value={parseOptions(question.options)[0]?.validation_value || 'العرض ينتهي خلال'}
+                      value={parseOptions(question.options)[0]?.validation_value || '╪º┘ä╪╣╪▒╪╢ ┘è┘å╪¬┘ç┘è ╪«┘ä╪º┘ä'}
                       onChange={(e) => {
                         if (parseOptions(question.options).length === 0) addOption(qIndex)
                         updateOption(qIndex, 0, { validation_value: e.target.value })
                       }}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg"
-                      placeholder="العرض ينتهي خلال"
+                      placeholder="╪º┘ä╪╣╪▒╪╢ ┘è┘å╪¬┘ç┘è ╪«┘ä╪º┘ä"
                     />
                     <input
                       type="datetime-local"
@@ -1889,7 +1919,7 @@ const supabase = createClient()
                       }}
                       rows={2}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg"
-                      placeholder="وصف اختياري يظهر أسفل العد"
+                      placeholder="┘ê╪╡┘ü ╪º╪«╪¬┘è╪º╪▒┘è ┘è╪╕┘ç╪▒ ╪ú╪│┘ü┘ä ╪º┘ä╪╣╪»"
                     />
                   </div>
                 )}
@@ -1897,8 +1927,8 @@ const supabase = createClient()
                 {question.type === 'products_block' && (
                   <div className="ms-2 sm:ms-11 space-y-3">
                     <div>
-                      <p className="text-sm font-medium text-gray-700 mb-1">المنتجات</p>
-                      <p className="text-xs text-gray-500">أضف مجموعات، وداخل كل مجموعة الأصناف والسعر والتفاصيل والصورة.</p>
+                      <p className="text-sm font-medium text-gray-700 mb-1">╪º┘ä┘à┘å╪¬╪¼╪º╪¬</p>
+                      <p className="text-xs text-gray-500">╪ú╪╢┘ü ┘à╪¼┘à┘ê╪╣╪º╪¬╪î ┘ê╪»╪º╪«┘ä ┘â┘ä ┘à╪¼┘à┘ê╪╣╪⌐ ╪º┘ä╪ú╪╡┘å╪º┘ü ┘ê╪º┘ä╪│╪╣╪▒ ┘ê╪º┘ä╪¬┘ü╪º╪╡┘è┘ä ┘ê╪º┘ä╪╡┘ê╪▒╪⌐.</p>
                     </div>
                     <ProductGroupsEditor
                       groups={normalizeProductGroups(parseOptions(question.options))}
@@ -1910,8 +1940,8 @@ const supabase = createClient()
                 {question.type === 'payment_info_block' && (
                   <div className="ms-2 sm:ms-11 space-y-3">
                     <div>
-                      <p className="text-sm font-medium text-gray-700 mb-1">بيانات الدفع</p>
-                      <p className="text-xs text-gray-500">اكتب بياناتك التي ستظهر للمستخدم مع زر نسخ لكل رقم أو رابط.</p>
+                      <p className="text-sm font-medium text-gray-700 mb-1">╪¿┘è╪º┘å╪º╪¬ ╪º┘ä╪»┘ü╪╣</p>
+                      <p className="text-xs text-gray-500">╪º┘â╪¬╪¿ ╪¿┘è╪º┘å╪º╪¬┘â ╪º┘ä╪¬┘è ╪│╪¬╪╕┘ç╪▒ ┘ä┘ä┘à╪│╪¬╪«╪»┘à ┘à╪╣ ╪▓╪▒ ┘å╪│╪« ┘ä┘â┘ä ╪▒┘é┘à ╪ú┘ê ╪▒╪º╪¿╪╖.</p>
                     </div>
                     <PaymentMethodsEditor
                       methods={normalizePaymentMethods(parseOptions(question.options))}
@@ -1922,7 +1952,7 @@ const supabase = createClient()
 
                 {question.type === 'star_rating' && (
                   <div className="ms-2 sm:ms-11">
-                    <p className="text-sm font-medium text-gray-700 mb-3">عدد النجوم:</p>
+                    <p className="text-sm font-medium text-gray-700 mb-3">╪╣╪»╪» ╪º┘ä┘å╪¼┘ê┘à:</p>
                     <input type="number" min="1" max="10" value={parseOptions(question.options).length} onChange={(e) => {
                       const count = parseInt(e.target.value) || 5;
                       updateQuestion(qIndex, { options: Array.from({ length: count }).map((_, i) => ({ id: `opt_${Date.now()}_${i}`, text: String(i+1), points: i+1 })) });
@@ -1932,16 +1962,16 @@ const supabase = createClient()
 
                 {question.type === 'static_image' && (
                   <div className="ms-2 sm:ms-11">
-                    <p className="text-sm font-medium text-gray-700 mb-3">رابط الصورة (URL):</p>
+                    <p className="text-sm font-medium text-gray-700 mb-3">╪▒╪º╪¿╪╖ ╪º┘ä╪╡┘ê╪▒╪⌐ (URL):</p>
                     <input type="text" value={(parseOptions(question.options)[0] || {}).validation_value || ''} onChange={(e) => { if(parseOptions(question.options).length===0) addOption(qIndex); updateOption(qIndex, 0, { validation_value: e.target.value }) }} className="w-full px-3 py-2 border border-gray-200 rounded-lg" dir="ltr" placeholder="https://..." />
-                    <p className="text-xs text-gray-500 mt-1">انسخ رابط الصورة وضعه هنا</p>
+                    <p className="text-xs text-gray-500 mt-1">╪º┘å╪│╪« ╪▒╪º╪¿╪╖ ╪º┘ä╪╡┘ê╪▒╪⌐ ┘ê╪╢╪╣┘ç ┘ç┘å╪º</p>
                   </div>
                 )}
 
 
                 {question.type === 'scale' && (
                   <div className="ms-2 sm:ms-11 bg-blue-50 rounded-lg p-4 overflow-x-auto">
-                    <p className="text-sm font-medium text-blue-700 mb-3">مقياس التقييم (1-10)</p>
+                    <p className="text-sm font-medium text-blue-700 mb-3">┘à┘é┘è╪º╪│ ╪º┘ä╪¬┘é┘è┘è┘à (1-10)</p>
                     <div className="flex justify-between items-center min-w-[200px]">
                       {parseOptions(question.options).map((opt: any) => (
                         <div key={opt.id} className="text-center">
@@ -1972,7 +2002,7 @@ const supabase = createClient()
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <p className="text-gray-500 mb-4">لم تضف أي أسئلة بعد</p>
+                <p className="text-gray-500 mb-4">┘ä┘à ╪¬╪╢┘ü ╪ú┘è ╪ú╪│╪ª┘ä╪⌐ ╪¿╪╣╪»</p>
               </div>
             )}
             
@@ -1986,7 +2016,7 @@ const supabase = createClient()
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  إضافة عنصر
+                  ╪Ñ╪╢╪º┘ü╪⌐ ╪╣┘å╪╡╪▒
                 </button>
                 
                 {questionMenuOpen && (
@@ -2027,13 +2057,13 @@ const supabase = createClient()
                                 ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200'
                                 : 'hover:bg-blue-50 border-transparent hover:border-blue-200'
                             }`}
-                            title={type === 'file_upload' ? 'قيد التطوير' : ''}
+                            title={type === 'file_upload' ? '┘é┘è╪» ╪º┘ä╪¬╪╖┘ê┘è╪▒' : ''}
                           >
                             <span className={`text-2xl mb-2 ${type === 'file_upload' ? 'opacity-50' : ''}`}>
                               {info.icon}
                             </span>
                             <span className="font-medium text-gray-800 text-sm mb-1">{info.label}</span>
-                            <span className="text-xs text-gray-500">{type === 'file_upload' ? 'قيد التطوير' : info.description}</span>
+                            <span className="text-xs text-gray-500">{type === 'file_upload' ? '┘é┘è╪» ╪º┘ä╪¬╪╖┘ê┘è╪▒' : info.description}</span>
                           </button>
                         ))}
                     </div>
@@ -2047,7 +2077,7 @@ const supabase = createClient()
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
                 </svg>
-                استيراد سؤال
+                ╪º╪│╪¬┘è╪▒╪º╪» ╪│╪ñ╪º┘ä
               </button>
             </div>
           </div>
@@ -2055,72 +2085,72 @@ const supabase = createClient()
 
         {/* Examples Section */}
         <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-200">
-          <h3 className="text-lg font-bold text-amber-800 mb-4">💡 أمثلة عملية لأنواع الأسئلة</h3>
+          <h3 className="text-lg font-bold text-amber-800 mb-4">≡ƒÆí ╪ú┘à╪½┘ä╪⌐ ╪╣┘à┘ä┘è╪⌐ ┘ä╪ú┘å┘ê╪º╪╣ ╪º┘ä╪ú╪│╪ª┘ä╪⌐</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Text Example */}
             <div className="bg-white rounded-xl p-4 border border-amber-200">
               <div className="flex items-center gap-2 mb-2">
                 <span className="w-6 h-6 bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold">T</span>
-                <span className="font-medium text-gray-800">نص قصير</span>
+                <span className="font-medium text-gray-800">┘å╪╡ ┘é╪╡┘è╪▒</span>
               </div>
-              <p className="text-sm text-gray-600 mb-2">ما اسم المسجد الذي تصلي فيه؟</p>
+              <p className="text-sm text-gray-600 mb-2">┘à╪º ╪º╪│┘à ╪º┘ä┘à╪│╪¼╪» ╪º┘ä╪░┘è ╪¬╪╡┘ä┘è ┘ü┘è┘ç╪ƒ</p>
               <div className="bg-gray-50 rounded p-2 text-xs text-gray-500">
-                إجابة: مسجد النور
+                ╪Ñ╪¼╪º╪¿╪⌐: ┘à╪│╪¼╪» ╪º┘ä┘å┘ê╪▒
               </div>
             </div>
 
             {/* Textarea Example */}
             <div className="bg-white rounded-xl p-4 border border-amber-200">
               <div className="flex items-center gap-2 mb-2">
-                <span className="w-6 h-6 bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold">¶</span>
-                <span className="font-medium text-gray-800">نص طويل</span>
+                <span className="w-6 h-6 bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold">┬╢</span>
+                <span className="font-medium text-gray-800">┘å╪╡ ╪╖┘ê┘è┘ä</span>
               </div>
-              <p className="text-sm text-gray-600 mb-2">اكتب عن شعورك أثناء قراءة القرآن</p>
+              <p className="text-sm text-gray-600 mb-2">╪º┘â╪¬╪¿ ╪╣┘å ╪┤╪╣┘ê╪▒┘â ╪ú╪½┘å╪º╪í ┘é╪▒╪º╪í╪⌐ ╪º┘ä┘é╪▒╪ó┘å</p>
               <div className="bg-gray-50 rounded p-2 text-xs text-gray-500">
-                إجابة: أشعر بالسكينة والطمأنينة...
+                ╪Ñ╪¼╪º╪¿╪⌐: ╪ú╪┤╪╣╪▒ ╪¿╪º┘ä╪│┘â┘è┘å╪⌐ ┘ê╪º┘ä╪╖┘à╪ú┘å┘è┘å╪⌐...
               </div>
             </div>
 
             {/* Single Choice Example */}
             <div className="bg-white rounded-xl p-4 border border-amber-200">
               <div className="flex items-center gap-2 mb-2">
-                <span className="w-6 h-6 bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold">○</span>
-                <span className="font-medium text-gray-800">اختيار واحد</span>
+                <span className="w-6 h-6 bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold">Γùï</span>
+                <span className="font-medium text-gray-800">╪º╪«╪¬┘è╪º╪▒ ┘ê╪º╪¡╪»</span>
               </div>
-              <p className="text-sm text-gray-600 mb-2">في أي وقت تصلي الفجر؟</p>
+              <p className="text-sm text-gray-600 mb-2">┘ü┘è ╪ú┘è ┘ê┘é╪¬ ╪¬╪╡┘ä┘è ╪º┘ä┘ü╪¼╪▒╪ƒ</p>
               <div className="space-y-1 text-xs text-gray-500">
-                <div>○ قبل الأذان (5 نقاط)</div>
-                <div>○ مع الأذان (4 نقاط)</div>
-                <div>○ بعد الأذان بـ15 دقيقة (3 نقاط)</div>
+                <div>Γùï ┘é╪¿┘ä ╪º┘ä╪ú╪░╪º┘å (5 ┘å┘é╪º╪╖)</div>
+                <div>Γùï ┘à╪╣ ╪º┘ä╪ú╪░╪º┘å (4 ┘å┘é╪º╪╖)</div>
+                <div>Γùï ╪¿╪╣╪» ╪º┘ä╪ú╪░╪º┘å ╪¿┘Ç15 ╪»┘é┘è┘é╪⌐ (3 ┘å┘é╪º╪╖)</div>
               </div>
             </div>
 
             {/* Multiple Choice Example */}
             <div className="bg-white rounded-xl p-4 border border-amber-200">
               <div className="flex items-center gap-2 mb-2">
-                <span className="w-6 h-6 bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold">☑</span>
-                <span className="font-medium text-gray-800">اختيار متعدد</span>
+                <span className="w-6 h-6 bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold">Γÿæ</span>
+                <span className="font-medium text-gray-800">╪º╪«╪¬┘è╪º╪▒ ┘à╪¬╪╣╪»╪»</span>
               </div>
-              <p className="text-sm text-gray-600 mb-2">ما الأعمال الصالحة التي تقوم بها؟</p>
+              <p className="text-sm text-gray-600 mb-2">┘à╪º ╪º┘ä╪ú╪╣┘à╪º┘ä ╪º┘ä╪╡╪º┘ä╪¡╪⌐ ╪º┘ä╪¬┘è ╪¬┘é┘ê┘à ╪¿┘ç╪º╪ƒ</p>
               <div className="space-y-1 text-xs text-gray-500">
-                <div>☑ الصلاة في وقتها (2 نقاط)</div>
-                <div>☑ قراءة القرآن (2 نقاط)</div>
-                <div>☐ الصدقة (2 نقاط)</div>
-                <div>☑ الذكر (1 نقطة)</div>
+                <div>Γÿæ ╪º┘ä╪╡┘ä╪º╪⌐ ┘ü┘è ┘ê┘é╪¬┘ç╪º (2 ┘å┘é╪º╪╖)</div>
+                <div>Γÿæ ┘é╪▒╪º╪í╪⌐ ╪º┘ä┘é╪▒╪ó┘å (2 ┘å┘é╪º╪╖)</div>
+                <div>ΓÿÉ ╪º┘ä╪╡╪»┘é╪⌐ (2 ┘å┘é╪º╪╖)</div>
+                <div>Γÿæ ╪º┘ä╪░┘â╪▒ (1 ┘å┘é╪╖╪⌐)</div>
               </div>
             </div>
 
             {/* Scale Example */}
             <div className="bg-white rounded-xl p-4 border border-amber-200">
               <div className="flex items-center gap-2 mb-2">
-                <span className="w-6 h-6 bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold">⭐</span>
-                <span className="font-medium text-gray-800">تقييم</span>
+                <span className="w-6 h-6 bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold">Γ¡É</span>
+                <span className="font-medium text-gray-800">╪¬┘é┘è┘è┘à</span>
               </div>
-              <p className="text-sm text-gray-600 mb-2">قيم مستوى خشوعك في الصلاة</p>
+              <p className="text-sm text-gray-600 mb-2">┘é┘è┘à ┘à╪│╪¬┘ê┘ë ╪«╪┤┘ê╪╣┘â ┘ü┘è ╪º┘ä╪╡┘ä╪º╪⌐</p>
               <div className="flex justify-between text-xs text-gray-500">
-                <span>⭐☆☆☆☆ ضعيف</span>
-                <span>⭐⭐⭐⭐⭐ ممتاز</span>
+                <span>Γ¡ÉΓÿåΓÿåΓÿåΓÿå ╪╢╪╣┘è┘ü</span>
+                <span>Γ¡ÉΓ¡ÉΓ¡ÉΓ¡ÉΓ¡É ┘à┘à╪¬╪º╪▓</span>
               </div>
             </div>
 
@@ -2128,22 +2158,22 @@ const supabase = createClient()
             <div className="bg-white rounded-xl p-4 border border-amber-200">
               <div className="flex items-center gap-2 mb-2">
                 <span className="w-6 h-6 bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold">#</span>
-                <span className="font-medium text-gray-800">ترتيب</span>
+                <span className="font-medium text-gray-800">╪¬╪▒╪¬┘è╪¿</span>
               </div>
-              <p className="text-sm text-gray-600 mb-2">رتب العبادات حسب أولويتك</p>
+              <p className="text-sm text-gray-600 mb-2">╪▒╪¬╪¿ ╪º┘ä╪╣╪¿╪º╪»╪º╪¬ ╪¡╪│╪¿ ╪ú┘ê┘ä┘ê┘è╪¬┘â</p>
               <div className="space-y-1 text-xs text-gray-500">
-                <div>1. الصلاة (5 نقاط)</div>
-                <div>2. قراءة القرآن (4 نقاط)</div>
-                <div>3. الذكر (3 نقاط)</div>
-                <div>4. الصدقة (2 نقاط)</div>
+                <div>1. ╪º┘ä╪╡┘ä╪º╪⌐ (5 ┘å┘é╪º╪╖)</div>
+                <div>2. ┘é╪▒╪º╪í╪⌐ ╪º┘ä┘é╪▒╪ó┘å (4 ┘å┘é╪º╪╖)</div>
+                <div>3. ╪º┘ä╪░┘â╪▒ (3 ┘å┘é╪º╪╖)</div>
+                <div>4. ╪º┘ä╪╡╪»┘é╪⌐ (2 ┘å┘é╪º╪╖)</div>
               </div>
             </div>
           </div>
 
           <div className="mt-4 p-3 bg-amber-100 rounded-lg">
             <p className="text-sm text-amber-800">
-              <strong>نصيحة:</strong> استخدم أنواع الأسئلة المختلفة لجعل النموذج أكثر تفاعلاً وشمولية.
-              يمكنك دمج عدة أنواع في نموذج واحد لتغطية جوانب مختلفة من الموضوع.
+              <strong>┘å╪╡┘è╪¡╪⌐:</strong> ╪º╪│╪¬╪«╪»┘à ╪ú┘å┘ê╪º╪╣ ╪º┘ä╪ú╪│╪ª┘ä╪⌐ ╪º┘ä┘à╪«╪¬┘ä┘ü╪⌐ ┘ä╪¼╪╣┘ä ╪º┘ä┘å┘à┘ê╪░╪¼ ╪ú┘â╪½╪▒ ╪¬┘ü╪º╪╣┘ä╪º┘ï ┘ê╪┤┘à┘ê┘ä┘è╪⌐.
+              ┘è┘à┘â┘å┘â ╪»┘à╪¼ ╪╣╪»╪⌐ ╪ú┘å┘ê╪º╪╣ ┘ü┘è ┘å┘à┘ê╪░╪¼ ┘ê╪º╪¡╪» ┘ä╪¬╪║╪╖┘è╪⌐ ╪¼┘ê╪º┘å╪¿ ┘à╪«╪¬┘ä┘ü╪⌐ ┘à┘å ╪º┘ä┘à┘ê╪╢┘ê╪╣.
             </p>
           </div>
         </div>
@@ -2155,7 +2185,7 @@ const supabase = createClient()
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowQuestionPicker(false)} />
           <div className="relative bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-xl">
             <div className="p-4 border-b flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-900">استيراد سؤال من فورم سابقة</h3>
+              <h3 className="text-lg font-bold text-gray-900">╪º╪│╪¬┘è╪▒╪º╪» ╪│╪ñ╪º┘ä ┘à┘å ┘ü┘ê╪▒┘à ╪│╪º╪¿┘é╪⌐</h3>
               <button onClick={() => setShowQuestionPicker(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2166,7 +2196,7 @@ const supabase = createClient()
             <div className="p-4 overflow-y-auto max-h-[calc(80vh-60px)]">
               {existingForms.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-500">لا توجد فورمز سابقة</p>
+                  <p className="text-gray-500">┘ä╪º ╪¬┘ê╪¼╪» ┘ü┘ê╪▒┘à╪▓ ╪│╪º╪¿┘é╪⌐</p>
                 </div>
               ) : (
                 existingForms.map(form => (
