@@ -176,6 +176,7 @@ function EditFormContent() {
   const [designerTab, setDesignerTab] = useState<'colors' | 'styles' | 'themes' | 'layout' | 'button'>('colors')
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const [showActionMenu, setShowActionMenu] = useState(false)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode)
@@ -1522,119 +1523,72 @@ const params = useParams()
 
       {/* Action Bar */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center sm:justify-start gap-2">
-          <button
-            onClick={() => setShowSettingsModal(prev => !prev)}
-            className="flex flex-col sm:flex-row items-center gap-1 px-2 sm:px-3 py-2 sm:py-1.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:scale-95 transition-all text-[10px] sm:text-xs font-medium cursor-pointer min-w-0 sm:min-w-fit"
-            title="الإعدادات"
-          >
-            <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <span className="hidden sm:inline">الإعدادات</span>
-          </button>
-          <button
-            onClick={() => setFormData(prev => prev ? ({ ...prev, is_active: !prev.is_active }) : null)}
-            className={`flex flex-col sm:flex-row items-center gap-1 px-2 sm:px-3 py-2 sm:py-1.5 rounded-xl active:scale-95 transition-all text-[10px] sm:text-xs font-medium cursor-pointer min-w-0 sm:min-w-fit ${
-              formData?.is_active 
-                ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                : 'bg-red-100 text-red-700 hover:bg-red-200'
-            }`}
-            title={formData?.is_active ? 'مفعل' : 'معطل'}
-          >
-            <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              {formData?.is_active ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-              )}
-            </svg>
-            <span className="hidden sm:inline">{formData?.is_active ? 'مفعل' : 'معطل'}</span>
-          </button>
-          <button
-            onClick={() => {
-              const code = formData?.short_code
-              const serial = formData?.serial_number || formId
-              const link = code ? `${window.location.origin}/f/${code}` : `${window.location.origin}/forms/${serial}`
-              navigator.clipboard.writeText(link)
-              alert('تم نسخ رابط المشاركة: ' + link)
-            }}
-            className="flex flex-col sm:flex-row items-center gap-1 px-2 sm:px-3 py-2 sm:py-1.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 active:scale-95 transition-all text-[10px] sm:text-xs font-medium cursor-pointer min-w-0 sm:min-w-fit"
-            title="نسخ الرابط"
-          >
-            <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-            </svg>
-            <span className="hidden sm:inline">نسخ الرابط</span>
-          </button>
-           <button
-             onClick={() => { setIsPreviewActive(prev => !prev); setShowSettingsModal(false) }}
-             className="flex flex-col sm:flex-row items-center gap-1 px-2 sm:px-3 py-2 sm:py-1.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 active:scale-95 transition-all text-[10px] sm:text-xs font-medium cursor-pointer min-w-0 sm:min-w-fit"
-             title="معاينة النموذج"
-           >
-             <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-             </svg>
-             <span className="hidden sm:inline">معاينة</span>
-           </button>
-           <button
-             onClick={() => setShowConvertToTemplate(true)}
-             className="flex flex-col sm:flex-row items-center gap-1 px-2 sm:px-3 py-2 sm:py-1.5 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 active:scale-95 transition-all text-[10px] sm:text-xs font-medium cursor-pointer min-w-0 sm:min-w-fit"
-             title="تحويل إلى قالب"
-           >
-             <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-             </svg>
-             <span className="hidden sm:-inline">قالب</span>
-           </button>
-           {/* Collaboration indicator */}
-          <div className="flex items-center gap-1.5 px-2">
-            <span className={`w-2 h-2 rounded-full ${
-              collabStatus === 'connected' ? 'bg-green-500' : collabStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' : 'bg-gray-400'
-            }`} />
-            <span className="text-[10px] text-gray-500 hidden sm:inline">
-              {collabStatus === 'connecting' ? 'جاري الاتصال...' : ''}
-            </span>
-            {collaborators.map(c => (
-              <span key={c.id} className="w-6 h-6 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-[10px] font-bold" title={c.name}>
-                {c.name.charAt(0)}
-              </span>
-            ))}
+        <div className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-2">
+          <div className="relative">
+            {showActionMenu && <div className="fixed inset-0 z-40" onClick={() => setShowActionMenu(false)} />}
+            <button
+              onClick={() => setShowActionMenu(prev => !prev)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:scale-95 transition-all text-xs font-medium cursor-pointer"
+              title="القائمة"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              الإعدادات
+            </button>
+            {showActionMenu && (
+              <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-200 py-2 min-w-[200px] z-50" onClick={(e) => e.stopPropagation()}>
+                <button onClick={() => { setShowActionMenu(false); setShowSettingsModal(true) }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right">
+                  <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  الإعدادات الكاملة
+                </button>
+                <div className="h-px bg-gray-100 mx-3 my-1" />
+                <button onClick={() => { setShowActionMenu(false); setFormData(prev => prev ? ({ ...prev, is_active: !prev.is_active }) : null) }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">{formData?.is_active ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /> : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />}</svg>
+                  <span className={formData?.is_active ? 'text-green-700' : 'text-red-600'}>{formData?.is_active ? 'مفعل' : 'معطل'}</span>
+                </button>
+                <button onClick={() => { setShowActionMenu(false); const code = formData?.short_code; const serial = formData?.serial_number || formId; const link = code ? `${window.location.origin}/f/${code}` : `${window.location.origin}/forms/${serial}`; navigator.clipboard.writeText(link); alert('تم نسخ الرابط: ' + link) }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right">
+                  <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                  نسخ رابط المشاركة
+                </button>
+                <button onClick={() => { setShowActionMenu(false); setIsPreviewActive(prev => !prev) }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right">
+                  <svg className="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  معاينة النموذج
+                </button>
+                <button onClick={() => { setShowActionMenu(false); setIsDarkMode(prev => !prev) }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right">
+                  <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">{isDarkMode ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /> : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />}</svg>
+                  {isDarkMode ? 'الوضع النهاري' : 'الوضع الليلي'}
+                </button>
+                <button onClick={() => { setShowActionMenu(false); setShowConvertToTemplate(true) }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right">
+                  <svg className="w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>
+                  تحويل إلى قالب
+                </button>
+                <div className="h-px bg-gray-100 mx-3 my-1" />
+                <div className="px-4 py-2 flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${collabStatus === 'connected' ? 'bg-green-500' : collabStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' : 'bg-gray-400'}`} />
+                  <span className="text-xs text-gray-500">{collabStatus === 'connecting' ? 'جاري الاتصال...' : collabStatus === 'connected' ? 'متصل' : ''}</span>
+                  {collaborators.map(c => (
+                    <span key={c.id} className="w-5 h-5 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-[9px] font-bold" title={c.name}>{c.name.charAt(0)}</span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-          <button
-            onClick={() => setIsDarkMode(prev => !prev)}
-            className={`flex flex-col sm:flex-row items-center gap-1 px-2 sm:px-3 py-2 sm:py-1.5 rounded-xl active:scale-95 transition-all text-[10px] sm:text-xs font-medium cursor-pointer min-w-0 sm:min-w-fit ${
-              isDarkMode
-                ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                : 'bg-gray-800 text-white hover:bg-gray-700'
-            }`}
-            title={isDarkMode ? 'الوضع النهاري' : 'الوضع الليلي'}
-          >
-            <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              {isDarkMode ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-              )}
-            </svg>
-            <span className="hidden sm:inline">{isDarkMode ? 'نهاري' : 'ليلي'}</span>
-          </button>
+          <div className="mr-auto" />
           <button
             onClick={saveForm}
             disabled={saving}
-            className="flex flex-col sm:flex-row items-center gap-1 px-2 sm:px-3 py-2 sm:py-1.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:scale-95 transition-all text-[10px] sm:text-xs font-medium cursor-pointer disabled:opacity-50 min-w-0 sm:min-w-fit"
+            className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:scale-95 transition-all text-xs font-medium cursor-pointer disabled:opacity-50"
             title="حفظ التعديلات"
           >
             {saving ? (
-              <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent"></div>
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
             ) : (
-              <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
               </svg>
             )}
-            <span className="hidden sm:inline">{saving ? 'جاري الحفظ...' : 'حفظ'}</span>
+            <span>{saving ? 'جاري الحفظ...' : 'حفظ'}</span>
           </button>
         </div>
       </div>
