@@ -130,6 +130,8 @@ function CreateFormContent() {
   const [questionMenuOpen, setQuestionMenuOpen] = useState(false)
   const [templates, setTemplates] = useState<FormTemplate[]>([])
   const [templatesLoading, setTemplatesLoading] = useState(true)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
+  const [selectedTemplateSource, setSelectedTemplateSource] = useState<'form_templates' | 'user_templates' | null>(null)
   
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -358,12 +360,14 @@ const supabase = createClient()
 
       setExistingForms(forms || [])
 
-      // Fetch templates
-      const { data: templateData } = await supabase
-        .from('form_templates')
-        .select('*')
-        .order('sort_order')
-      setTemplates(templateData || [])
+      // Fetch built-in and user templates (approved)
+      const { data: built } = await supabase.from('form_templates').select('*').order('sort_order')
+      const { data: userTemplates } = await supabase.from('user_templates').select('*').eq('approved', true).order('created_at')
+      const merged = [
+        ...(built || []).map((t: any) => ({ ...t, source: 'form_templates' })),
+        ...(userTemplates || []).map((t: any) => ({ ...t, source: 'user_templates' }))
+      ]
+      setTemplates(merged)
       setTemplatesLoading(false)
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -634,6 +638,8 @@ const supabase = createClient()
       questions: importedQuestions,
       ...(template.form_settings || {})
     }))
+    setSelectedTemplateId(template.id)
+    setSelectedTemplateSource((template as any).source || null)
   }
 
   const saveForm = async () => {
@@ -734,6 +740,18 @@ const supabase = createClient()
 
       if (questionsError) throw questionsError
 
+      // If this form was created from an approved user template, inform server to increment usage_count
+      try {
+        if (selectedTemplateId && selectedTemplateSource === 'user_templates') {
+          await fetch('/api/templates/increment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ templateId: selectedTemplateId })
+          })
+        }
+      } catch (e) {
+        console.warn('Failed to notify template usage', e)
+      }
       router.push(`/forms/${form.serial_number}/edit`)
     } catch (error) {
       console.error('Error saving form:', error)

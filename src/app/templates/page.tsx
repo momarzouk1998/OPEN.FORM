@@ -13,6 +13,8 @@ interface FormTemplate {
   description: string;
   category: string;
   questions_data: any[];
+  source?: 'form_templates' | 'user_templates';
+  usage_count?: number;
 }
 
 export default function TemplatesPage() {
@@ -22,19 +24,27 @@ export default function TemplatesPage() {
 
   useEffect(() => {
     const fetchTemplates = async () => {
-      const { data, error } = await supabase
-        .from('form_templates')
-        .select('*')
-        .order('sort_order', { ascending: true });
-        
-      if (data && !error) {
-        setTemplates(data);
-      }
-      setLoading(false);
-    };
+      // fetch curated templates and user-created approved templates
+      const [built] = await Promise.all([
+        supabase.from('form_templates').select('*').order('sort_order', { ascending: true }),
+        supabase.from('user_templates').select('*').eq('approved', true).order('created_at', { ascending: false })
+      ])
 
-    fetchTemplates();
-  }, []);
+      const builtData: any[] = built.data || []
+      // second result is ignored in destructuring above because Promise.all returns array; fetch separately
+      const { data: userTemplates } = await supabase.from('user_templates').select('*').eq('approved', true).order('created_at', { ascending: false })
+
+      const merged: FormTemplate[] = [
+        ...builtData.map((t: any) => ({ ...t, source: 'form_templates' })),
+        ...(userTemplates || []).map((t: any) => ({ ...t, source: 'user_templates' }))
+      ]
+
+      setTemplates(merged)
+      setLoading(false)
+    }
+
+    fetchTemplates()
+  }, [])
 
   // Helper to get nice icons and colors based on the DB category
   const getCategoryTheme = (category: string) => {

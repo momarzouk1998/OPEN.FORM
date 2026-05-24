@@ -61,11 +61,14 @@ export default function PartnersPage() {
         .select('*', { count: 'exact', head: true })
         .eq('created_by', p.id)
 
-      // Templates count
-      const { count: templatesCount } = await supabase
+      // Templates (approved) - fetch up to 6 for preview
+      const { data: templatesList } = await supabase
         .from('user_templates')
-        .select('*', { count: 'exact', head: true })
+        .select('*')
         .eq('created_by', p.id)
+        .eq('approved', true)
+        .order('created_at', { ascending: false })
+        .limit(6)
 
       // Total submissions on all forms
       const { data: formIds } = await supabase
@@ -88,7 +91,8 @@ export default function PartnersPage() {
         likes_count: likesCount || 0,
         liked_by_me: likedByMe,
         forms_count: formsCount || 0,
-        templates_count: templatesCount || 0,
+        templates_count: (templatesList || []).length || 0,
+        templates_preview: templatesList || [],
         submissions_count: submissionsCount
       })
     }
@@ -98,7 +102,27 @@ export default function PartnersPage() {
   }
 
   const toggleLike = async (partnerId: string) => {
-    if (!user) return
+    if (!user) {
+      // Visitor like: store in localStorage so the visitor can toggle likes
+      try {
+        const key = 'visitor_partner_likes'
+        const raw = localStorage.getItem(key)
+        const arr = raw ? JSON.parse(raw) : []
+        const idx = arr.indexOf(partnerId)
+        if (idx >= 0) {
+          arr.splice(idx, 1)
+        } else {
+          arr.push(partnerId)
+        }
+        localStorage.setItem(key, JSON.stringify(arr))
+        // Update UI by reloading data (will reflect visitor-like in counts)
+        loadData()
+      } catch (e) {
+        console.warn('visitor like failed', e)
+      }
+      return
+    }
+
     const { data: existing } = await supabase
       .from('partner_likes')
       .select('id')
@@ -270,19 +294,7 @@ function PartnerCard({
 
       {/* Like Button + Referral */}
       <div className="px-5 py-4 flex items-center justify-between border-t border-gray-100 mt-3">
-        <button
-          onClick={() => onLike(partner.id)}
-          className={`flex items-center gap-1.5 text-sm font-medium transition-all ${
-            partner.liked_by_me
-              ? 'text-red-500'
-              : 'text-gray-400 hover:text-red-400'
-          }`}
-        >
-          <svg className="w-5 h-5" fill={partner.liked_by_me ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-          </svg>
-          {partner.likes_count || 0}
-        </button>
+        <VisitorLikeButton partner={partner} onLike={() => onLike(partner.id)} userId={userId} />
 
         {partner.referral_code && (
           <button
@@ -301,6 +313,20 @@ function PartnerCard({
           </button>
         )}
       </div>
+
+      {/* Templates preview */}
+      {partner.templates_preview && partner.templates_preview.length > 0 && (
+        <div className="px-5 pb-5">
+          <h4 className="text-xs font-bold text-gray-800 mb-2">قوالب المنشئ</h4>
+          <div className="grid grid-cols-2 gap-2">
+            {partner.templates_preview.map((t: any) => (
+              <Link key={t.id} href={`/templates/${t.id}`} className="text-xs p-2 rounded-lg bg-gray-50 border border-gray-100 text-gray-700 hover:bg-indigo-50">
+                {t.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -311,5 +337,40 @@ function StatBox({ label, value }: { label: string; value: number }) {
       <p className="text-lg font-bold text-gray-800">{value.toLocaleString()}</p>
       <p className="text-[10px] text-gray-400">{label}</p>
     </div>
+  )
+}
+
+function VisitorLikeButton({ partner, onLike, userId }: any) {
+  const isVisitor = !userId
+  const [visitorLiked, setVisitorLiked] = useState(false)
+
+  useEffect(() => {
+    if (isVisitor) {
+      try {
+        const raw = localStorage.getItem('visitor_partner_likes')
+        const arr = raw ? JSON.parse(raw) : []
+        setVisitorLiked(arr.indexOf(partner.id) >= 0)
+      } catch {
+        setVisitorLiked(false)
+      }
+    }
+  }, [partner.id, isVisitor])
+
+  const displayCount = (partner.likes_count || 0) + (isVisitor && visitorLiked && !partner.liked_by_me ? 1 : 0)
+
+  return (
+    <button
+      onClick={onLike}
+      className={`flex items-center gap-1.5 text-sm font-medium transition-all ${
+        (partner.liked_by_me || visitorLiked)
+          ? 'text-red-500'
+          : 'text-gray-400 hover:text-red-400'
+      }`}
+    >
+      <svg className="w-5 h-5" fill={(partner.liked_by_me || visitorLiked) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+      </svg>
+      {displayCount}
+    </button>
   )
 }

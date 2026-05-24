@@ -98,21 +98,16 @@ function RegisterForm() {
 
          if (profileError) console.error('Profile update error:', profileError)
 
-         // If referral code exists, find the referrer and increment their count
+         // If referral code exists, call server API to record referral atomically
          if (referralCode) {
-           const { data: referrer, error: referrerError } = await supabase
-             .from('profiles')
-             .select('id, referral_count')
-             .eq('referral_code', referralCode)
-             .single()
-
-           if (!referrerError && referrer) {
-             const { error: updateError } = await supabase
-               .from('profiles')
-               .update({ referral_count: referrer.referral_count + 1 })
-               .eq('id', referrer.id)
-
-             if (updateError) console.error('Failed to update referral count:', updateError)
+           try {
+             await fetch('/api/referrals/complete', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({ referralCode, referredId: data.user.id, referredEmail: formData.email })
+             })
+           } catch (err) {
+             console.warn('Referral recording failed', err)
            }
          }
 
