@@ -43,7 +43,7 @@ const QUESTION_TYPES: Record<string, { label: string; icon: string; description:
   match_items: { label: 'توصيل العناصر', icon: '🔗', description: 'مطابقة عمودين', explanation: 'مثال: وصّل الكلمة بمعناها' },
   // تواريخ وملفات
   date: { label: 'تاريخ', icon: '📅', description: 'إدخال تاريخ', explanation: 'مثال: "تاريخ الميلاد"' },
-  date_range: { label: 'نطاق تاريخ', icon: '📆', description: 'من تاريخ إلى تاريخ', explanation: 'مثال: فترة الإجازة' },
+  date_range: { label: 'نطاق وقت وتاريخ', icon: '📆', description: 'من وقت/تاريخ إلى وقت/تاريخ', explanation: 'مثال: فترة حجز أو إجازة' },
   time: { label: 'وقت', icon: '⏰', description: 'إدخال وقت', explanation: 'مثال: "وقت الحضور"' },
   file_upload: { label: 'رفع ملف', icon: '📎', description: 'إرفاق ملف أو صورة', explanation: 'مثال: رفع السيرة الذاتية أو صورة' },
   signature: { label: 'التوقيع', icon: '✍️', description: 'حقل توقيع', explanation: 'للحصول على توقيع رقمي' },
@@ -61,9 +61,29 @@ const QUESTION_TYPES: Record<string, { label: string; icon: string; description:
 } as const;
 
 const DISPLAY_ONLY_QUESTION_TYPES: QuestionType[] = [
+  'static_text',
+  'static_image',
+  'terms',
   'countdown_timer',
   'products_block',
   'payment_info_block',
+]
+
+const DATE_RANGE_MODE_OPTIONS = [
+  { value: 'time', label: 'نطاق وقت' },
+  { value: 'date', label: 'نطاق تاريخ' },
+  { value: 'datetime', label: 'نطاق وقت وتاريخ' },
+]
+
+const APPOINTMENT_META_ID = 'appointment_settings'
+const WEEKDAY_OPTIONS = [
+  { value: '0', label: 'الأحد' },
+  { value: '1', label: 'الإثنين' },
+  { value: '2', label: 'الثلاثاء' },
+  { value: '3', label: 'الأربعاء' },
+  { value: '4', label: 'الخميس' },
+  { value: '5', label: 'الجمعة' },
+  { value: '6', label: 'السبت' },
 ]
 
 
@@ -609,6 +629,113 @@ function EditFormContent() {
     return normalizePaymentMethods(formData?.payment_info || [])
   }
 
+  const getAppointmentConfig = (options: any) => {
+    const opts = parseOptions(options)
+    const meta = opts.find((opt: any) => opt.id === APPOINTMENT_META_ID) || {}
+    return {
+      mode: meta.validation_type === 'custom' || meta.validation_type === 'auto' ? meta.validation_type : 'fixed',
+      customBy: meta.validation_category === 'date' ? 'date' : 'weekday',
+      single: meta.validation_value !== 'shared',
+    }
+  }
+
+  const getAppointmentSlots = (options: any) => {
+    return parseOptions(options).filter((opt: any) => opt.id !== APPOINTMENT_META_ID)
+  }
+
+  const setAppointmentOptions = (questionIndex: number, configUpdates: any = {}, slots?: any[]) => {
+    if (!formData) return
+    const question = formData.questions[questionIndex]
+    const currentConfig = { ...getAppointmentConfig(question.options), ...configUpdates }
+    const currentSlots = slots ?? getAppointmentSlots(question.options)
+    updateQuestion(questionIndex, {
+      options: [
+        {
+          id: APPOINTMENT_META_ID,
+          text: 'appointment_settings',
+          points: 0,
+          validation_type: currentConfig.mode,
+          validation_category: currentConfig.customBy,
+          validation_value: currentConfig.single ? 'single' : 'shared',
+        },
+        ...currentSlots,
+      ] as any,
+    })
+  }
+
+  const addAppointmentSlot = (questionIndex: number) => {
+    if (!formData) return
+    const question = formData.questions[questionIndex]
+    const config = getAppointmentConfig(question.options)
+    const slots = getAppointmentSlots(question.options)
+    setAppointmentOptions(questionIndex, {}, [
+      ...slots,
+      {
+        id: `appt_${Date.now()}`,
+        text: '',
+        points: 0,
+        validation_category: config.mode === 'fixed' ? 'fixed' : config.customBy,
+        validation_value: config.mode === 'custom' && config.customBy === 'weekday' ? '0' : '',
+      },
+    ])
+  }
+
+  const updateAppointmentSlot = (questionIndex: number, slotIndex: number, updates: any) => {
+    if (!formData) return
+    const question = formData.questions[questionIndex]
+    const slots = getAppointmentSlots(question.options).map((slot: any, index: number) =>
+      index === slotIndex ? { ...slot, ...updates } : slot
+    )
+    setAppointmentOptions(questionIndex, {}, slots)
+  }
+
+  const removeAppointmentSlot = (questionIndex: number, slotIndex: number) => {
+    if (!formData) return
+    const question = formData.questions[questionIndex]
+    setAppointmentOptions(questionIndex, {}, getAppointmentSlots(question.options).filter((_: any, index: number) => index !== slotIndex))
+  }
+
+  const getAvailabilitySettings = () => {
+    return (formData?.page_titles as any)?._availability || {
+      enabled: false,
+      mode: 'weekly',
+      weekly: [{ day: '0', start: '09:00', end: '17:00' }],
+      starts_at: '',
+      ends_at: '',
+    }
+  }
+
+  const updateAvailabilitySettings = (updates: any) => {
+    setFormData(prev => prev ? ({
+      ...prev,
+      page_titles: {
+        ...prev.page_titles,
+        _availability: { ...getAvailabilitySettings(), ...updates }
+      }
+    }) : null)
+  }
+
+  const updateWeeklyAvailability = (index: number, updates: any) => {
+    const current = getAvailabilitySettings()
+    updateAvailabilitySettings({
+      weekly: (current.weekly || []).map((slot: any, i: number) => i === index ? { ...slot, ...updates } : slot)
+    })
+  }
+
+  const addWeeklyAvailability = () => {
+    const current = getAvailabilitySettings()
+    updateAvailabilitySettings({
+      weekly: [...(current.weekly || []), { day: '0', start: '09:00', end: '17:00' }]
+    })
+  }
+
+  const removeWeeklyAvailability = (index: number) => {
+    const current = getAvailabilitySettings()
+    updateAvailabilitySettings({
+      weekly: (current.weekly || []).filter((_: any, i: number) => i !== index)
+    })
+  }
+
   const prepareQuestionsForPreview = (qs: any[]): any[] => {
     return qs.filter((q: any) => !q.hidden).map((q, index) => {
       let optionsData: any
@@ -955,6 +1082,21 @@ const params = useParams()
     } else if (type === 'dropdown') {
       newQuestion.dropdown_type = 'single'
       newQuestion.correct_option_ids = []
+    } else if (type === 'date_range') {
+      newQuestion.options = [{ id: `range_${Date.now()}`, text: '', points: 0, validation_type: 'datetime' }] as any
+    } else if (type === 'appointment') {
+      newQuestion.options = [
+        {
+          id: APPOINTMENT_META_ID,
+          text: 'appointment_settings',
+          points: 0,
+          validation_type: 'fixed',
+          validation_category: 'weekday',
+          validation_value: 'single',
+        },
+        { id: `appt_${Date.now()}_1`, text: '09:00', points: 0, validation_category: 'fixed', validation_value: '' },
+        { id: `appt_${Date.now()}_2`, text: '10:00', points: 0, validation_category: 'fixed', validation_value: '' },
+      ] as any
     } else if (type === 'button_choice') {
       newQuestion.options = [
         { id: `opt_${Date.now()}_1`, text: '', points: 0 },
@@ -1506,18 +1648,22 @@ const params = useParams()
             {question.required && !DISPLAY_ONLY_QUESTION_TYPES.includes(question.type) && <span className="text-xs text-red-500">* مطلوب</span>}
             {question.points > 0 && <span className="text-xs text-amber-600">{question.points} نقطة</span>}
           </div>
-          {parseOptions(question.options).length > 0 && !['scale'].includes(question.type) && (
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {(parseOptions(question.options) as any[]).slice(0, 4).map((opt: any, oi: number) => (
-                <span key={oi} className="text-xs bg-white border border-gray-200 text-gray-500 px-2 py-0.5 rounded-lg">
-                  {opt.text || 'خيار'}
-                </span>
-              ))}
-              {parseOptions(question.options).length > 4 && (
-                <span className="text-xs text-gray-400">+{parseOptions(question.options).length - 4}</span>
-              )}
-            </div>
-          )}
+          {(() => {
+            const previewOptions = parseOptions(question.options).filter((opt: any) => opt.id !== APPOINTMENT_META_ID)
+            if (previewOptions.length === 0 || ['scale'].includes(question.type)) return null
+            return (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {previewOptions.slice(0, 4).map((opt: any, oi: number) => (
+                  <span key={oi} className="text-xs bg-white border border-gray-200 text-gray-500 px-2 py-0.5 rounded-lg">
+                    {opt.text || 'خيار'}
+                  </span>
+                ))}
+                {previewOptions.length > 4 && (
+                  <span className="text-xs text-gray-400">+{previewOptions.length - 4}</span>
+                )}
+              </div>
+            )
+          })()}
         </div>
         <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
           <button onClick={() => moveQuestion(qIndex, 'up')} disabled={qIndex === 0} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-lg disabled:opacity-30">
@@ -1819,6 +1965,59 @@ const params = useParams()
                     <input type="datetime-local" value={formData.expires_at} onChange={(e) => setFormData(prev => prev ? ({ ...prev, expires_at: e.target.value }) : null)} className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
                   </div>
                 )}
+
+                {(() => {
+                  const availability = getAvailabilitySettings()
+                  return (
+                    <div className="mt-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                      <label className="flex items-start gap-2 cursor-pointer text-sm">
+                        <input type="checkbox" checked={!!availability.enabled} onChange={(e) => updateAvailabilitySettings({ enabled: e.target.checked })} className="w-4 h-4 mt-0.5 text-blue-600 rounded" />
+                        <div>
+                          <span className="text-gray-700 font-medium">جدول تشغيل النموذج</span>
+                          <p className="text-xs text-gray-500 mt-0.5">فتح وإغلاق النموذج تلقائيًا حسب أيام الأسبوع أو تاريخ ووقت محددين.</p>
+                        </div>
+                      </label>
+
+                      {availability.enabled && (
+                        <div className="mt-3 space-y-3">
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <button type="button" onClick={() => updateAvailabilitySettings({ mode: 'weekly' })} className={`px-3 py-2 rounded-lg border text-sm ${availability.mode === 'weekly' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}>حسب أيام الأسبوع</button>
+                            <button type="button" onClick={() => updateAvailabilitySettings({ mode: 'range' })} className={`px-3 py-2 rounded-lg border text-sm ${availability.mode === 'range' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}>حسب تاريخ ووقت</button>
+                          </div>
+
+                          {availability.mode === 'weekly' ? (
+                            <div className="space-y-2">
+                              {(availability.weekly || []).map((slot: any, index: number) => (
+                                <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto] bg-white border border-blue-100 rounded-xl p-2">
+                                  <select value={slot.day || '0'} onChange={(e) => updateWeeklyAvailability(index, { day: e.target.value })} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+                                    {WEEKDAY_OPTIONS.map((day) => <option key={day.value} value={day.value}>{day.label}</option>)}
+                                  </select>
+                                  <input type="time" value={slot.start || ''} onChange={(e) => updateWeeklyAvailability(index, { start: e.target.value })} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" />
+                                  <input type="time" value={slot.end || ''} onChange={(e) => updateWeeklyAvailability(index, { end: e.target.value })} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" />
+                                  <button type="button" onClick={() => removeWeeklyAvailability(index)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                  </button>
+                                </div>
+                              ))}
+                              <button type="button" onClick={addWeeklyAvailability} className="w-full py-2 border-2 border-dashed border-blue-200 text-blue-600 rounded-lg hover:border-blue-400 text-sm">+ إضافة يوم تشغيل</button>
+                            </div>
+                          ) : (
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <label className="block">
+                                <span className="block text-xs text-gray-600 mb-1">يفتح في</span>
+                                <input type="datetime-local" value={availability.starts_at || ''} onChange={(e) => updateAvailabilitySettings({ starts_at: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                              </label>
+                              <label className="block">
+                                <span className="block text-xs text-gray-600 mb-1">يقفل في</span>
+                                <input type="datetime-local" value={availability.ends_at || ''} onChange={(e) => updateAvailabilitySettings({ ends_at: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                              </label>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* Smart Redirect Section */}
@@ -2353,6 +2552,31 @@ const params = useParams()
                                     </div>
                                   )}
 
+                                  {question.type === 'date_range' && (
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-600 mb-2">نوع النطاق</label>
+                                      <div className="grid gap-2 sm:grid-cols-3">
+                                        {DATE_RANGE_MODE_OPTIONS.map((mode) => {
+                                          const currentMode = parseOptions(question.options)[0]?.validation_type || 'datetime'
+                                          const isSelected = currentMode === mode.value
+                                          return (
+                                            <button
+                                              key={mode.value}
+                                              type="button"
+                                              onClick={() => {
+                                                if (parseOptions(question.options).length === 0) addOption(qIndex)
+                                                updateOption(qIndex, 0, { validation_type: mode.value })
+                                              }}
+                                              className={`px-3 py-2 rounded-lg border text-sm transition-colors ${isSelected ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'}`}
+                                            >
+                                              {mode.label}
+                                            </button>
+                                          )
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
+
                                   {question.type === 'countdown_timer' && (
                                     <div className="space-y-3">
                                       <div>
@@ -2418,21 +2642,111 @@ const params = useParams()
                                   )}
 
                                   {question.type === 'appointment' && (
-                                    <div>
-                                      <label className="block text-xs font-medium text-gray-600 mb-1.5">المواعيد المتاحة</label>
-                                      <p className="text-xs text-gray-500 mb-2">أضف أوقاتاً متاحة لكل خيار (مثل: 09:00, 10:00, 11:00)</p>
-                                      <div className="space-y-1.5">
-                                        {(parseOptions(question.options) as any[]).map((opt: any, oi: number) => (
-                                          <div key={oi} className="flex items-center gap-1.5">
-                                            <input type="text" value={opt.text} onChange={(e) => updateOption(qIndex, oi, { text: e.target.value })} placeholder={`مثل: 09:00`} className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
-                                            <button onClick={() => removeOption(qIndex, oi)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                    (() => {
+                                      const appointmentConfig = getAppointmentConfig(question.options)
+                                      const appointmentSlots = getAppointmentSlots(question.options)
+                                      return (
+                                        <div className="space-y-4">
+                                          <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-2">نوع المواعيد</label>
+                                            <div className="grid gap-2 sm:grid-cols-2">
+                                              {[
+                                                { value: 'fixed', label: 'مواعيد ثابتة', hint: 'نفس المواعيد متاحة كل يوم.' },
+                                                { value: 'custom', label: 'مواعيد مخصصة', hint: 'مواعيد مختلفة حسب اليوم أو التاريخ.' },
+                                                { value: 'auto', label: 'موعد تلقائي', hint: 'يعرض أقرب موعد تلقائيًا، وكل حجز جديد يزيد بعدد دقائق تحدده.' },
+                                              ].map((mode) => (
+                                                <button
+                                                  key={mode.value}
+                                                  type="button"
+                                                  onClick={() => setAppointmentOptions(qIndex, { mode: mode.value })}
+                                                  className={`text-right p-3 rounded-xl border transition-colors ${appointmentConfig.mode === mode.value ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300'}`}
+                                                >
+                                                  <span className="block text-sm font-semibold">{mode.label}</span>
+                                                  <span className="block text-xs mt-1 opacity-75">{mode.hint}</span>
+                                                </button>
+                                              ))}
+                                            </div>
                                           </div>
-                                        ))}
-                                      </div>
-                                      <button onClick={() => addOption(qIndex)} className="w-full mt-2 py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors text-sm flex items-center justify-center gap-1">
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> إضافة وقت
-                                      </button>
-                                    </div>
+
+                                          {appointmentConfig.mode === 'custom' && (
+                                            <div>
+                                              <label className="block text-xs font-medium text-gray-600 mb-2">تخصيص المواعيد حسب</label>
+                                              <div className="grid gap-2 sm:grid-cols-2">
+                                                <button type="button" onClick={() => setAppointmentOptions(qIndex, { customBy: 'weekday' })} className={`px-3 py-2 rounded-lg border text-sm ${appointmentConfig.customBy === 'weekday' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}>أيام الأسبوع</button>
+                                                <button type="button" onClick={() => setAppointmentOptions(qIndex, { customBy: 'date' })} className={`px-3 py-2 rounded-lg border text-sm ${appointmentConfig.customBy === 'date' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}>تاريخ محدد</button>
+                                              </div>
+                                            </div>
+                                          )}
+
+                                          {appointmentConfig.mode === 'auto' && (
+                                            <div className="grid gap-3 sm:grid-cols-2">
+                                              <label className="block">
+                                                <span className="block text-xs font-medium text-gray-600 mb-1.5">بداية أول موعد</span>
+                                                <input
+                                                  type="datetime-local"
+                                                  value={appointmentSlots[0]?.validation_value || ''}
+                                                  onChange={(e) => {
+                                                    const firstSlot = appointmentSlots[0] || { id: `appt_auto_${Date.now()}`, text: '', points: 0 }
+                                                    setAppointmentOptions(qIndex, {}, [{ ...firstSlot, text: 'auto', validation_category: 'auto', validation_value: e.target.value, validation_min: firstSlot.validation_min || '30' }])
+                                                  }}
+                                                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+                                                />
+                                              </label>
+                                              <label className="block">
+                                                <span className="block text-xs font-medium text-gray-600 mb-1.5">فرق الدقائق بين كل حالة</span>
+                                                <input
+                                                  type="number"
+                                                  min="1"
+                                                  value={appointmentSlots[0]?.validation_min || '30'}
+                                                  onChange={(e) => {
+                                                    const firstSlot = appointmentSlots[0] || { id: `appt_auto_${Date.now()}`, text: 'auto', points: 0, validation_category: 'auto' }
+                                                    setAppointmentOptions(qIndex, {}, [{ ...firstSlot, validation_category: 'auto', validation_value: firstSlot.validation_value || '', validation_min: e.target.value }])
+                                                  }}
+                                                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+                                                />
+                                              </label>
+                                              <p className="sm:col-span-2 text-xs text-gray-500">مثال: لو أول موعد 10:00 والفرق 15 دقيقة، أول حجز يكون 10:00 والثاني 10:15 والثالث 10:30.</p>
+                                            </div>
+                                          )}
+
+                                          {appointmentConfig.mode !== 'auto' && <label className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-100 rounded-xl cursor-pointer">
+                                            <input
+                                              type="checkbox"
+                                              checked={appointmentConfig.single}
+                                              onChange={(e) => setAppointmentOptions(qIndex, { single: e.target.checked })}
+                                              className="w-4 h-4 mt-0.5 text-amber-600 rounded"
+                                            />
+                                            <span>
+                                              <span className="block text-sm font-medium text-amber-800">مواعيد منفردة</span>
+                                              <span className="block text-xs text-amber-700 mt-1">لو مستخدم اختار موعد، يختفي هذا الموعد من الاختيارات المتاحة لباقي المستخدمين.</span>
+                                            </span>
+                                          </label>}
+
+                                          {appointmentConfig.mode !== 'auto' && <div className="space-y-2">
+                                            <label className="block text-xs font-medium text-gray-600">المواعيد المتاحة</label>
+                                            {appointmentSlots.map((slot: any, slotIndex: number) => (
+                                              <div key={slot.id || slotIndex} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] items-center bg-white border border-gray-200 rounded-xl p-2">
+                                                {appointmentConfig.mode === 'custom' && appointmentConfig.customBy === 'weekday' && (
+                                                  <select value={slot.validation_value || '0'} onChange={(e) => updateAppointmentSlot(qIndex, slotIndex, { validation_category: 'weekday', validation_value: e.target.value })} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+                                                    {WEEKDAY_OPTIONS.map((day) => <option key={day.value} value={day.value}>{day.label}</option>)}
+                                                  </select>
+                                                )}
+                                                {appointmentConfig.mode === 'custom' && appointmentConfig.customBy === 'date' && (
+                                                  <input type="date" value={slot.validation_value || ''} onChange={(e) => updateAppointmentSlot(qIndex, slotIndex, { validation_category: 'date', validation_value: e.target.value })} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" />
+                                                )}
+                                                <input type="time" value={slot.text || ''} onChange={(e) => updateAppointmentSlot(qIndex, slotIndex, { text: e.target.value, validation_category: appointmentConfig.mode === 'fixed' ? 'fixed' : appointmentConfig.customBy })} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" />
+                                                <button type="button" onClick={() => removeAppointmentSlot(qIndex, slotIndex)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                                </button>
+                                              </div>
+                                            ))}
+                                            <button type="button" onClick={() => addAppointmentSlot(qIndex)} className="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors text-sm">
+                                              + إضافة موعد
+                                            </button>
+                                          </div>}
+                                        </div>
+                                      )
+                                    })()
                                   )}
 
                                   {question.type === 'star_rating' && (

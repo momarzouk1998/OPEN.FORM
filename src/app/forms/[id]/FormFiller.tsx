@@ -39,10 +39,15 @@ interface Question {
 }
 
 const DISPLAY_ONLY_QUESTION_TYPES = [
+  'static_text',
+  'static_image',
+  'terms',
   'countdown_timer',
   'products_block',
   'payment_info_block',
 ]
+
+const APPOINTMENT_META_ID = 'appointment_settings'
 
 interface Form {
   id: string
@@ -204,6 +209,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
   const [draftRestored, setDraftRestored] = useState(false)
   const [draftDismissed, setDraftDismissed] = useState(false)
   const [redirectMessage, setRedirectMessage] = useState<string | null>(null)
+  const [closedReason, setClosedReason] = useState('النموذج غير متاح الآن')
 
   // Appointment calendar state
   const [apptMonth, setApptMonth] = useState(() => {
@@ -211,12 +217,6 @@ export default function FormFiller({ form, questions, existingResponse: propExis
     return { year: now.getFullYear(), month: now.getMonth() }
   })
   const [bookedSlots, setBookedSlots] = useState<Record<string, Record<string, string[]>>>({})
-
-  // Date range calendar state
-  const [dateRangeMonth, setDateRangeMonth] = useState(() => {
-    const now = new Date()
-    return { year: now.getFullYear(), month: now.getMonth() }
-  })
 
   const router = useRouter()
   const supabase = createClient()
@@ -326,6 +326,37 @@ export default function FormFiller({ form, questions, existingResponse: propExis
   const [displayQuestions, setDisplayQuestions] = useState<Question[]>([]);
   const [isExpired, setIsExpired] = useState(false);
 
+  const getAvailabilityStatus = () => {
+    const availability = (form.page_titles as any)?._availability
+    if (!availability?.enabled || isPreview) return { closed: false, reason: '' }
+
+    const now = new Date()
+    if (availability.mode === 'range') {
+      const startsAt = availability.starts_at ? new Date(availability.starts_at) : null
+      const endsAt = availability.ends_at ? new Date(availability.ends_at) : null
+      if (startsAt && now < startsAt) return { closed: true, reason: 'النموذج لم يفتح بعد' }
+      if (endsAt && now > endsAt) return { closed: true, reason: 'تم إغلاق النموذج' }
+      return { closed: false, reason: '' }
+    }
+
+    const weekly = Array.isArray(availability.weekly) ? availability.weekly : []
+    const today = String(now.getDay())
+    const currentMinutes = now.getHours() * 60 + now.getMinutes()
+    const isOpen = weekly.some((slot: any) => {
+      if (String(slot.day) !== today || !slot.start || !slot.end) return false
+      const [startHour, startMinute] = String(slot.start).split(':').map(Number)
+      const [endHour, endMinute] = String(slot.end).split(':').map(Number)
+      const startMinutes = (startHour || 0) * 60 + (startMinute || 0)
+      const endMinutes = (endHour || 0) * 60 + (endMinute || 0)
+      return currentMinutes >= startMinutes && currentMinutes <= endMinutes
+    })
+
+    return {
+      closed: !isOpen,
+      reason: 'النموذج مغلق الآن حسب جدول التشغيل'
+    }
+  }
+
   // Extract visibility_rules from question (may be in q.visibility_rules or inside options._visibility_rules)
   const getVisibilityRules = (q: any): VisibilityRule[] | undefined => {
     if (q.visibility_rules && q.visibility_rules.length > 0) return q.visibility_rules
@@ -374,13 +405,23 @@ export default function FormFiller({ form, questions, existingResponse: propExis
   const isLastPage = pageIndex >= totalPages - 1
 
   useEffect(() => {
+    const availabilityStatus = getAvailabilityStatus()
+    if (availabilityStatus.closed) {
+      setClosedReason(availabilityStatus.reason)
+      setIsExpired(true)
+      return
+    }
+
     // Check expiration
     if (form.expires_at) {
       if (new Date() > new Date(form.expires_at)) {
+        setClosedReason('تم إغلاق النموذج')
         setIsExpired(true);
         return;
       }
     }
+
+    setIsExpired(false)
 
     // Set Timer
     if (form.time_limit && !submitted) {
@@ -836,6 +877,15 @@ export default function FormFiller({ form, questions, existingResponse: propExis
         }
 
         const answer = answers[q.id]
+        if (q.type === 'date_range' && q.required) {
+          const rangeAnswer = typeof answer === 'object' ? answer as any : {}
+          if (!rangeAnswer.from || !rangeAnswer.to) {
+            setError(`يرجى تحديد بداية ونهاية النطاق في السؤال: ${q.text}`)
+            setSubmitting(false)
+            return
+          }
+        }
+
         if (q.required && (answer === undefined || answer === null || answer === '' || 
             (Array.isArray(answer) && answer.length === 0))) {
           setError(`يرجى الإجابة على السؤال: ${q.text}`)
@@ -846,6 +896,14 @@ export default function FormFiller({ form, questions, existingResponse: propExis
         // Appointment: validate both date and time
         if (q.type === 'appointment') {
           const appt = typeof answer === 'object' ? answer as any : {}
+          const apptConfig = getAppointmentConfig(q)
+          if (apptConfig.mode === 'auto') {
+            const latestAutoAppointment = getAutoAppointment(q)
+            if (!latestAutoAppointment || appt.date !== latestAutoAppointment.date || appt.time !== latestAutoAppointment.time) {
+              setError(`تم تحديث الموعد المتاح في السؤال: ${q.text}. يرجى تأكيد الموعد المقترح مرة أخرى قبل الإرسال.`)
+              setSubmitting(false); return
+            }
+          }
           if (!appt.date || !appt.time) {
             setError(`يرجى اختيار التاريخ والوقت في السؤال: ${q.text}`)
             setSubmitting(false); return
@@ -1045,13 +1103,67 @@ export default function FormFiller({ form, questions, existingResponse: propExis
     return `${h - 12}:${m} مساءاً`
   }
 
-  function isDateFullyBooked(dateStr: string, questionId: string, timeSlots: string[]) {
+  function getAppointmentConfig(question: Question) {
+    const opts = parseOptions(question.options)
+    const meta = opts.find((opt: any) => opt.id === APPOINTMENT_META_ID) || {}
+    return {
+      mode: meta.validation_type === 'custom' || meta.validation_type === 'auto' ? meta.validation_type : 'fixed',
+      customBy: meta.validation_category === 'date' ? 'date' : 'weekday',
+      single: meta.validation_value !== 'shared',
+    }
+  }
+
+  function getAppointmentSlots(question: Question) {
+    return parseOptions(question.options).filter((opt: any) => opt.id !== APPOINTMENT_META_ID && opt.text)
+  }
+
+  function getBookedAppointmentCount(questionId: string) {
+    const qSlots = bookedSlots[questionId]
+    if (!qSlots) return 0
+    return Object.values(qSlots).reduce((sum, daySlots) => sum + daySlots.length, 0)
+  }
+
+  function getAutoAppointment(question: Question) {
+    const slot = getAppointmentSlots(question)[0]
+    const startValue = slot?.validation_value || ''
+    const intervalMinutes = Math.max(1, Number(slot?.validation_min) || 30)
+    if (!startValue) return null
+
+    const start = new Date(startValue)
+    if (Number.isNaN(start.getTime())) return null
+
+    const next = new Date(start.getTime() + getBookedAppointmentCount(question.id) * intervalMinutes * 60000)
+    const date = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`
+    const time = `${String(next.getHours()).padStart(2, '0')}:${String(next.getMinutes()).padStart(2, '0')}`
+    return { date, time, intervalMinutes }
+  }
+
+  function getTimeSlotsForDate(question: Question, dateStr: string) {
+    const config = getAppointmentConfig(question)
+    const slots = getAppointmentSlots(question)
+    if (config.mode === 'fixed') return slots.map((slot: any) => slot.text)
+
+    if (config.customBy === 'date') {
+      return slots
+        .filter((slot: any) => (slot.validation_category || 'date') === 'date' && slot.validation_value === dateStr)
+        .map((slot: any) => slot.text)
+    }
+
+    const weekday = String(new Date(dateStr + 'T00:00:00').getDay())
+    return slots
+      .filter((slot: any) => (slot.validation_category || 'weekday') !== 'date' && String(slot.validation_value || '0') === weekday)
+      .map((slot: any) => slot.text)
+  }
+
+  function isDateFullyBooked(dateStr: string, questionId: string, timeSlots: string[], singleAppointment = true) {
+    if (!singleAppointment) return false
     const qSlots = bookedSlots[questionId]
     if (!qSlots || !qSlots[dateStr]) return false
     return timeSlots.every(slot => qSlots[dateStr].includes(slot))
   }
 
-  function getAvailableTimeSlots(dateStr: string, questionId: string, timeSlots: string[]) {
+  function getAvailableTimeSlots(dateStr: string, questionId: string, timeSlots: string[], singleAppointment = true) {
+    if (!singleAppointment) return timeSlots
     const qSlots = bookedSlots[questionId]
     if (!qSlots || !qSlots[dateStr]) return timeSlots
     return timeSlots.filter(slot => !qSlots[dateStr].includes(slot))
@@ -1061,13 +1173,48 @@ export default function FormFiller({ form, questions, existingResponse: propExis
     return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate()
   }
 
-  const renderAppointmentCalendar = (question: Question, currentAnswer: any, apptObj: any, timeSlots: string[]) => {
+  const renderAppointmentCalendar = (question: Question, currentAnswer: any, apptObj: any) => {
     const today = new Date()
     const { year, month } = apptMonth
     const daysInMonth = getDaysInMonth(year, month)
     const firstDay = getFirstDayOfMonth(year, month)
     const monthName = ARABIC_MONTHS[month]
     const questionId = question.id
+    const appointmentConfig = getAppointmentConfig(question)
+
+    if (appointmentConfig.mode === 'auto') {
+      const autoAppointment = getAutoAppointment(question)
+      const isConfirmed = autoAppointment && apptObj.date === autoAppointment.date && apptObj.time === autoAppointment.time
+
+      if (!autoAppointment) {
+        return (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700">
+            لم يتم ضبط بداية الموعد التلقائي بعد.
+          </div>
+        )
+      }
+
+      return (
+        <div className="space-y-3">
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-center">
+            <p className="text-xs text-blue-500 mb-1">الموعد المقترح لك</p>
+            <p className="text-lg font-bold text-blue-800">{autoAppointment.date}</p>
+            <p className="text-base font-semibold text-blue-700 mt-1">{formatArabicTime(autoAppointment.time)}</p>
+            <p className="text-xs text-blue-500 mt-2">يتم حساب الموعد تلقائيًا بفاصل {autoAppointment.intervalMinutes} دقيقة بين كل حجز.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAnswers({ ...answers, [question.id]: { date: autoAppointment.date, time: autoAppointment.time, auto: true } })}
+            className={`w-full py-3 rounded-xl font-semibold transition-colors ${isConfirmed ? 'bg-green-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+          >
+            {isConfirmed ? 'تم تأكيد هذا الموعد' : 'تأكيد هذا الموعد'}
+          </button>
+          {!isConfirmed && (
+            <p className="text-xs text-gray-500 text-center">لو الموعد غير مناسب يمكنك عدم تأكيده وعدم إرسال النموذج.</p>
+          )}
+        </div>
+      )
+    }
 
     const prevMonth = () => {
       if (month === 0) setApptMonth({ year: year - 1, month: 11 })
@@ -1087,6 +1234,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
       const dateOnly = new Date(y, m, d)
       dateOnly.setHours(0, 0, 0, 0)
       if (dateOnly < new Date(today.getFullYear(), today.getMonth(), today.getDate())) return
+      if (getTimeSlotsForDate(question, dateStr).length === 0) return
       // Sync calendar view to the selected date's month
       setApptMonth({ year: y, month: m })
       setAnswers({ ...answers, [question.id]: { date: dateStr, time: '' } })
@@ -1099,6 +1247,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
       const m = currentDate.getMonth()
       const d = currentDate.getDate()
       const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+      if (getTimeSlotsForDate(question, dateStr).length === 0) return
       // Auto-navigate calendar month to match
       setApptMonth({ year: y, month: m })
       setAnswers({ ...answers, [question.id]: { date: dateStr, time: '' } })
@@ -1114,6 +1263,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
       const dateOnly = new Date(y, m, d)
       dateOnly.setHours(0, 0, 0, 0)
       if (dateOnly < new Date(today.getFullYear(), today.getMonth(), today.getDate())) return
+      if (getTimeSlotsForDate(question, dateStr).length === 0) return
       setApptMonth({ year: y, month: m })
       setAnswers({ ...answers, [question.id]: { date: dateStr, time: '' } })
     }
@@ -1148,8 +1298,9 @@ export default function FormFiller({ form, questions, existingResponse: propExis
     const selectedDate = apptObj.date || ''
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
 
-    const availableSlots = apptObj.date ? getAvailableTimeSlots(apptObj.date, questionId, timeSlots) : []
-    const allBooked = apptObj.date ? isDateFullyBooked(apptObj.date, questionId, timeSlots) : false
+    const selectedDateSlots = apptObj.date ? getTimeSlotsForDate(question, apptObj.date) : []
+    const availableSlots = apptObj.date ? getAvailableTimeSlots(apptObj.date, questionId, selectedDateSlots, appointmentConfig.single) : []
+    const allBooked = apptObj.date ? isDateFullyBooked(apptObj.date, questionId, selectedDateSlots, appointmentConfig.single) : false
 
     return (
       <div className="space-y-4">
@@ -1197,8 +1348,10 @@ export default function FormFiller({ form, questions, existingResponse: propExis
             const isPast = dateOnly < todayStart
             const isToday = isSameDay(cell.date, today)
             const isSelected = selectedDate === cellDateStr
-            const fullyBooked = cell.isCurrentMonth && !isPast && isDateFullyBooked(cellDateStr, questionId, timeSlots)
-            const isDisabled = isPast || !cell.isCurrentMonth
+            const cellSlots = getTimeSlotsForDate(question, cellDateStr)
+            const hasSlots = cellSlots.length > 0
+            const fullyBooked = cell.isCurrentMonth && !isPast && hasSlots && isDateFullyBooked(cellDateStr, questionId, cellSlots, appointmentConfig.single)
+            const isDisabled = isPast || !cell.isCurrentMonth || !hasSlots
 
             return (
               <button
@@ -1213,6 +1366,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
                   ${isToday && !isSelected && cell.isCurrentMonth ? 'bg-blue-100 text-blue-700' : ''}
                   ${isSelected && cell.isCurrentMonth ? 'bg-blue-600 text-white shadow-md' : ''}
                   ${fullyBooked && !isSelected ? 'bg-red-50 text-red-400 line-through' : ''}
+                  ${cell.isCurrentMonth && !isPast && !hasSlots ? 'text-gray-300 cursor-not-allowed' : ''}
                   ${!isDisabled && !isSelected && !fullyBooked ? 'hover:bg-blue-50 hover:text-blue-600 text-gray-700 cursor-pointer' : ''}
                 `}
               >
@@ -1740,8 +1894,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
       case 'appointment': {
         const apptVal = currentAnswer || {}
         const apptObj = typeof apptVal === 'object' ? apptVal as any : {}
-        const timeSlots: string[] = (Array.isArray(options) ? options : []).map((o: any) => o.text).filter(Boolean)
-        return renderAppointmentCalendar(question, currentAnswer, apptObj, timeSlots)
+        return renderAppointmentCalendar(question, currentAnswer, apptObj)
       }
 
       case 'file_upload':
@@ -1967,177 +2120,34 @@ export default function FormFiller({ form, questions, existingResponse: propExis
       case 'date_range': {
         const rangeVal = currentAnswer || {}
         const rangeObj = typeof rangeVal === 'object' ? rangeVal as any : {}
-        const today = new Date()
-        const { year, month } = dateRangeMonth
-        const daysInMonth = getDaysInMonth(year, month)
-        const firstDay = getFirstDayOfMonth(year, month)
-        const monthName = ARABIC_MONTHS[month]
-
-        const prevMonth = () => {
-          if (month === 0) setDateRangeMonth({ year: year - 1, month: 11 })
-          else setDateRangeMonth({ year, month: month - 1 })
-        }
-
-        const nextMonth = () => {
-          if (month === 11) setDateRangeMonth({ year: year + 1, month: 0 })
-          else setDateRangeMonth({ year, month: month + 1 })
-        }
-
-        const handleRangeDate = (date: Date) => {
-          const y = date.getFullYear()
-          const m = date.getMonth()
-          const d = date.getDate()
-          const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-          const dateOnly = new Date(y, m, d)
-          dateOnly.setHours(0, 0, 0, 0)
-          if (dateOnly < new Date(today.getFullYear(), today.getMonth(), today.getDate())) return
-
-          if (!rangeObj.from || (rangeObj.from && rangeObj.to)) {
-            // Start new range
-            setAnswers({ ...answers, [question.id]: { from: dateStr, to: '' } })
-          } else {
-            // Set "to" date, ensure it's after "from"
-            if (dateStr < rangeObj.from) {
-              // If clicked date is before from, swap
-              setAnswers({ ...answers, [question.id]: { from: dateStr, to: rangeObj.from } })
-            } else {
-              setAnswers({ ...answers, [question.id]: { ...rangeObj, to: dateStr } })
-            }
-          }
-        }
-
-        const clearRange = () => {
-          setAnswers({ ...answers, [question.id]: { from: '', to: '' } })
-        }
-
-        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-
-        // Build calendar days
-        const prevMonthDays: number[] = []
-        for (let i = 0; i < firstDay; i++) prevMonthDays.push(i)
-
-        const calendarDays: ({ day: number; isCurrentMonth: boolean; date: Date })[] = []
-        const prevMonthDaysCount = getDaysInMonth(month === 0 ? year - 1 : year, month === 0 ? 11 : month - 1)
-        for (const i of prevMonthDays) {
-          const d = prevMonthDaysCount - firstDay + i + 1
-          const prevM = month === 0 ? 11 : month - 1
-          const prevY = month === 0 ? year - 1 : year
-          calendarDays.push({ day: d, isCurrentMonth: false, date: new Date(prevY, prevM, d) })
-        }
-        for (let d = 1; d <= daysInMonth; d++) {
-          calendarDays.push({ day: d, isCurrentMonth: true, date: new Date(year, month, d) })
-        }
-        const remaining = 42 - calendarDays.length
-        for (let d = 1; d <= remaining; d++) {
-          const nextM = month === 11 ? 0 : month + 1
-          const nextY = month === 11 ? year + 1 : year
-          calendarDays.push({ day: d, isCurrentMonth: false, date: new Date(nextY, nextM, d) })
-        }
-
-        // Calculate day count
-        let dayCount = 0
-        if (rangeObj.from && rangeObj.to) {
-          const fromD = new Date(rangeObj.from + 'T00:00:00')
-          const toD = new Date(rangeObj.to + 'T00:00:00')
-          dayCount = Math.round((toD.getTime() - fromD.getTime()) / 86400000)
-        }
-
-        const isInRange = (dateStr: string) => {
-          if (!rangeObj.from || !rangeObj.to) return false
-          return dateStr >= rangeObj.from && dateStr <= rangeObj.to
+        const mode = parseOptions(question.options)[0]?.validation_type || 'datetime'
+        const inputType = mode === 'time' ? 'time' : mode === 'date' ? 'date' : 'datetime-local'
+        const label = mode === 'time' ? 'الوقت' : mode === 'date' ? 'التاريخ' : 'الوقت والتاريخ'
+        const updateRange = (key: 'from' | 'to', value: string) => {
+          setAnswers({ ...answers, [question.id]: { ...rangeObj, [key]: value } })
         }
 
         return (
-          <div className="space-y-4">
-            {/* Selected range display */}
-            <div className="flex items-center justify-between bg-blue-50 rounded-xl px-4 py-3">
-              <div className="flex items-center gap-4">
-                <div className="text-center">
-                  <span className="text-xs text-gray-500">من</span>
-                  <p className="text-sm font-bold text-blue-700">{rangeObj.from || '—'}</p>
-                </div>
-                <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-                <div className="text-center">
-                  <span className="text-xs text-gray-500">إلى</span>
-                  <p className="text-sm font-bold text-blue-700">{rangeObj.to || '—'}</p>
-                </div>
-              </div>
-              {rangeObj.from && (
-                <div className="flex items-center gap-2">
-                  {dayCount > 0 && (
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">{dayCount} يوم</span>
-                  )}
-                  <button type="button" onClick={clearRange} className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="مسح">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Calendar header */}
-            <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
-              <button type="button" onClick={prevMonth} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-              </button>
-              <span className="text-sm font-bold text-gray-700">{monthName} {year}</span>
-              <button type="button" onClick={nextMonth} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-              </button>
-            </div>
-
-            {/* Day names */}
-            <div className="grid grid-cols-7 gap-1">
-              {ARABIC_DAYS.map((name, i) => (
-                <div key={i} className="text-center text-xs font-bold text-gray-500 py-1">{name}</div>
-              ))}
-            </div>
-
-            {/* Calendar grid */}
-            <div className="grid grid-cols-7 gap-1">
-              {calendarDays.map((cell, i) => {
-                const y = cell.date.getFullYear()
-                const m = cell.date.getMonth() + 1
-                const d = cell.date.getDate()
-                const cellDateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-                const dateOnly = new Date(y, m - 1, d)
-                const isPast = dateOnly < todayStart
-                const isToday = isSameDay(cell.date, today)
-                const isFrom = rangeObj.from === cellDateStr
-                const isTo = rangeObj.to === cellDateStr
-                const inRange = isInRange(cellDateStr)
-                const isDisabled = isPast || !cell.isCurrentMonth
-
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    disabled={isDisabled}
-                    onClick={() => handleRangeDate(cell.date)}
-                    className={`
-                      relative p-2 text-sm rounded-lg transition-all font-medium
-                      ${!cell.isCurrentMonth ? 'text-gray-300' : ''}
-                      ${isPast && cell.isCurrentMonth ? 'text-gray-300 cursor-not-allowed' : ''}
-                      ${isToday && !isFrom && !isTo && cell.isCurrentMonth ? 'bg-blue-100 text-blue-700' : ''}
-                      ${isFrom || isTo ? 'bg-blue-600 text-white shadow-md z-10' : ''}
-                      ${inRange && !isFrom && !isTo ? 'bg-blue-100 text-blue-700' : ''}
-                      ${isFrom && isTo ? 'ring-2 ring-blue-300' : ''}
-                      ${!isDisabled && !isFrom && !isTo && !inRange ? 'hover:bg-blue-50 hover:text-blue-600 text-gray-700 cursor-pointer' : ''}
-                    `}
-                  >
-                    {d}
-                    {isToday && cell.isCurrentMonth && (
-                      <span className={`absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${isFrom || isTo ? 'bg-white' : 'bg-blue-500'}`} />
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-
-            {rangeObj.from && !rangeObj.to && (
-              <p className="text-xs text-gray-500 text-center">اختر تاريخ النهاية لتحديد النطاق</p>
-            )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="block text-xs font-medium text-gray-600 mb-1.5">من {label}</span>
+              <input
+                type={inputType}
+                value={rangeObj.from || ''}
+                onChange={(e) => updateRange('from', e.target.value)}
+                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500"
+              />
+            </label>
+            <label className="block">
+              <span className="block text-xs font-medium text-gray-600 mb-1.5">إلى {label}</span>
+              <input
+                type={inputType}
+                value={rangeObj.to || ''}
+                min={rangeObj.from || undefined}
+                onChange={(e) => updateRange('to', e.target.value)}
+                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500"
+              />
+            </label>
           </div>
         )
       }
@@ -2288,6 +2298,23 @@ export default function FormFiller({ form, questions, existingResponse: propExis
           />
         )
     }
+  }
+
+  if (isExpired && !submitted) {
+    return (
+      <div dir="rtl" className={`${isPreview ? 'min-h-full' : 'min-h-screen'} bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4 form-themed-container`}>
+        {renderThemeStyles()}
+        <div className="bg-white rounded-3xl shadow-xl shadow-blue-900/5 border border-gray-100 p-8 max-w-md w-full text-center form-themed-card">
+          <div className="w-16 h-16 mx-auto mb-5 bg-red-50 rounded-2xl flex items-center justify-center">
+            <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2 form-themed-text">النموذج غير متاح الآن</h2>
+          <p className="text-gray-500 text-sm form-themed-description">{closedReason}</p>
+        </div>
+      </div>
+    )
   }
 
   if (submitted) {
