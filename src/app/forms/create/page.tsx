@@ -110,7 +110,6 @@ interface FormData {
   image_url: string
   questions: Question[]
   time_limit?: number | null
-  expires_at?: string | null
   allow_delete_responses?: boolean
   randomize_questions?: boolean
 }
@@ -138,7 +137,6 @@ function CreateFormContent() {
     description: '',
     allow_multiple: false,
     time_limit: null,
-    expires_at: '',
     allow_delete_responses: false,
     randomize_questions: false,
     image_url: '',
@@ -663,7 +661,6 @@ const supabase = createClient()
           description: formData.description,
           allow_multiple: formData.allow_multiple,
           time_limit: formData.time_limit,
-          expires_at: formData.expires_at || null,
           allow_delete_responses: formData.allow_delete_responses,
           randomize_questions: formData.randomize_questions,
           image_url: formData.image_url,
@@ -962,35 +959,6 @@ const supabase = createClient()
                         value={formData.time_limit}
                         onChange={(e) => setFormData(prev => ({ ...prev, time_limit: parseInt(e.target.value) || 1 }))}
                         className="w-24 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-center"
-                      />
-                    </div>
-                  )}
-                </div>
-              </label>
-            </div>
-
-            {/* Expiration Date */}
-            <div className="bg-red-50 rounded-xl p-4">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={!!formData.expires_at}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    expires_at: e.target.checked ? new Date(Date.now() + 86400000).toISOString().slice(0, 16) : ''
-                  }))}
-                  className="w-5 h-5 mt-1 text-red-600 rounded focus:ring-red-500"
-                />
-                <div className="flex-1">
-                  <span className="font-medium text-gray-800 block">تاريخ ووقت الإغلاق</span>
-                  <span className="text-sm text-gray-600">إغلاق النموذج تلقائياً في تاريخ ووقت محدد</span>
-                  {formData.expires_at && (
-                    <div className="mt-2">
-                      <input
-                        type="datetime-local"
-                        value={formData.expires_at}
-                        onChange={(e) => setFormData(prev => ({ ...prev, expires_at: e.target.value }))}
-                        className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg"
                       />
                     </div>
                   )}
