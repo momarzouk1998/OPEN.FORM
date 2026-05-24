@@ -3296,9 +3296,8 @@ const params = useParams()
      </div>
    )
    
-   {/* Convert to Template Modal */}
-   {showConvertToTemplate && (
-     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      {/* Convert to Template Modal */}
+      <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 ${showConvertToTemplate ? '' : 'hidden'}`}>
        <div className="bg-white rounded-2xl w-full max-w-md p-6">
          <div className="mb-6">
            <h2 className="text-2xl font-bold text-gray-900">تحويل النموذج إلى قالب</h2>
@@ -3385,9 +3384,7 @@ const params = useParams()
            </div>
          </div>
        </div>
-     </div>
-   )
- }
+      </div>
     </div>
   )
 }
