@@ -12,37 +12,46 @@ import type { QuestionType, QuestionOption, FormTemplate } from '@/types'
 import { TEMPLATE_CATEGORIES } from '@/types'
 import { generateShortCode } from '@/lib/shortCode'
 
-// Question type definitions with detailed explanations
-// Question type definitions with detailed explanations
+// Question/Item type definitions with detailed explanations
+// Organized by category for better UX
 const QUESTION_TYPES = {
-  text: { label: 'نص', icon: 'T', description: 'إجابة نصية قصيرة', explanation: 'مثال: "ما اسمك؟"' },
-  textarea: { label: 'نص طويل', icon: '¶', description: 'إجابة مفصلة', explanation: 'مثال: "صف تجربتك"' },
-  single_choice: { label: 'اختيار واحد', icon: '○', description: 'اختيار إجابة واحدة', explanation: 'مثال: "نعم أو لا"' },
-  multiple_choice: { label: 'اختيار متعدد', icon: '☑', description: 'اختيار عدة إجابات', explanation: 'مثال: "الهوايات"' },
-  dropdown: { label: 'قائمة منسدلة', icon: '▼', description: 'اختيار من قائمة', explanation: 'قائمة مضغوطة لتوفير المساحة' },
-  scale: { label: 'تقييم', icon: '⭐', description: 'تقييم من 1 إلى 10', explanation: 'مثال: تقييم الأداء' },
-  ranking: { label: 'ترتيب', icon: '#', description: 'ترتيب العناصر', explanation: 'ترتيب العناصر حسب الأولوية' },
-  matrix: { label: 'مصفوفة', icon: '⊞', description: 'خيارات مشتركة', explanation: 'عدة أسئلة مع نفس الخيارات' },
-  date: { label: 'تاريخ', icon: '📅', description: 'إدخال تاريخ', explanation: 'مثال: "تاريخ الميلاد"' },
-  time: { label: 'وقت', icon: '⏰', description: 'إدخال وقت', explanation: 'مثال: "وقت الحضور"' },
-  file_upload: { label: 'رفع ملف', icon: '📎', description: 'إرفاق ملف أو صورة', explanation: 'مثال: رفع السيرة الذاتية أو صورة' }
-  ,static_text: { label: 'فقرة (نص ثابت)', icon: '📝', description: 'نص للقراءة فقط', explanation: 'لعرض تعليمات أو معلومات' },
-  static_image: { label: 'صورة ثابتة', icon: '🖼️', description: 'عرض صورة', explanation: 'لعرض شعار أو توضيح' },
-  divider: { label: 'فاصل', icon: '➖', description: 'خط فاصل', explanation: 'للفصل بين الأقسام' },
-  signature: { label: 'التوقيع', icon: '✍️', description: 'حقل توقيع', explanation: 'للحصول على توقيع رقمي' },
-  star_rating: { label: 'تقييم بالنجوم', icon: '⭐', description: 'تقييم باستخدام النجوم', explanation: 'بديل مرئي للتقييم الرقمي' },
-  terms: { label: 'الشروط والأحكام', icon: '📋', description: 'موافقة على الشروط', explanation: 'المستخدم يقرأ ويوافق على نص' },
-  date_range: { label: 'نطاق وقت وتاريخ', icon: '📆', description: 'من وقت/تاريخ إلى وقت/تاريخ', explanation: 'مثال: فترة حجز أو إجازة' },
-  slider: { label: 'شريط رقمي', icon: '🎚️', description: 'اختيار قيمة بالسحب', explanation: 'مثال: تحديد ميزانية أو عمر' },
-  button_choice: { label: 'اختيار بأزرار', icon: '🔘', description: 'خيارات كأزرار مرئية', explanation: 'بديل جميل للاختيار الواحد' },
-  email_confirm: { label: 'تأكيد البريد', icon: '✉️', description: 'إدخال الإيميل مرتين', explanation: 'للتأكد من صحة البريد الإلكتروني' },
-  youtube: { label: 'فيديو يوتيوب', icon: '▶️', description: 'تضمين فيديو يوتيوب', explanation: 'لعرض فيديو توضيحي داخل النموذج' },
-  match_items: { label: 'توصيل العناصر', icon: '🔗', description: 'مطابقة عمودين', explanation: 'مثال: وصّل الكلمة بمعناها' },
-  appointment: { label: 'حجز موعد', icon: '📅', description: 'اختيار تاريخ ووقت للحجز', explanation: 'مثال: حجز موعد استشارة' },
-  // إضافات
-  countdown_timer: { label: 'العد التنازلي', icon: '⏳', description: 'عرض العد التنازلي', explanation: 'مؤقت لانتهاء العرض' },
-  products_block: { label: 'المنتجات', icon: '📦', description: 'قائمة منتجات', explanation: 'عرض منتجات للاختيار والطلب' },
-  payment_info_block: { label: 'بيانات الدفع', icon: '💳', description: 'عرض طرق الدفع', explanation: 'عرض معلومات الدفع' }
+  text: { label: 'نص', icon: 'T', description: 'إجابة نصية قصيرة', explanation: 'مثال: "ما اسمك؟"', category: 'basic' },
+  textarea: { label: 'نص طويل', icon: '¶', description: 'إجابة مفصلة', explanation: 'مثال: "صف تجربتك"', category: 'basic' },
+  single_choice: { label: 'اختيار واحد', icon: '○', description: 'اختيار إجابة واحدة', explanation: 'مثال: "نعم أو لا"', category: 'basic' },
+  multiple_choice: { label: 'اختيار متعدد', icon: '☑', description: 'اختيار عدة إجابات', explanation: 'مثال: "الهوايات"', category: 'basic' },
+  dropdown: { label: 'قائمة منسدلة', icon: '▼', description: 'اختيار من قائمة', explanation: 'قائمة مضغوطة لتوفير المساحة', category: 'basic' },
+  scale: { label: 'تقييم', icon: '⭐', description: 'تقييم من 1 إلى 10', explanation: 'مثال: تقييم الأداء', category: 'advanced' },
+  ranking: { label: 'ترتيب', icon: '#', description: 'ترتيب العناصر', explanation: 'ترتيب العناصر حسب الأولوية', category: 'advanced' },
+  matrix: { label: 'مصفوفة', icon: '⊞', description: 'خيارات مشتركة', explanation: 'عدة أسئلة مع نفس الخيارات', category: 'advanced' },
+  date: { label: 'تاريخ', icon: '📅', description: 'إدخال تاريخ', explanation: 'مثال: "تاريخ الميلاد"', category: 'advanced' },
+  time: { label: 'وقت', icon: '⏰', description: 'إدخال وقت', explanation: 'مثال: "وقت الحضور"', category: 'advanced' },
+  date_range: { label: 'نطاق وقت وتاريخ', icon: '📆', description: 'من وقت/تاريخ إلى وقت/تاريخ', explanation: 'مثال: فترة حجز أو إجازة', category: 'advanced' },
+  slider: { label: 'شريط رقمي', icon: '🎚️', description: 'اختيار قيمة بالسحب', explanation: 'مثال: تحديد ميزانية أو عمر', category: 'advanced' },
+  button_choice: { label: 'اختيار بأزرار', icon: '🔘', description: 'خيارات كأزرار مرئية', explanation: 'بديل جميل للاختيار الواحد', category: 'advanced' },
+  star_rating: { label: 'تقييم بالنجوم', icon: '⭐', description: 'تقييم باستخدام النجوم', explanation: 'بديل مرئي للتقييم الرقمي', category: 'advanced' },
+  appointment: { label: 'حجز موعد', icon: '📅', description: 'اختيار تاريخ ووقت للحجز', explanation: 'مثال: حجز موعد استشارة', category: 'advanced' },
+  match_items: { label: 'توصيل العناصر', icon: '🔗', description: 'مطابقة عمودين', explanation: 'مثال: وصّل الكلمة بمعناها', category: 'advanced' },
+  file_upload: { label: 'رفع ملف', icon: '📎', description: 'إرفاق ملف أو صورة', explanation: 'مثال: رفع السيرة الذاتية أو صورة', category: 'advanced' },
+  email_confirm: { label: 'تأكيد البريد', icon: '✉️', description: 'إدخال الإيميل مرتين', explanation: 'للتأكد من صحة البريد الإلكتروني', category: 'advanced' },
+  // عناصر عرض (Display/Content)
+  static_text: { label: 'فقرة (نص ثابت)', icon: '📝', description: 'نص للقراءة فقط', explanation: 'لعرض تعليمات أو معلومات', category: 'display' },
+  static_image: { label: 'صورة ثابتة', icon: '🖼️', description: 'عرض صورة', explanation: 'لعرض شعار أو توضيح', category: 'display' },
+  youtube: { label: 'فيديو يوتيوب', icon: '▶️', description: 'تضمين فيديو يوتيوب', explanation: 'لعرض فيديو توضيحي داخل النموذج', category: 'display' },
+  divider: { label: 'فاصل', icon: '➖', description: 'خط فاصل', explanation: 'للفصل بين الأقسام', category: 'display' },
+  terms: { label: 'الشروط والأحكام', icon: '📋', description: 'موافقة على الشروط', explanation: 'المستخدم يقرأ ويوافق على نص', category: 'display' },
+  signature: { label: 'التوقيع', icon: '✍️', description: 'حقل توقيع', explanation: 'للحصول على توقيع رقمي', category: 'display' },
+  // إضافات (Widgets)
+  countdown_timer: { label: 'العد التنازلي', icon: '⏳', description: 'عرض العد التنازلي', explanation: 'مؤقت لانتهاء العرض', category: 'widgets' },
+  products_block: { label: 'المنتجات', icon: '📦', description: 'قائمة منتجات', explanation: 'عرض منتجات للاختيار والطلب', category: 'widgets' },
+  payment_info_block: { label: 'بيانات الدفع', icon: '💳', description: 'عرض طرق الدفع', explanation: 'عرض معلومات الدفع', category: 'widgets' }
+} as const
+
+// Category definitions
+const ITEM_CATEGORIES = {
+  basic: { label: 'أسئلة أساسية', icon: '❓', color: 'blue' },
+  advanced: { label: 'أسئلة متقدمة', icon: '🔬', color: 'purple' },
+  display: { label: 'عناصر عرض', icon: '👁️', color: 'green' },
+  widgets: { label: 'إضافات', icon: '⚙️', color: 'amber' }
 } as const
 
 const DISPLAY_ONLY_QUESTION_TYPES: QuestionType[] = [
@@ -127,6 +136,7 @@ function CreateFormContent() {
   const [existingForms, setExistingForms] = useState<ExistingForm[]>([])
   const [showQuestionPicker, setShowQuestionPicker] = useState(false)
   const [questionMenuOpen, setQuestionMenuOpen] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState<'basic' | 'advanced' | 'display' | 'widgets'>('basic')
   const [templates, setTemplates] = useState<FormTemplate[]>([])
   const [templatesLoading, setTemplatesLoading] = useState(true)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
@@ -1976,29 +1986,57 @@ const supabase = createClient()
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  إضافة سؤال جديد
+                  إضافة عنصر جديد
                 </button>
                 
                 {questionMenuOpen && (
-                  <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 shadow-xl rounded-xl z-20 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 p-4">
-                    {(Object.entries(QUESTION_TYPES) as [QuestionType, typeof QUESTION_TYPES['text']][]).map(([type, info]) => (
-                      <button
-                        key={type}
-                        onClick={() => {
-                          if (type === 'file_upload') return
-                          addQuestion(type)
-                          setQuestionMenuOpen(false)
-                        }}
-                        className={`flex flex-col items-center justify-center text-center p-3 rounded-lg transition-colors border ${type === 'file_upload' ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200' : 'hover:bg-blue-50 border-transparent hover:border-blue-200'}`}
-                        title={type === 'file_upload' ? 'قيد التطوير' : ''}
-                      >
-                        <span className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 font-bold ${type === 'file_upload' ? 'bg-gray-200 text-gray-400' : 'bg-blue-100 text-blue-600'}`}>
-                          {info.icon}
-                        </span>
-                        <span className="font-medium text-gray-800 text-sm mb-1">{info.label}</span>
-                        <span className="text-xs text-gray-500">{type === 'file_upload' ? 'قيد التطوير' : info.description}</span>
-                      </button>
-                    ))}
+                  <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 shadow-xl rounded-xl z-20">
+                    {/* Category Tabs */}
+                    <div className="flex flex-wrap border-b border-gray-200 p-2 gap-2">
+                      {(Object.entries(ITEM_CATEGORIES) as [typeof selectedCategory, typeof ITEM_CATEGORIES['basic']][]).map(([cat, info]) => (
+                        <button
+                          key={cat}
+                          onClick={() => setSelectedCategory(cat)}
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
+                            selectedCategory === cat
+                              ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                              : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          <span>{info.icon}</span>
+                          {info.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Items Grid */}
+                    <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {(Object.entries(QUESTION_TYPES) as [QuestionType, typeof QUESTION_TYPES['text']][])
+                        .filter(([_, info]) => info.category === selectedCategory)
+                        .map(([type, info]) => (
+                          <button
+                            key={type}
+                            onClick={() => {
+                              if (type === 'file_upload') return
+                              addQuestion(type)
+                              setQuestionMenuOpen(false)
+                              setSelectedCategory('basic')
+                            }}
+                            className={`flex flex-col items-center justify-center text-center p-3 rounded-lg transition-colors border ${
+                              type === 'file_upload'
+                                ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200'
+                                : 'hover:bg-blue-50 border-transparent hover:border-blue-200'
+                            }`}
+                            title={type === 'file_upload' ? 'قيد التطوير' : ''}
+                          >
+                            <span className={`text-2xl mb-2 ${type === 'file_upload' ? 'opacity-50' : ''}`}>
+                              {info.icon}
+                            </span>
+                            <span className="font-medium text-gray-800 text-sm mb-1">{info.label}</span>
+                            <span className="text-xs text-gray-500">{type === 'file_upload' ? 'قيد التطوير' : info.description}</span>
+                          </button>
+                        ))}
+                    </div>
                   </div>
                 )}
               </div>
