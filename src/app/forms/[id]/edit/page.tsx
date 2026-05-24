@@ -1502,6 +1502,7 @@ const params = useParams()
 
 
   return (
+    <>
 
     <div dir="rtl" className={`min-h-screen ${isDarkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
       {renderThemeStyles()}
@@ -1715,8 +1716,9 @@ const params = useParams()
                     <div className="flex items-center gap-3 mt-3 p-2.5 bg-gradient-to-l from-blue-50 to-purple-50 rounded-xl border border-blue-100 text-sm">
                       <span className="text-gray-600">الأسئلة: <strong className="text-gray-900">{qs.length}</strong></span>
                       {!!(formData?.page_titles as any)?._is_test && <span className="text-gray-600">النقاط: <strong className="text-blue-700">{totalPts}</strong></span>}
-                    </div>
-                  )
+    </div>
+    </>
+  )
                 })()}
               </div>
 
@@ -3385,11 +3387,14 @@ const params = useParams()
            </div>
          </div>
        </div>
-     </div>
-   )
- }
+      </div>
+    )
 
+    </div>
+    </>
+  )
 
+}
 
 function SortableQuestionItem({
   id,
