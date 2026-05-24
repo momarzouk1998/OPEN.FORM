@@ -60,6 +60,29 @@ interface Project {
   color: string
 }
 
+interface ProductItem {
+  id: string
+  name: string
+  description?: string
+  price: number
+  image_url?: string
+  available?: boolean
+}
+
+interface ProductGroup {
+  id: string
+  name: string
+  items: ProductItem[]
+}
+
+interface PaymentMethod {
+  id?: string
+  method: string
+  label: string
+  value: string
+  details?: string
+}
+
 interface FormFillerProps {
   form: Form
   questions: Question[]
@@ -209,16 +232,83 @@ export default function FormFiller({ form, questions, existingResponse: propExis
 
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [offerCountdown, setOfferCountdown] = useState<number>(-1);
+  const [countdownNow, setCountdownNow] = useState<number>(() => Date.now());
   const [totalResponses, setTotalResponses] = useState<number>(0);
   const [cart, setCart] = useState<Record<string, number>>({});
 
+  const extractOptionsArray = (options: any): any[] => {
+    let parsed = options
+    if (typeof parsed === 'string') {
+      try {
+        parsed = JSON.parse(parsed)
+      } catch {
+        return []
+      }
+    }
+    if (!Array.isArray(parsed)) return []
+    if (parsed.length > 0 && parsed[parsed.length - 1]?._visibility_rules !== undefined) {
+      return parsed.slice(0, -1)
+    }
+    return parsed
+  }
+
+  const normalizeProductGroups = (value: any): ProductGroup[] => {
+    const items = extractOptionsArray(value)
+    if (items.length === 0) return []
+    if ('items' in items[0]) {
+      return items.map((group: any) => ({
+        id: group.id || `g_${Math.random().toString(36).slice(2, 8)}`,
+        name: group.name || '',
+        items: Array.isArray(group.items) ? group.items : []
+      }))
+    }
+    return [{
+      id: 'g_default',
+      name: 'المنتجات',
+      items: items.map((item: any) => ({
+        id: item.id,
+        name: item.name || item.text || '',
+        description: item.description || '',
+        price: Number(item.price ?? item.points ?? 0),
+        image_url: item.image_url || item.validation_value || '',
+        available: item.available !== false
+      }))
+    }]
+  }
+
+  const normalizePaymentMethods = (value: any): PaymentMethod[] => {
+    const items = extractOptionsArray(value)
+    return items.map((method: any) => ({
+      id: method.id,
+      method: method.method || method.validation_type || 'bank',
+      label: method.label || method.text || '',
+      value: method.value || method.validation_value || '',
+      details: method.details || method.validation_min || ''
+    })).filter((method: PaymentMethod) => method.label || method.value || method.details)
+  }
+
+  const legacyPaymentMethods = normalizePaymentMethods((form.page_titles as any)?._payment || [])
+
+  const copyPaymentValue = async (value: string) => {
+    if (!value) return
+    try {
+      await navigator.clipboard.writeText(value)
+    } catch {
+      const textarea = document.createElement('textarea')
+      textarea.value = value
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+    }
+  }
+
   const rawProducts: any = (form.page_titles as any)?._products || []
-  const productGroups: Array<{ id: string; name: string; items: Array<{ id: string; name: string; description?: string; price: number; image_url?: string; available?: boolean }> }> =
-    Array.isArray(rawProducts) && rawProducts.length > 0 && 'items' in rawProducts[0]
-      ? rawProducts
-      : Array.isArray(rawProducts) && rawProducts.length > 0
-        ? [{ id: 'g_default', name: 'المنتجات', items: rawProducts }]
-        : []
+  const legacyProductGroups = normalizeProductGroups(rawProducts)
+  const inlineProductGroups = (questions || [])
+    .filter(q => q.type === 'products_block')
+    .flatMap(q => normalizeProductGroups(q.options))
+  const productGroups = inlineProductGroups.length > 0 ? inlineProductGroups : legacyProductGroups
   const allProducts = productGroups.flatMap(g => g.items)
 
   const cartTotal = Object.entries(cart).reduce((sum, [id, qty]) => {
@@ -399,6 +489,12 @@ export default function FormFiller({ form, questions, existingResponse: propExis
     const interval = setInterval(update, 1000)
     return () => clearInterval(interval)
   }, [offerEndStr, submitted])
+
+  useEffect(() => {
+    if (submitted || !questions?.some(q => q.type === 'countdown_timer')) return
+    const interval = setInterval(() => setCountdownNow(Date.now()), 1000)
+    return () => clearInterval(interval)
+  }, [questions, submitted])
 
   const formatCountdown = (seconds: number) => {
     const h = Math.floor(seconds / 3600)
@@ -716,6 +812,23 @@ export default function FormFiller({ form, questions, existingResponse: propExis
           }
         }
       } else {
+        if (q.type === 'products_block') {
+          const inlineGroups = normalizeProductGroups(q.options)
+          const groups = inlineGroups.length > 0 ? inlineGroups : legacyProductGroups
+          const productIds = groups.flatMap(group => (group.items || []).map(item => item.id))
+          const selectedCount = productIds.reduce((sum, id) => sum + (cart[id] || 0), 0)
+          if (q.required && selectedCount === 0) {
+            setError(`يرجى اختيار منتج واحد على الأقل من: ${q.text}`)
+            setSubmitting(false)
+            return
+          }
+          continue
+        }
+
+        if (q.type === 'payment_info_block' || q.type === 'countdown_timer') {
+          continue
+        }
+
         const answer = answers[q.id]
         if (q.required && (answer === undefined || answer === null || answer === '' || 
             (Array.isArray(answer) && answer.length === 0))) {
@@ -1647,81 +1760,114 @@ export default function FormFiller({ form, questions, existingResponse: propExis
         const ctOpts = Array.isArray(options) ? options : []
         const endTime = ctOpts[0]?.text || (form.page_titles as any)?._offer_countdown
         if (!endTime) return null
-        const diff = Math.floor((new Date(endTime).getTime() - Date.now()) / 1000)
+        const diff = Math.floor((new Date(endTime).getTime() - countdownNow) / 1000)
         if (diff <= 0) return null
-        const h = Math.floor(diff / 3600)
-        const m = Math.floor((diff % 3600) / 60)
-        const s = diff % 60
+        const title = ctOpts[0]?.validation_value || 'العرض ينتهي خلال'
+        const description = ctOpts[0]?.validation_min || ''
         return (
           <div className="bg-gradient-to-l from-red-500 to-orange-500 rounded-2xl p-4 shadow-lg text-center">
-            <p className="text-white/80 text-xs mb-1">العرض ينتهي خلال</p>
+            <p className="text-white/80 text-xs mb-1">{title}</p>
             <p className="text-white text-3xl font-mono font-bold tracking-widest" dir="ltr">
-              {`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`}
+              {formatCountdown(diff)}
             </p>
+            {description && <p className="text-white/80 text-xs mt-2">{description}</p>}
           </div>
         )
       }
 
       case 'products_block': {
-        const pbOpts = Array.isArray(options) ? options : []
-        const inlineProds = pbOpts.map((o: any) => ({
-          id: o.id,
-          name: o.text || '',
-          price: o.points || 0,
-          image_url: o.validation_value || ''
-        }))
-        const prods: Array<{ id: string; name: string; price: number; image_url?: string }> =
-          inlineProds.length > 0 ? inlineProds : (form.page_titles as any)?._products || []
-        if (prods.length === 0) return null
+        const visibleGroups = normalizeProductGroups(question.options)
+        const groupsToShow = visibleGroups.length > 0 ? visibleGroups : legacyProductGroups
+        if (groupsToShow.length === 0) return null
         return (
-          <div className="bg-gradient-to-l from-blue-50 to-indigo-50 rounded-2xl p-5 border border-blue-100">
-            <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 form-themed-card">
+            <h3 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
               <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
-              المنتجات المتاحة
+              {question.text || 'المنتجات المتاحة'}
             </h3>
-            <div className="grid grid-cols-2 gap-2">
-              {prods.map((prod) => (
-                <div key={prod.id} className="bg-white rounded-xl border border-blue-100 overflow-hidden">
-                  {prod.image_url && <div className="h-24 bg-gray-50"><img src={prod.image_url} alt={prod.name} className="w-full h-full object-cover" /></div>}
-                  <div className="p-2.5">
-                    <h4 className="font-bold text-gray-900 text-xs">{prod.name}</h4>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-sm font-bold text-blue-700">{prod.price.toLocaleString()} <span className="text-[10px] font-normal">EGP</span></span>
-                    </div>
-                  </div>
+            {groupsToShow.map(group => (
+              <div key={group.id} className="mb-6 last:mb-0">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-0.5 flex-1 bg-gradient-to-l from-blue-100 to-transparent rounded-full" />
+                  <h4 className="text-sm font-bold text-gray-700 px-2">{group.name || 'المنتجات'}</h4>
+                  <div className="h-0.5 flex-1 bg-gradient-to-r from-blue-100 to-transparent rounded-full" />
                 </div>
-              ))}
-            </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {(group.items || []).filter(prod => prod.available !== false).map((prod) => {
+                    const qty = cart[prod.id] || 0
+                    return (
+                      <div key={prod.id} className="border border-gray-200 rounded-xl overflow-hidden hover:border-blue-300 hover:shadow-md transition-all">
+                        {prod.image_url && (
+                          <div className="h-36 bg-gray-50 overflow-hidden">
+                            <img src={prod.image_url} alt={prod.name} className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        <div className="p-3">
+                          <h4 className="font-bold text-gray-900 text-sm">{prod.name}</h4>
+                          {prod.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{prod.description}</p>}
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-lg font-bold text-blue-700">{prod.price.toLocaleString()} <span className="text-xs font-normal">EGP</span></span>
+                            {qty > 0 ? (
+                              <div className="flex items-center gap-2">
+                                <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: Math.max(0, qty - 1) }))} className="w-7 h-7 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-sm font-bold hover:bg-red-200">−</button>
+                                <span className="text-sm font-bold w-5 text-center">{qty}</span>
+                                <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: qty + 1 }))} className="w-7 h-7 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold hover:bg-blue-200">+</button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: 1 }))} className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors">إضافة</button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+            {cartCount > 0 && (
+              <div className="mt-4 p-3 bg-gradient-to-l from-blue-50 to-indigo-50 rounded-xl border border-blue-100 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">إجمالي الطلب</p>
+                  <p className="text-xl font-bold text-blue-700">{cartTotal.toLocaleString()} <span className="text-sm font-normal">EGP</span></p>
+                </div>
+                <p className="text-xs text-gray-500">{cartCount} منتج{cartCount > 1 ? 'ات' : ''}</p>
+              </div>
+            )}
           </div>
         )
       }
 
       case 'payment_info_block': {
-        const piOpts = Array.isArray(options) ? options : []
-        const inlinePayments = piOpts.map((o: any) => ({
-          method: o.validation_type || 'bank',
-          label: o.text || '',
-          value: o.validation_value || ''
-        }))
-        const paymentMethods: Array<{ method: string; label: string; value: string }> =
-          inlinePayments.length > 0 ? inlinePayments : (form.page_titles as any)?._payment || []
+        const inlinePayments = normalizePaymentMethods(question.options)
+        const paymentMethods = inlinePayments.length > 0 ? inlinePayments : legacyPaymentMethods
         if (paymentMethods.length === 0) return null
-        const icons: Record<string, string> = { bank: '🏦', instapay: '📱', vodafone: '📞' }
-        const methodNames: Record<string, string> = { bank: 'حساب بنكي', instapay: 'إنستاباي', vodafone: 'فودافون كاش' }
+        const icons: Record<string, string> = { bank: '🏦', instapay: '📱', vodafone: '📞', wallet: '💳', payment_link: '🔗', custom: '💰' }
+        const methodNames: Record<string, string> = { bank: 'حساب بنكي', instapay: 'إنستاباي', vodafone: 'فودافون كاش', wallet: 'محفظة إلكترونية', payment_link: 'رابط دفع', custom: 'طريقة دفع' }
         return (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-            <h4 className="text-sm font-bold text-amber-800 mb-3 flex items-center gap-2">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+            <h4 className="text-base font-bold text-amber-900 mb-3 flex items-center gap-2">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-              طرق الدفع المتاحة
+              {question.text || 'بيانات الدفع'}
             </h4>
             <div className="space-y-2">
               {paymentMethods.map((pm, pi) => (
-                <div key={pi} className="flex items-center gap-3 bg-white rounded-xl px-4 py-3 border border-amber-100">
+                <div key={pm.id || pi} className="bg-white rounded-xl px-4 py-3 border border-amber-100">
+                  <div className="flex items-start gap-3">
                   <span className="text-xl">{icons[pm.method] || '💳'}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-gray-800">{methodNames[pm.method] || pm.method}</p>
                     {pm.label && <p className="text-xs text-gray-500">{pm.label}</p>}
-                    <p className="text-sm font-mono font-bold text-amber-700 mt-0.5" dir="ltr">{pm.value}</p>
+                    {pm.value && <p className="text-sm font-mono font-bold text-amber-700 mt-1 break-all" dir="ltr">{pm.value}</p>}
+                    {pm.details && <p className="text-xs text-gray-500 mt-1 leading-relaxed">{pm.details}</p>}
+                  </div>
+                  {pm.value && (
+                    <button
+                      onClick={() => copyPaymentValue(pm.value)}
+                      className="px-3 py-1.5 bg-amber-100 text-amber-800 rounded-lg text-xs font-bold hover:bg-amber-200 transition-colors shrink-0"
+                    >
+                      نسخ
+                    </button>
+                  )}
                   </div>
                 </div>
               ))}
@@ -2537,12 +2683,8 @@ export default function FormFiller({ form, questions, existingResponse: propExis
         </div>
 
         {/* Payment Info Display (only if no payment_info_block question type) */}
-        {isLastPage && !questions?.some(q => q.type === 'payment_info_block') && form.page_titles?._payment && (() => {
-          const rawPayment = form.page_titles._payment
-          let paymentMethods: any[] = []
-          try {
-            paymentMethods = typeof rawPayment === 'string' ? JSON.parse(rawPayment) : rawPayment
-          } catch { paymentMethods = [] }
+        {isLastPage && !questions?.some(q => q.type === 'payment_info_block') && legacyPaymentMethods.length > 0 && (() => {
+          const paymentMethods = legacyPaymentMethods
           if (!paymentMethods || paymentMethods.length === 0) return null
           return (
           <div className="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-4">
@@ -2554,15 +2696,26 @@ export default function FormFiller({ form, questions, existingResponse: propExis
             </h4>
             <div className="space-y-2">
               {paymentMethods.map((pm: any, pi: number) => {
-                const icons: Record<string, string> = { bank: '🏦', instapay: '📱', vodafone: '📞' }
-                const methodNames: Record<string, string> = { bank: 'حساب بنكي', instapay: 'إنستاباي', vodafone: 'فودافون كاش' }
+                const icons: Record<string, string> = { bank: '🏦', instapay: '📱', vodafone: '📞', wallet: '💳', payment_link: '🔗', custom: '💰' }
+                const methodNames: Record<string, string> = { bank: 'حساب بنكي', instapay: 'إنستاباي', vodafone: 'فودافون كاش', wallet: 'محفظة إلكترونية', payment_link: 'رابط دفع', custom: 'طريقة دفع' }
                 return (
-                  <div key={pi} className="flex items-center gap-3 bg-white rounded-xl px-4 py-3 border border-amber-100">
+                  <div key={pi} className="bg-white rounded-xl px-4 py-3 border border-amber-100">
+                    <div className="flex items-start gap-3">
                     <span className="text-xl">{icons[pm.method] || '💳'}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-gray-800">{methodNames[pm.method] || pm.method}</p>
                       {pm.label && <p className="text-xs text-gray-500">{pm.label}</p>}
-                      <p className="text-sm font-mono font-bold text-amber-700 mt-0.5" dir="ltr">{pm.value}</p>
+                      {pm.value && <p className="text-sm font-mono font-bold text-amber-700 mt-0.5 break-all" dir="ltr">{pm.value}</p>}
+                      {pm.details && <p className="text-xs text-gray-500 mt-1">{pm.details}</p>}
+                    </div>
+                    {pm.value && (
+                      <button
+                        onClick={() => copyPaymentValue(pm.value)}
+                        className="px-3 py-1.5 bg-amber-100 text-amber-800 rounded-lg text-xs font-bold hover:bg-amber-200 transition-colors shrink-0"
+                      >
+                        نسخ
+                      </button>
+                    )}
                     </div>
                   </div>
                 )

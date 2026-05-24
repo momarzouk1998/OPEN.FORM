@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ImageUpload from '@/components/ImageUpload'
 import RichTextEditor from '@/components/RichTextEditor'
+import ProductGroupsEditor, { type ProductGroup } from '@/components/ProductGroupsEditor'
+import PaymentMethodsEditor, { type PaymentMethod } from '@/components/PaymentMethodsEditor'
 import type { QuestionType, QuestionOption, FormTemplate } from '@/types'
 import { TEMPLATE_CATEGORIES } from '@/types'
 import { generateShortCode } from '@/lib/shortCode'
@@ -138,6 +140,47 @@ function CreateFormContent() {
     return []
   }
 
+  const normalizeProductGroups = (value: any): ProductGroup[] => {
+    if (!Array.isArray(value)) return []
+    if (value.length > 0 && value[value.length - 1]?._visibility_rules !== undefined) {
+      value = value.slice(0, -1)
+    }
+    if (value.length === 0) return []
+    if ('items' in value[0]) {
+      return value.map((group: any) => ({
+        id: group.id || `g_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        name: group.name || '',
+        items: Array.isArray(group.items) ? group.items : []
+      }))
+    }
+    return [{
+      id: 'g_default',
+      name: 'المنتجات',
+      items: value.map((item: any) => ({
+        id: item.id || `p_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        name: item.name || item.text || '',
+        description: item.description || '',
+        price: Number(item.price ?? item.points ?? 0),
+        image_url: item.image_url || item.validation_value || '',
+        available: item.available !== false
+      }))
+    }]
+  }
+
+  const normalizePaymentMethods = (value: any): PaymentMethod[] => {
+    if (!Array.isArray(value)) return []
+    if (value.length > 0 && value[value.length - 1]?._visibility_rules !== undefined) {
+      value = value.slice(0, -1)
+    }
+    return value.map((method: any) => ({
+      id: method.id || `pm_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      method: method.method || method.validation_type || 'bank',
+      label: method.label || method.text || '',
+      value: method.value || method.validation_value || '',
+      details: method.details || method.validation_min || ''
+    }))
+  }
+
 const supabase = createClient()
 
   useEffect(() => {
@@ -249,6 +292,20 @@ const supabase = createClient()
       newQuestion.options = [{ id: `opt_${Date.now()}_1`, text: '0|100|1', points: 0 }] as any
     } else if (type === 'star_rating') {
       newQuestion.options = Array.from({ length: 5 }).map((_, i) => ({ id: `opt_${Date.now()}_${i}`, text: String(i+1), points: i+1 }))
+    } else if (type === 'countdown_timer') {
+      newQuestion.text = 'العد التنازلي للعرض'
+      newQuestion.options = [{
+        id: `timer_${Date.now()}`,
+        text: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
+        validation_value: 'العرض ينتهي خلال',
+        validation_min: ''
+      }] as any
+    } else if (type === 'products_block') {
+      newQuestion.text = 'المنتجات'
+      newQuestion.options = [{ id: `g_${Date.now()}`, name: '', items: [] }] as any
+    } else if (type === 'payment_info_block') {
+      newQuestion.text = 'بيانات الدفع'
+      newQuestion.options = [{ id: `pm_${Date.now()}`, method: 'bank', label: '', value: '', details: '' }] as any
     } else if (type === 'match_items') {
       newQuestion.matrix_rows = [
         { id: `left_${Date.now()}_1`, text: 'عنصر 1', required: true },
@@ -1465,6 +1522,70 @@ const supabase = createClient()
                   <div className="ms-2 sm:ms-11">
                     <p className="text-sm font-medium text-gray-700 mb-3">رابط يوتيوب:</p>
                     <input type="text" value={(parseOptions(question.options)[0] || {}).text || ''} onChange={(e) => { if(parseOptions(question.options).length===0) addOption(qIndex); updateOption(qIndex, 0, { text: e.target.value }) }} className="w-full px-3 py-2 border border-gray-200 rounded-lg" dir="ltr" placeholder="https://youtube.com/watch?v=..." />
+                  </div>
+                )}
+
+                {question.type === 'countdown_timer' && (
+                  <div className="ms-2 sm:ms-11 space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-1">العد التنازلي للعرض</p>
+                      <p className="text-xs text-gray-500">حدد وقت انتهاء العرض والنص الذي سيظهر للمستخدم.</p>
+                    </div>
+                    <input
+                      type="text"
+                      value={parseOptions(question.options)[0]?.validation_value || 'العرض ينتهي خلال'}
+                      onChange={(e) => {
+                        if (parseOptions(question.options).length === 0) addOption(qIndex)
+                        updateOption(qIndex, 0, { validation_value: e.target.value })
+                      }}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                      placeholder="العرض ينتهي خلال"
+                    />
+                    <input
+                      type="datetime-local"
+                      value={parseOptions(question.options)[0]?.text || ''}
+                      onChange={(e) => {
+                        if (parseOptions(question.options).length === 0) addOption(qIndex)
+                        updateOption(qIndex, 0, { text: e.target.value })
+                      }}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                    />
+                    <textarea
+                      value={parseOptions(question.options)[0]?.validation_min || ''}
+                      onChange={(e) => {
+                        if (parseOptions(question.options).length === 0) addOption(qIndex)
+                        updateOption(qIndex, 0, { validation_min: e.target.value })
+                      }}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                      placeholder="وصف اختياري يظهر أسفل العد"
+                    />
+                  </div>
+                )}
+
+                {question.type === 'products_block' && (
+                  <div className="ms-2 sm:ms-11 space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-1">المنتجات</p>
+                      <p className="text-xs text-gray-500">أضف مجموعات، وداخل كل مجموعة الأصناف والسعر والتفاصيل والصورة.</p>
+                    </div>
+                    <ProductGroupsEditor
+                      groups={normalizeProductGroups(parseOptions(question.options))}
+                      onChange={(groups) => updateQuestion(qIndex, { options: groups as any })}
+                    />
+                  </div>
+                )}
+
+                {question.type === 'payment_info_block' && (
+                  <div className="ms-2 sm:ms-11 space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-1">بيانات الدفع</p>
+                      <p className="text-xs text-gray-500">اكتب بياناتك التي ستظهر للمستخدم مع زر نسخ لكل رقم أو رابط.</p>
+                    </div>
+                    <PaymentMethodsEditor
+                      methods={normalizePaymentMethods(parseOptions(question.options))}
+                      onChange={(methods) => updateQuestion(qIndex, { options: methods as any })}
+                    />
                   </div>
                 )}
 

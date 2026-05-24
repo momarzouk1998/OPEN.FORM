@@ -10,6 +10,8 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import ImageUpload from '@/components/ImageUpload'
 import RichTextEditor from '@/components/RichTextEditor'
+import ProductGroupsEditor, { type ProductGroup } from '@/components/ProductGroupsEditor'
+import PaymentMethodsEditor, { type PaymentMethod } from '@/components/PaymentMethodsEditor'
 import FormFiller from '../FormFiller'
 
 import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
@@ -548,6 +550,59 @@ function EditFormContent() {
     return []
   }
 
+  const normalizeProductGroups = (value: any): ProductGroup[] => {
+    if (!Array.isArray(value)) return []
+    if (value.length > 0 && value[value.length - 1]?._visibility_rules !== undefined) {
+      value = value.slice(0, -1)
+    }
+    if (value.length === 0) return []
+    if ('items' in value[0]) {
+      return value.map((group: any) => ({
+        id: group.id || `g_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        name: group.name || '',
+        items: Array.isArray(group.items) ? group.items : []
+      }))
+    }
+    return [{
+      id: 'g_default',
+      name: 'المنتجات',
+      items: value.map((item: any) => ({
+        id: item.id || `p_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        name: item.name || item.text || '',
+        description: item.description || '',
+        price: Number(item.price ?? item.points ?? 0),
+        image_url: item.image_url || item.validation_value || '',
+        available: item.available !== false
+      }))
+    }]
+  }
+
+  const getQuestionProductGroups = (question: Question): ProductGroup[] => {
+    const inlineGroups = normalizeProductGroups(parseOptions(question.options))
+    if (inlineGroups.length > 0) return inlineGroups
+    return normalizeProductGroups(formData?.products || [])
+  }
+
+  const normalizePaymentMethods = (value: any): PaymentMethod[] => {
+    if (!Array.isArray(value)) return []
+    if (value.length > 0 && value[value.length - 1]?._visibility_rules !== undefined) {
+      value = value.slice(0, -1)
+    }
+    return value.map((method: any) => ({
+      id: method.id || `pm_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      method: method.method || method.validation_type || 'bank',
+      label: method.label || method.text || '',
+      value: method.value || method.validation_value || '',
+      details: method.details || method.validation_min || ''
+    }))
+  }
+
+  const getQuestionPaymentMethods = (question: Question): PaymentMethod[] => {
+    const inlineMethods = normalizePaymentMethods(parseOptions(question.options))
+    if (inlineMethods.length > 0) return inlineMethods
+    return normalizePaymentMethods(formData?.payment_info || [])
+  }
+
   const prepareQuestionsForPreview = (qs: any[]): any[] => {
     return qs.filter((q: any) => !q.hidden).map((q, index) => {
       let optionsData: any
@@ -903,6 +958,20 @@ const params = useParams()
       newQuestion.options = [{ id: `opt_${Date.now()}_1`, text: '0|100|1', points: 0 }] as any
     } else if (type === 'star_rating') {
       newQuestion.options = Array.from({ length: 5 }).map((_, i) => ({ id: `opt_${Date.now()}_${i}`, text: String(i+1), points: i+1 }))
+    } else if (type === 'countdown_timer') {
+      newQuestion.text = 'العد التنازلي للعرض'
+      newQuestion.options = [{
+        id: `timer_${Date.now()}`,
+        text: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
+        validation_value: 'العرض ينتهي خلال',
+        validation_min: ''
+      }] as any
+    } else if (type === 'products_block') {
+      newQuestion.text = 'المنتجات'
+      newQuestion.options = [{ id: `g_${Date.now()}`, name: '', items: [] }] as any
+    } else if (type === 'payment_info_block') {
+      newQuestion.text = 'بيانات الدفع'
+      newQuestion.options = [{ id: `pm_${Date.now()}`, method: 'bank', label: '', value: '', details: '' }] as any
     } else if (type === 'match_items') {
       newQuestion.matrix_rows = [
         { id: `left_${Date.now()}_1`, text: 'عنصر 1', required: true },
@@ -1179,7 +1248,14 @@ const params = useParams()
           randomize_questions: formData.randomize_questions || false,
           image_url: formData.image_url || null,
           short_code: formData.short_code || generateShortCode(),
-          page_titles: { ...formData.page_titles, _is_test: !!(formData.page_titles as any)?._is_test, _payment: formData.payment_info || [], _products: formData.products || [], _submit_button: (formData.page_titles as any)?._submit_button || {}, _offer_countdown: (formData.page_titles as any)?._offer_countdown || '' }
+          page_titles: {
+            ...formData.page_titles,
+            _is_test: !!(formData.page_titles as any)?._is_test,
+            _payment: formData.questions?.some((q: any) => q.type === 'payment_info_block') ? ((formData.page_titles as any)?._payment || []) : (formData.payment_info || []),
+            _products: formData.questions?.some((q: any) => q.type === 'products_block') ? ((formData.page_titles as any)?._products || []) : (formData.products || []),
+            _submit_button: (formData.page_titles as any)?._submit_button || {},
+            _offer_countdown: (formData.page_titles as any)?._offer_countdown || ''
+          }
 
         })
 
@@ -1573,7 +1649,7 @@ const params = useParams()
           </div>
           <button
             onClick={() => setIsPreviewActive(prev => !prev)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl active:scale-95 transition-all text-xs font-medium cursor-pointer ${isPreviewActive ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl active:scale-95 transition-all text-xs font-medium cursor-pointer ${isPreviewActive ? 'bg-blue-100 text-blue-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
             title="معاينة النموذج"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
@@ -1773,44 +1849,8 @@ const params = useParams()
                 </div>
               </div>
 
-              {/* Offer Countdown */}
-              <div>
-                <h4 className="text-sm font-bold text-gray-900 mb-3">العد التنازلي للعرض</h4>
-                <div className="p-3 bg-gradient-to-l from-red-50 to-orange-50 rounded-lg border border-red-100 space-y-3">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={!!(formData?.page_titles as any)?._offer_countdown}
-                      onChange={(e) => setFormData(prev => prev ? ({
-                        ...prev,
-                        page_titles: {
-                          ...prev.page_titles,
-                          _offer_countdown: e.target.checked ? new Date(Date.now() + 86400000).toISOString().slice(0, 16) : ''
-                        }
-                      }) : null)}
-                      className="w-4 h-4 text-red-600 rounded"
-                    />
-                    <span className="text-sm text-gray-700 font-medium">تفعيل العد التنازلي</span>
-                  </label>
-                  {(formData?.page_titles as any)?._offer_countdown && (
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">وقت انتهاء العرض</label>
-                      <input
-                        type="datetime-local"
-                        value={(formData?.page_titles as any)?._offer_countdown || ''}
-                        onChange={(e) => setFormData(prev => prev ? ({
-                          ...prev,
-                          page_titles: { ...prev.page_titles, _offer_countdown: e.target.value }
-                        }) : null)}
-                        className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm"
-                      />
-                      <p className="text-xs text-red-500 mt-1">سيظهر للمستخدم "العرض ينتهي خلال: HH:MM:SS"</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Products Section */}
+              {/* Products Section moved into the products question block */}
+              {false && (
               <div>
                 <h4 className="text-sm font-bold text-gray-900 mb-3">المنتجات</h4>
                 <p className="text-xs text-gray-500 mb-3">نظم منتجاتك في مجموعات مثل المشروبات والحلويات — المستخدم يطلب منها مباشرة</p>
@@ -1915,8 +1955,10 @@ const params = useParams()
                   </button>
                 </div>
               </div>
+              )}
 
-              {/* Payment Info Section */}
+              {/* Payment info moved into the payment question block */}
+              {false && (
               <div>
                 <h4 className="text-sm font-bold text-gray-900 mb-3">بيانات الدفع</h4>
                 <p className="text-xs text-gray-500 mb-3">أضف طرق الدفع لعرضها للمستخدم عند ملء النموذج</p>
@@ -1956,6 +1998,7 @@ const params = useParams()
                   </button>
                 </div>
               </div>
+              )}
 
             </div>
           </div>
@@ -2303,70 +2346,66 @@ const params = useParams()
                                   )}
 
                                   {question.type === 'countdown_timer' && (
-                                    <div>
-                                      <label className="block text-xs font-medium text-gray-600 mb-1.5">وقت انتهاء العرض</label>
-                                      <input type="datetime-local" value={parseOptions(question.options)[0]?.text || ''} onChange={(e) => {
-                                        if (parseOptions(question.options).length === 0) addOption(qIndex)
-                                        updateOption(qIndex, 0, { text: e.target.value })
-                                      }} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                                    <div className="space-y-3">
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1.5">عنوان العد التنازلي</label>
+                                        <input
+                                          type="text"
+                                          value={parseOptions(question.options)[0]?.validation_value || 'العرض ينتهي خلال'}
+                                          onChange={(e) => {
+                                            if (parseOptions(question.options).length === 0) addOption(qIndex)
+                                            updateOption(qIndex, 0, { validation_value: e.target.value })
+                                          }}
+                                          className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm"
+                                          placeholder="العرض ينتهي خلال"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1.5">وقت انتهاء العرض</label>
+                                        <input type="datetime-local" value={parseOptions(question.options)[0]?.text || ''} onChange={(e) => {
+                                          if (parseOptions(question.options).length === 0) addOption(qIndex)
+                                          updateOption(qIndex, 0, { text: e.target.value })
+                                        }} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1.5">وصف اختياري</label>
+                                        <textarea
+                                          value={parseOptions(question.options)[0]?.validation_min || ''}
+                                          onChange={(e) => {
+                                            if (parseOptions(question.options).length === 0) addOption(qIndex)
+                                            updateOption(qIndex, 0, { validation_min: e.target.value })
+                                          }}
+                                          rows={2}
+                                          className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm"
+                                          placeholder="مثال: احجز الآن قبل انتهاء العرض"
+                                        />
+                                      </div>
                                     </div>
                                   )}
 
                                   {question.type === 'products_block' && (
-                                    <div>
-                                      <div className="flex items-center justify-between mb-2">
+                                    <div className="space-y-3">
+                                      <div>
                                         <label className="text-xs font-medium text-gray-600">المنتجات</label>
-                                        <button onClick={() => setShowSettingsModal(true)} className="text-xs text-blue-600 hover:underline flex items-center gap-1">
-                                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
-                                          إدارة المنتجات
-                                        </button>
+                                        <p className="text-xs text-gray-500 mt-1">أضف مجموعات، وداخل كل مجموعة الأصناف والسعر والتفاصيل والصورة.</p>
                                       </div>
-                                      {(formData?.products || []).length === 0 && (
-                                        <p className="text-xs text-gray-400 text-center py-4 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                                          لم يتم إضافة منتجات بعد. اضغط "إدارة المنتجات" لإضافة مجموعات ومنتجات
-                                        </p>
-                                      )}
-                                      {(formData?.products || []).map((group: any, gi: number) => (
-                                        <div key={gi} className="mb-2 last:mb-0">
-                                          <div className="flex items-center gap-1.5 mb-1">
-                                            <div className="h-px flex-1 bg-gray-200" />
-                                            <span className="text-[10px] font-bold text-gray-500">{group.name || 'بدون اسم'}</span>
-                                            <div className="h-px flex-1 bg-gray-200" />
-                                          </div>
-                                          <div className="grid grid-cols-2 gap-1.5">
-                                            {(group.items || []).filter((it: any) => it.available !== false).map((item: any) => (
-                                              <div key={item.id} className="flex items-center gap-1.5 p-1.5 bg-gray-50 rounded-lg border border-gray-100">
-                                                {item.image_url && <img src={item.image_url} alt={item.name} className="w-8 h-8 rounded object-cover shrink-0" />}
-                                                <div className="min-w-0 flex-1">
-                                                  <p className="text-[10px] font-bold text-gray-700 truncate">{item.name}</p>
-                                                  <p className="text-[9px] text-blue-600">{item.price?.toLocaleString()} EGP</p>
-                                                </div>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      ))}
+                                      <ProductGroupsEditor
+                                        groups={getQuestionProductGroups(question)}
+                                        onChange={(groups) => updateQuestion(qIndex, { options: groups as any })}
+                                      />
                                     </div>
                                   )}
 
                                   {question.type === 'payment_info_block' && (
-                                    <div>
-                                      <label className="block text-xs font-medium text-gray-600 mb-1.5">طرق الدفع</label>
-                                      {(parseOptions(question.options) as any[]).map((pm: any, pi: number) => (
-                                        <div key={pi} className="flex items-center gap-1.5 mb-1.5">
-                                          <select value={pm.validation_type || 'bank'} onChange={(e) => updateOption(qIndex, pi, { validation_type: e.target.value })} className="w-24 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-sm">
-                                            <option value="bank">بنكي</option>
-                                            <option value="instapay">إنستاباي</option>
-                                            <option value="vodafone">فودافون كاش</option>
-                                          </select>
-                                          <input type="text" value={pm.text || ''} onChange={(e) => updateOption(qIndex, pi, { text: e.target.value })} placeholder="الاسم" className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
-                                          <input type="text" value={pm.validation_value || ''} onChange={(e) => updateOption(qIndex, pi, { validation_value: e.target.value })} placeholder="الرقم" className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
-                                          <button onClick={() => removeOption(qIndex, pi)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-                                        </div>
-                                      ))}
-                                      <button onClick={() => addOption(qIndex)} className="w-full mt-1 py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors text-sm flex items-center justify-center gap-1">
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> إضافة طريقة دفع
-                                      </button>
+                                    <div className="space-y-3">
+                                      <div>
+                                        <label className="text-xs font-medium text-gray-600">بيانات الدفع</label>
+                                        <p className="text-xs text-gray-500 mt-1">اكتب بياناتك التي ستظهر للمستخدم مع زر نسخ لكل رقم أو رابط.</p>
+                                      </div>
+                                      <PaymentMethodsEditor
+                                        methods={getQuestionPaymentMethods(question)}
+                                        onChange={(methods) => updateQuestion(qIndex, { options: methods as any })}
+                                      />
                                     </div>
                                   )}
 
