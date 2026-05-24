@@ -97,18 +97,18 @@ export default function PartnersPage() {
     setLoading(false)
   }
 
-  const toggleLike = async (partnerId: string, currentlyLiked: boolean) => {
+  const toggleLike = async (partnerId: string) => {
     if (!user) return
-    if (currentlyLiked) {
-      await supabase
-        .from('partner_likes')
-        .delete()
-        .eq('partner_id', partnerId)
-        .eq('user_id', user.id)
+    const { data: existing } = await supabase
+      .from('partner_likes')
+      .select('id')
+      .eq('partner_id', partnerId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (existing) {
+      await supabase.from('partner_likes').delete().eq('id', existing.id)
     } else {
-      await supabase
-        .from('partner_likes')
-        .insert({ partner_id: partnerId, user_id: user.id })
+      await supabase.from('partner_likes').insert({ partner_id: partnerId, user_id: user.id })
     }
     loadData()
   }
@@ -150,7 +150,7 @@ export default function PartnersPage() {
                 key={partner.id}
                 partner={partner}
                 userId={user?.id}
-                onLike={() => toggleLike(partner.id, partner.liked_by_me || false)}
+                    onLike={() => toggleLike(partner.id)}
               />
             ))}
           </div>
@@ -167,7 +167,7 @@ function PartnerCard({
 }: {
   partner: PartnerProfile & { ideas?: PartnerIdea[] }
   userId?: string
-  onLike: () => void
+  onLike: (partnerId: string) => void
 }) {
   // Build other links array from partner fields
   const otherLinks: { label: string; url: string }[] = []
@@ -271,7 +271,7 @@ function PartnerCard({
       {/* Like Button + Referral */}
       <div className="px-5 py-4 flex items-center justify-between border-t border-gray-100 mt-3">
         <button
-          onClick={onLike}
+          onClick={() => onLike(partner.id)}
           className={`flex items-center gap-1.5 text-sm font-medium transition-all ${
             partner.liked_by_me
               ? 'text-red-500'
