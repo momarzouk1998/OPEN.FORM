@@ -24,40 +24,41 @@ import { generateShortCode } from '@/lib/shortCode'
 
 
 // Question type definitions with detailed explanations
-const QUESTION_TYPES: Record<string, { label: string; icon: string; description: string; explanation: string }> = {
-  // نصوص
-  text: { label: 'نص', icon: 'T', description: 'إجابة نصية قصيرة', explanation: 'مثال: "ما اسمك؟"' },
-  textarea: { label: 'نص طويل', icon: '¶', description: 'إجابة مفصلة', explanation: 'مثال: "صف تجربتك"' },
-  email_confirm: { label: 'تأكيد البريد', icon: '✉️', description: 'إدخال الإيميل مرتين', explanation: 'للتأكد من صحة البريد الإلكتروني' },
-  // اختيارات
-  single_choice: { label: 'اختيار واحد', icon: '○', description: 'اختيار إجابة واحدة', explanation: 'مثال: "نعم أو لا"' },
-  multiple_choice: { label: 'اختيار متعدد', icon: '☑', description: 'اختيار عدة إجابات', explanation: 'مثال: "الهوايات"' },
-  button_choice: { label: 'اختيار بأزرار', icon: '🔘', description: 'خيارات كأزرار مرئية', explanation: 'بديل جميل للاختيار الواحد' },
-  dropdown: { label: 'قائمة منسدلة', icon: '▼', description: 'اختيار من قائمة', explanation: 'قائمة مضغوطة لتوفير المساحة' },
-  // تقييم وترتيب
-  scale: { label: 'تقييم', icon: '⭐', description: 'تقييم من 1 إلى 10', explanation: 'مثال: تقييم الأداء' },
-  star_rating: { label: 'تقييم بالنجوم', icon: '🌟', description: 'تقييم باستخدام النجوم', explanation: 'بديل مرئي للتقييم الرقمي' },
-  slider: { label: 'شريط رقمي', icon: '🎚️', description: 'اختيار قيمة بالسحب', explanation: 'مثال: تحديد ميزانية أو عمر' },
-  ranking: { label: 'ترتيب', icon: '#', description: 'ترتيب العناصر', explanation: 'ترتيب العناصر حسب الأولوية' },
-  matrix: { label: 'مصفوفة', icon: '⊞', description: 'خيارات مشتركة', explanation: 'عدة أسئلة مع نفس الخيارات' },
-  match_items: { label: 'توصيل العناصر', icon: '🔗', description: 'مطابقة عمودين', explanation: 'مثال: وصّل الكلمة بمعناها' },
-  // تواريخ وملفات
-  date: { label: 'تاريخ', icon: '📅', description: 'إدخال تاريخ', explanation: 'مثال: "تاريخ الميلاد"' },
-  date_range: { label: 'نطاق وقت وتاريخ', icon: '📆', description: 'من وقت/تاريخ إلى وقت/تاريخ', explanation: 'مثال: فترة حجز أو إجازة' },
-  time: { label: 'وقت', icon: '⏰', description: 'إدخال وقت', explanation: 'مثال: "وقت الحضور"' },
-  file_upload: { label: 'رفع ملف', icon: '📎', description: 'إرفاق ملف أو صورة', explanation: 'مثال: رفع السيرة الذاتية أو صورة' },
-  signature: { label: 'التوقيع', icon: '✍️', description: 'حقل توقيع', explanation: 'للحصول على توقيع رقمي' },
-  // محتوى ثابت
-  static_text: { label: 'فقرة (نص ثابت)', icon: '📝', description: 'نص للقراءة فقط', explanation: 'لعرض تعليمات أو معلومات' },
-  static_image: { label: 'صورة ثابتة', icon: '🖼️', description: 'عرض صورة', explanation: 'لعرض شعار أو توضيح' },
-  youtube: { label: 'فيديو يوتيوب', icon: '▶️', description: 'تضمين فيديو يوتيوب', explanation: 'لعرض فيديو توضيحي داخل النموذج' },
-  divider: { label: 'فاصل', icon: '➖', description: 'خط فاصل', explanation: 'للفصل بين الأقسام' },
-  terms: { label: 'الشروط والأحكام', icon: '📋', description: 'موافقة على الشروط', explanation: 'المستخدم يقرأ ويوافق على نص' },
-  appointment: { label: 'حجز موعد', icon: '📅', description: 'اختيار تاريخ ووقت للحجز', explanation: 'مثال: حجز موعد استشارة' },
-  // إضافات
-  countdown_timer: { label: 'العد التنازلي', icon: '⏳', description: 'عرض العد التنازلي', explanation: 'مؤقت لانتهاء العرض' },
-  products_block: { label: 'المنتجات', icon: '📦', description: 'قائمة منتجات', explanation: 'عرض منتجات للاختيار والطلب' },
-  payment_info_block: { label: 'بيانات الدفع', icon: '💳', description: 'عرض طرق الدفع', explanation: 'عرض معلومات الدفع' },
+const QUESTION_TYPES: Record<string, { label: string; icon: string; description: string; explanation: string; category: string }> = {
+  text: { label: 'نص', icon: 'T', description: 'إجابة نصية قصيرة', explanation: 'مثال: "ما اسمك؟"', category: 'basic' },
+  textarea: { label: 'نص طويل', icon: '¶', description: 'إجابة مفصلة', explanation: 'مثال: "صف تجربتك"', category: 'basic' },
+  email_confirm: { label: 'تأكيد البريد', icon: '✉️', description: 'إدخال الإيميل مرتين', explanation: 'للتأكد من صحة البريد الإلكتروني', category: 'advanced' },
+  single_choice: { label: 'اختيار واحد', icon: '○', description: 'اختيار إجابة واحدة', explanation: 'مثال: "نعم أو لا"', category: 'basic' },
+  multiple_choice: { label: 'اختيار متعدد', icon: '☑', description: 'اختيار عدة إجابات', explanation: 'مثال: "الهوايات"', category: 'basic' },
+  button_choice: { label: 'اختيار بأزرار', icon: '🔘', description: 'خيارات كأزرار مرئية', explanation: 'بديل جميل للاختيار الواحد', category: 'advanced' },
+  dropdown: { label: 'قائمة منسدلة', icon: '▼', description: 'اختيار من قائمة', explanation: 'قائمة مضغوطة لتوفير المساحة', category: 'basic' },
+  scale: { label: 'تقييم', icon: '⭐', description: 'تقييم من 1 إلى 10', explanation: 'مثال: تقييم الأداء', category: 'advanced' },
+  star_rating: { label: 'تقييم بالنجوم', icon: '🌟', description: 'تقييم باستخدام النجوم', explanation: 'بديل مرئي للتقييم الرقمي', category: 'advanced' },
+  slider: { label: 'شريط رقمي', icon: '🎚️', description: 'اختيار قيمة بالسحب', explanation: 'مثال: تحديد ميزانية أو عمر', category: 'advanced' },
+  ranking: { label: 'ترتيب', icon: '#', description: 'ترتيب العناصر', explanation: 'ترتيب العناصر حسب الأولوية', category: 'advanced' },
+  matrix: { label: 'مصفوفة', icon: '⊞', description: 'خيارات مشتركة', explanation: 'عدة أسئلة مع نفس الخيارات', category: 'advanced' },
+  match_items: { label: 'توصيل العناصر', icon: '🔗', description: 'مطابقة عمودين', explanation: 'مثال: وصّل الكلمة بمعناها', category: 'advanced' },
+  date: { label: 'تاريخ', icon: '📅', description: 'إدخال تاريخ', explanation: 'مثال: "تاريخ الميلاد"', category: 'advanced' },
+  date_range: { label: 'نطاق وقت وتاريخ', icon: '📆', description: 'من وقت/تاريخ إلى وقت/تاريخ', explanation: 'مثال: فترة حجز أو إجازة', category: 'advanced' },
+  time: { label: 'وقت', icon: '⏰', description: 'إدخال وقت', explanation: 'مثال: "وقت الحضور"', category: 'advanced' },
+  file_upload: { label: 'رفع ملف', icon: '📎', description: 'إرفاق ملف أو صورة', explanation: 'مثال: رفع السيرة الذاتية أو صورة', category: 'advanced' },
+  signature: { label: 'التوقيع', icon: '✍️', description: 'حقل توقيع', explanation: 'للحصول على توقيع رقمي', category: 'display' },
+  static_text: { label: 'فقرة (نص ثابت)', icon: '📝', description: 'نص للقراءة فقط', explanation: 'لعرض تعليمات أو معلومات', category: 'display' },
+  static_image: { label: 'صورة ثابتة', icon: '🖼️', description: 'عرض صورة', explanation: 'لعرض شعار أو توضيح', category: 'display' },
+  youtube: { label: 'فيديو يوتيوب', icon: '▶️', description: 'تضمين فيديو يوتيوب', explanation: 'لعرض فيديو توضيحي داخل النموذج', category: 'display' },
+  divider: { label: 'فاصل', icon: '➖', description: 'خط فاصل', explanation: 'للفصل بين الأقسام', category: 'display' },
+  terms: { label: 'الشروط والأحكام', icon: '📋', description: 'موافقة على الشروط', explanation: 'المستخدم يقرأ ويوافق على نص', category: 'display' },
+  appointment: { label: 'حجز موعد', icon: '📅', description: 'اختيار تاريخ ووقت للحجز', explanation: 'مثال: حجز موعد استشارة', category: 'advanced' },
+  countdown_timer: { label: 'العد التنازلي', icon: '⏳', description: 'عرض العد التنازلي', explanation: 'مؤقت لانتهاء العرض', category: 'widgets' },
+  products_block: { label: 'المنتجات', icon: '📦', description: 'قائمة منتجات', explanation: 'عرض منتجات للاختيار والطلب', category: 'widgets' },
+  payment_info_block: { label: 'بيانات الدفع', icon: '💳', description: 'عرض طرق الدفع', explanation: 'عرض معلومات الدفع', category: 'widgets' },
+} as const;
+
+const ITEM_CATEGORIES = {
+  basic: { label: 'أسئلة أساسية', icon: '❓', color: 'blue' },
+  advanced: { label: 'أسئلة متقدمة', icon: '🔬', color: 'purple' },
+  display: { label: 'عناصر عرض', icon: '👁️', color: 'green' },
+  widgets: { label: 'إضافات', icon: '⚙️', color: 'amber' }
 } as const;
 
 const DISPLAY_ONLY_QUESTION_TYPES: QuestionType[] = [
@@ -151,8 +152,6 @@ interface FormData {
 
   time_limit?: number | null
 
-  expires_at?: string | null
-
   allow_delete_responses?: boolean
 
   randomize_questions?: boolean
@@ -193,8 +192,10 @@ function EditFormContent() {
    const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
 
    // Convert to template states
-   const [showConvertToTemplate, setShowConvertToTemplate] = useState(false)
-   const [convertToTemplateLoading, setConvertToTemplateLoading] = useState(false)
+  const [showConvertToTemplate, setShowConvertToTemplate] = useState(false)
+  const [convertToTemplateLoading, setConvertToTemplateLoading] = useState(false)
+  const [elementPickerOpen, setElementPickerOpen] = useState(false)
+  const [pickerCategory, setPickerCategory] = useState<string>('basic')
    const [templateTitle, setTemplateTitle] = useState('')
    const [templateDescription, setTemplateDescription] = useState('')
 
@@ -991,8 +992,6 @@ const params = useParams()
 
         time_limit: form.time_limit || null,
 
-        expires_at: form.expires_at || '',
-
         allow_delete_responses: form.allow_delete_responses || false,
 
         randomize_questions: form.randomize_questions || false,
@@ -1389,8 +1388,6 @@ const params = useParams()
           is_active: formData.is_active,
 
           time_limit: formData.time_limit || null,
-
-          expires_at: formData.expires_at || null,
 
           allow_delete_responses: formData.allow_delete_responses || false,
           randomize_questions: formData.randomize_questions || false,
@@ -1924,13 +1921,7 @@ const params = useParams()
                       <p className="text-xs text-gray-500 mt-0.5">عداد تنازلي لإكمال النموذج خلال مدة محددة</p>
                     </div>
                   </label>
-                  <label className="flex items-start gap-2 p-2 bg-red-50 rounded-lg cursor-pointer text-sm">
-                    <input type="checkbox" checked={!!formData?.expires_at} onChange={(e) => setFormData(prev => prev ? ({ ...prev, expires_at: e.target.checked ? new Date(Date.now() + 86400000).toISOString().slice(0, 16) : '' }) : null)} className="w-4 h-4 mt-0.5 text-red-600 rounded" />
-                    <div>
-                      <span className="text-gray-700 font-medium">تاريخ إغلاق</span>
-                      <p className="text-xs text-gray-500 mt-0.5">إغلاق النموذج تلقائياً في تاريخ محدد</p>
-                    </div>
-                  </label>
+
                   <label className="flex items-start gap-2 p-2 bg-orange-50 rounded-lg cursor-pointer text-sm">
                     <input type="checkbox" checked={formData?.allow_delete_responses || false} onChange={(e) => setFormData(prev => prev ? ({ ...prev, allow_delete_responses: e.target.checked }) : null)} className="w-4 h-4 mt-0.5 text-orange-600 rounded" />
                     <div>
@@ -1960,12 +1951,6 @@ const params = useParams()
                     <input type="number" min="1" value={formData?.time_limit || 1} onChange={(e) => setFormData(prev => prev ? ({ ...prev, time_limit: parseInt(e.target.value) || 1 }) : null)} className="w-20 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-center text-sm" />
                   </div>
                 )}
-                {formData?.expires_at && (
-                  <div className="mt-2">
-                    <input type="datetime-local" value={formData.expires_at} onChange={(e) => setFormData(prev => prev ? ({ ...prev, expires_at: e.target.value }) : null)} className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
-                  </div>
-                )}
-
                 {(() => {
                   const availability = getAvailabilitySettings()
                   return (
@@ -3055,27 +3040,55 @@ const params = useParams()
                         })}
                           </SortableContext>
                         </DndContext>
-                        {/* Add question to this page */}
+                        {/* Add element to this page */}
                         <div className="mt-4 pt-2 border-t border-dashed border-gray-200">
-                          <p className="text-sm font-bold text-gray-700 mb-3">إضافة سؤال جديد:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {(Object.entries(QUESTION_TYPES) as [QuestionType, typeof QUESTION_TYPES['text']][]).map(([type, info]) => (
+                          <div className="flex gap-2">
+                            <div className="relative flex-1">
                               <button
-                                key={type}
-                                onClick={() => { addQuestion(type); moveToPage(qs.length, pageNum) }}
-                                className="px-3 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors flex items-center gap-2 shadow-sm"
+                                onClick={() => setElementPickerOpen(!elementPickerOpen)}
+                                className="w-full px-3 py-2 border-2 border-dashed border-blue-300 text-blue-600 rounded-xl hover:bg-blue-50 hover:border-blue-400 font-medium transition-all flex items-center justify-center gap-2 text-sm"
                               >
-                                <span className="text-blue-500 font-bold">{info.icon}</span> {info.label}
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                إضافة عنصر
                               </button>
-                            ))}
-                            
-                            <button
-                              onClick={() => setShowQuestionPicker(true)}
-                              className="px-3 py-2 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-lg text-sm hover:bg-emerald-100 transition-colors flex items-center gap-2 shadow-sm mr-auto"
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
-                              استيراد سؤال
-                            </button>
+
+                              {elementPickerOpen && <div className="fixed inset-0 z-10" onClick={() => setElementPickerOpen(false)} />}
+                              {elementPickerOpen && (
+                                <div className="absolute top-full mt-2 left-0 right-0 bg-white border border-gray-200 shadow-xl rounded-xl z-20">
+                                  <div className="flex flex-wrap border-b border-gray-200 p-2 gap-2">
+                                    {(Object.entries(ITEM_CATEGORIES) as [string, typeof ITEM_CATEGORIES['basic']][]).map(([cat, info]) => (
+                                      <button
+                                        key={cat}
+                                        onClick={() => setPickerCategory(cat)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-xs transition-colors ${
+                                          pickerCategory === cat
+                                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                                            : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                                        }`}
+                                      >
+                                        <span>{info.icon}</span>
+                                        {info.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  <div className="p-3 grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                                    {(Object.entries(QUESTION_TYPES) as [QuestionType, typeof QUESTION_TYPES['text']][])
+                                      .filter(([_, info]) => info.category === pickerCategory)
+                                      .map(([type, info]) => (
+                                        <button
+                                          key={type}
+                                          onClick={() => { addQuestion(type); moveToPage(qs.length, pageNum); setElementPickerOpen(false) }}
+                                          className="flex flex-col items-center justify-center text-center p-2.5 rounded-lg transition-colors border border-transparent hover:bg-blue-50 hover:border-blue-200"
+                                        >
+                                          <span className="text-lg mb-1">{info.icon}</span>
+                                          <span className="font-medium text-gray-800 text-[11px]">{info.label}</span>
+                                          <span className="text-[9px] text-gray-500 mt-0.5">{info.description}</span>
+                                        </button>
+                                      ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
