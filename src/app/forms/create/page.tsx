@@ -45,6 +45,12 @@ const QUESTION_TYPES = {
   payment_info_block: { label: 'بيانات الدفع', icon: '💳', description: 'عرض طرق الدفع', explanation: 'عرض معلومات الدفع' }
 } as const
 
+const DISPLAY_ONLY_QUESTION_TYPES: QuestionType[] = [
+  'countdown_timer',
+  'products_block',
+  'payment_info_block',
+]
+
 interface MatrixRow {
   id: string
   text: string
@@ -998,15 +1004,17 @@ const supabase = createClient()
 
                 {/* Question Settings */}
                 <div className="flex flex-wrap gap-4 mb-4 ms-2 sm:ms-11">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={question.required}
-                      onChange={(e) => updateQuestion(qIndex, { required: e.target.checked })}
-                      className="w-4 h-4 text-blue-600 rounded"
-                    />
-                    <span className="text-sm text-gray-700">مطلوب</span>
-                  </label>
+                  {!DISPLAY_ONLY_QUESTION_TYPES.includes(question.type) && (
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={question.required}
+                        onChange={(e) => updateQuestion(qIndex, { required: e.target.checked })}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      <span className="text-sm text-gray-700">مطلوب</span>
+                    </label>
+                  )}
                   
                   {!!((formData as any)._is_test) && !['single_choice', 'multiple_choice', 'dropdown', 'ranking', 'matrix', 'button_choice', 'match_items', 'static_text', 'static_image', 'divider', 'terms', 'youtube'].includes(question.type) && (
                   <div className="flex items-center gap-2">

@@ -38,6 +38,12 @@ interface Question {
   visibility_rules?: VisibilityRule[]
 }
 
+const DISPLAY_ONLY_QUESTION_TYPES = [
+  'countdown_timer',
+  'products_block',
+  'payment_info_block',
+]
+
 interface Form {
   id: string
   name: string
@@ -2642,7 +2648,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
                 <div className="flex-1 min-w-0">
                   <h3 className="text-base font-semibold text-gray-900 form-themed-text">
                     {question.text}
-                    {question.required && <span className="text-red-500 mr-1">*</span>}
+                    {question.required && !DISPLAY_ONLY_QUESTION_TYPES.includes(question.type) && <span className="text-red-500 mr-1">*</span>}
                   </h3>
                   {question.type !== 'file_upload' && (
                     <p className="text-blue-500 text-xs mt-1 font-medium form-themed-primary-text">
