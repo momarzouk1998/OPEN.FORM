@@ -50,7 +50,7 @@ export default async function AdminPartnersPage() {
     // Fetch pending ideas
     const { data: ideasData, error: ideasError } = await supabase
       .from('partner_ideas')
-      .select('id, user_id, title, description, implemented, created_at, profiles!inner(name, avatar_url)')
+      .select('id, partner_id, text, implemented, created_at, profiles(name, avatar_url)')
       .order('created_at', { ascending: false })
 
     if (!ideasError) {
@@ -60,7 +60,7 @@ export default async function AdminPartnersPage() {
     // Fetch pending templates (not approved)
     const { data: templatesData, error: templatesError } = await supabase
       .from('user_templates')
-      .select('id, user_id, title, description, approved, created_at, profiles!inner(name, avatar_url), forms!inner(id, name)')
+      .select('id, created_by, name, description, approved, created_at, profiles!created_by!inner(name, avatar_url), forms!form_id!inner(id, name)')
       .eq('approved', false)
       .order('created_at', { ascending: false })
 
@@ -171,7 +171,7 @@ export default async function AdminPartnersPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <button
-                            onClick={() => togglePartner(partner.id, partner.is_partner)}
+                            onClick={() => togglePartner(partner.id, partner.is_partner ?? false)}
                             className={`px-3 py-1 text-sm font-medium rounded border ${partner.is_partner ? 'bg-red-100 text-red-800 hover:bg-red-200' : 'bg-green-100 text-green-800 hover:bg-green-200'}`}
                           >
                             {partner.is_partner ? 'إزالة' : 'جعل شريك'}
@@ -181,7 +181,7 @@ export default async function AdminPartnersPage() {
                     ))}
                     {partners.length === 0 && (
                       <tr>
-                        <td colspan="6" className="px-6 py-4 text-center text-gray-500">
+                        <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                           لا يوجد شركاء بعد
                         </td>
                       </tr>
@@ -201,16 +201,15 @@ export default async function AdminPartnersPage() {
                 {ideas.map(idea => (
                   <div key={idea.id} className="border rounded-xl p-4 bg-gray-50">
                     <div className="flex items-start space-x-3">
-                      {idea.profiles?.avatar_url ? (
-                        <img src={idea.profiles.avatar_url} alt={idea.profiles.name} className="h-10 w-10 rounded-full" />
+                      {idea.profiles?.[0]?.avatar_url ? (
+                        <img src={idea.profiles[0].avatar_url} alt={idea.profiles[0].name} className="h-10 w-10 rounded-full" />
                       ) : (
                         <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 font-medium">
-                          {idea.profiles?.name?.charAt(0) || '?'}
+                          {idea.profiles?.[0]?.name?.charAt(0) || '?'}
                         </div>
                       )}
                       <div className="flex-1">
-                        <h3 className="font-medium text-gray-900">{idea.title}</h3>
-                        <p className="mt-1 text-sm text-gray-600 line-clamp-2">{idea.description}</p>
+                        <h3 className="font-medium text-gray-900">{idea.text}</h3>
                         <div className="mt-2 flex items-center gap-2">
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${idea.implemented ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                             {idea.implemented ? 'منفذ' : 'قيد المراجعة'}
@@ -245,19 +244,19 @@ export default async function AdminPartnersPage() {
             {templates.map(template => (
               <div key={template.id} className="border rounded-xl p-4 bg-gray-50">
                 <div className="flex items-start space-x-3">
-                  {template.profiles?.avatar_url ? (
-                    <img src={template.profiles.avatar_url} alt={template.profiles.name} className="h-10 w-10 rounded-full" />
+                  {template.profiles?.[0]?.avatar_url ? (
+                    <img src={template.profiles[0].avatar_url} alt={template.profiles[0].name} className="h-10 w-10 rounded-full" />
                   ) : (
                     <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 font-medium">
-                      {template.profiles?.name?.charAt(0) || '?'}
+                      {template.profiles?.[0]?.name?.charAt(0) || '?'}
                     </div>
                   )}
                   <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">{template.title}</h3>
-                    <p className="mt-1 text-sm text-gray-600 line-clamp-2">{template.description}</p>
+                        <h3 className="font-medium text-gray-900">{template.name}</h3>
+                        <p className="mt-1 text-sm text-gray-600 line-clamp-2">{template.description}</p>
                     <div className="mt-2 flex items-center gap-2">
                       <span className="text-sm text-gray-500">
-                        القالب بناءً على النموذج: <span className="font-medium">{template.forms?.name}</span>
+                        القالب بناءً على النموذج: <span className="font-medium">{template.forms?.[0]?.name}</span>
                       </span>
                       <button
                         onClick={() => approveTemplate(template.id)}

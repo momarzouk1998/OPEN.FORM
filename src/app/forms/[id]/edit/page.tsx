@@ -3292,10 +3292,8 @@ const params = useParams()
              تم وتطبيق التغييرات
            </button>
          </div>
-       </div>
-     </div>
-   )
-   
+      </div>
+
       {/* Convert to Template Modal */}
       <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 ${showConvertToTemplate ? '' : 'hidden'}`}>
        <div className="bg-white rounded-2xl w-full max-w-md p-6">
@@ -3325,7 +3323,7 @@ const params = useParams()
                value={templateDescription}
                onChange={(e) => setTemplateDescription(e.target.value)}
                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-               rows="4"
+               rows={4}
                placeholder="صف briefly ما يحتويه هذا القالب"
                required
              />

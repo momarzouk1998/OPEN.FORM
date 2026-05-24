@@ -22,6 +22,7 @@ export interface User {
   banned?: boolean
   form_limit?: number | null
   submission_limit?: number | null
+  is_partner?: boolean
 }
 
 // Project types
@@ -256,6 +257,7 @@ export interface PartnerIdea {
   text: string
   implemented: boolean
   created_at: string
+  profiles?: { name: string; avatar_url: string }[]
 }
 
 export interface PartnerLike {
@@ -276,15 +278,17 @@ export interface Referral {
 
 export interface UserTemplate {
   id: string
-  form_id: string
+  form_id?: string
   created_by: string
   name: string
   description: string
-  category: string
-  usage_count: number
-  is_published: boolean
+  category?: string
+  usage_count?: number
+  is_published?: boolean
   approved: boolean
   created_at: string
+  profiles?: { name: string; avatar_url: string }[]
+  forms?: { id: string; name: string }[]
 }
 
 export interface PartnerProfile extends User {
