@@ -212,11 +212,17 @@ export default function FormFiller({ form, questions, existingResponse: propExis
   const [totalResponses, setTotalResponses] = useState<number>(0);
   const [cart, setCart] = useState<Record<string, number>>({});
 
-  const products: Array<{ id: string; name: string; description?: string; price: number; image_url?: string; available?: boolean }> =
-    (form.page_titles as any)?._products || []
+  const rawProducts: any = (form.page_titles as any)?._products || []
+  const productGroups: Array<{ id: string; name: string; items: Array<{ id: string; name: string; description?: string; price: number; image_url?: string; available?: boolean }> }> =
+    Array.isArray(rawProducts) && rawProducts.length > 0 && 'items' in rawProducts[0]
+      ? rawProducts
+      : Array.isArray(rawProducts) && rawProducts.length > 0
+        ? [{ id: 'g_default', name: 'المنتجات', items: rawProducts }]
+        : []
+  const allProducts = productGroups.flatMap(g => g.items)
 
   const cartTotal = Object.entries(cart).reduce((sum, [id, qty]) => {
-    const prod = products.find(p => p.id === id)
+    const prod = allProducts.find(p => p.id === id)
     return sum + (prod ? prod.price * qty : 0)
   }, 0)
 
@@ -799,7 +805,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
 
     try {
       // Inject cart into answers
-      const finalAnswers = { ...answers, __cart: products.length > 0 ? cart : {} }
+      const finalAnswers = { ...answers, __cart: allProducts.length > 0 ? cart : {} }
 
       // Check user limits if authenticated
       if (userId) {
@@ -2376,42 +2382,59 @@ export default function FormFiller({ form, questions, existingResponse: propExis
         </div>
 
         {/* Products (only if no products_block question type) */}
-        {!questions?.some(q => q.type === 'products_block') && products.length > 0 && !submitted && (
+        {!questions?.some(q => q.type === 'products_block') && productGroups.length > 0 && !submitted && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-6 form-themed-card">
-            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
               <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
-              المنتجات المتاحة
+              {/* Offer Countdown inline */}
+              {(() => {
+                const endStr = offerEndStr
+                const cd = offerCountdown
+                if (endStr && cd > 0) {
+                  return <span className="mr-auto text-sm font-mono text-red-500 tracking-wider" dir="ltr">{formatCountdown(cd)}</span>
+                }
+                return null
+              })()}
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {products.filter(p => p.available !== false).map((prod) => {
-                const qty = cart[prod.id] || 0
-                return (
-                  <div key={prod.id} className="border border-gray-200 rounded-xl overflow-hidden hover:border-blue-300 transition-colors">
-                    {prod.image_url && (
-                      <div className="h-36 bg-gray-50 overflow-hidden">
-                        <img src={prod.image_url} alt={prod.name} className="w-full h-full object-cover" />
-                      </div>
-                    )}
-                    <div className="p-3">
-                      <h4 className="font-bold text-gray-900 text-sm">{prod.name}</h4>
-                      {prod.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{prod.description}</p>}
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-lg font-bold text-blue-700">{prod.price.toLocaleString()} <span className="text-xs font-normal">EGP</span></span>
-                        {qty > 0 ? (
-                          <div className="flex items-center gap-2">
-                            <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: Math.max(0, qty - 1) }))} className="w-7 h-7 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-sm font-bold hover:bg-red-200">−</button>
-                            <span className="text-sm font-bold w-5 text-center">{qty}</span>
-                            <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: qty + 1 }))} className="w-7 h-7 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold hover:bg-blue-200">+</button>
+            {productGroups.map(group => (
+              <div key={group.id} className="mb-6 last:mb-0">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-0.5 flex-1 bg-gradient-to-l from-blue-100 to-transparent rounded-full" />
+                  <h4 className="text-sm font-bold text-gray-700 px-2">{group.name}</h4>
+                  <div className="h-0.5 flex-1 bg-gradient-to-r from-blue-100 to-transparent rounded-full" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {group.items.filter(p => p.available !== false).map((prod) => {
+                    const qty = cart[prod.id] || 0
+                    return (
+                      <div key={prod.id} className="border border-gray-200 rounded-xl overflow-hidden hover:border-blue-300 hover:shadow-md transition-all">
+                        {prod.image_url && (
+                          <div className="h-36 bg-gray-50 overflow-hidden">
+                            <img src={prod.image_url} alt={prod.name} className="w-full h-full object-cover" />
                           </div>
-                        ) : (
-                          <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: 1 }))} className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors">إضافة</button>
                         )}
+                        <div className="p-3">
+                          <h4 className="font-bold text-gray-900 text-sm">{prod.name}</h4>
+                          {prod.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{prod.description}</p>}
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-lg font-bold text-blue-700">{prod.price.toLocaleString()} <span className="text-xs font-normal">EGP</span></span>
+                            {qty > 0 ? (
+                              <div className="flex items-center gap-2">
+                                <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: Math.max(0, qty - 1) }))} className="w-7 h-7 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-sm font-bold hover:bg-red-200">−</button>
+                                <span className="text-sm font-bold w-5 text-center">{qty}</span>
+                                <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: qty + 1 }))} className="w-7 h-7 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold hover:bg-blue-200">+</button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: 1 }))} className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors">إضافة</button>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
             {cartCount > 0 && (
               <div className="mt-4 p-3 bg-gradient-to-l from-blue-50 to-indigo-50 rounded-xl border border-blue-100 flex items-center justify-between">
                 <div>
