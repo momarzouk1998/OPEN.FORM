@@ -124,7 +124,7 @@ export default function AdminSettingsPage() {
 
       const settingsObj: any = {}
 
-      data?.forEach(setting => {
+      data?.forEach((setting: { key: string; value: string | null }) => {
 
         settingsObj[setting.key] = setting.value || ''
 

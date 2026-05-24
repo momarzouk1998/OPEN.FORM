@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Briefcase, ShoppingCart, UserCheck, Stethoscope, Sparkles, ChevronLeft, GraduationCap, LayoutTemplate, Building2, Truck, Home, School, LineChart, Search } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { TEMPLATE_CATEGORIES } from "@/types";
+import PublicHeader from "@/components/PublicHeader";
 
 interface FormTemplate {
   id: string;
@@ -112,7 +113,8 @@ export default function TemplatesPage() {
     : presentCategories
 
   return (
-    <div className="min-h-screen p-6 md:p-12 max-w-7xl mx-auto">
+    <div className="min-h-screen pt-24 pb-6 px-6 md:pt-28 md:pb-12 md:px-12 max-w-7xl mx-auto">
+      <PublicHeader />
       {/* Hero */}
       <div className="flex flex-col items-center text-center mb-12 mt-8">
         <motion.div

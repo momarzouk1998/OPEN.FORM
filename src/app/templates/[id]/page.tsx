@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ArrowRight, ChevronLeft, Sparkles, Loader2, AlertCircle, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { TEMPLATE_CATEGORIES } from "@/types";
+import PublicHeader from "@/components/PublicHeader";
 
 interface TemplateData {
   id: string;
@@ -201,7 +202,8 @@ export default function TemplatePreviewPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="min-h-screen flex items-center justify-center p-6 pt-20">
+        <PublicHeader />
         <div className="flex items-center gap-3">
           <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
           <span className="text-slate-500">جاري تحميل القالب...</span>
@@ -212,7 +214,8 @@ export default function TemplatePreviewPage() {
 
   if (error || !template) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="min-h-screen flex items-center justify-center p-6 pt-20">
+        <PublicHeader />
         <div className="text-center max-w-md">
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-red-50 flex items-center justify-center">
             <AlertCircle className="w-10 h-10 text-red-500" />
@@ -235,7 +238,8 @@ export default function TemplatePreviewPage() {
   const displayQuestions = showAll ? questions : questions.slice(0, 10)
 
   return (
-    <div className="min-h-screen p-6 md:p-12 max-w-4xl mx-auto">
+    <div className="min-h-screen pt-24 pb-6 px-6 md:pt-28 md:pb-12 md:px-12 max-w-4xl mx-auto">
+      <PublicHeader />
       {/* Back link */}
       <Link href="/templates" className="inline-flex items-center gap-2 text-slate-500 hover:text-brand-500 mb-8 font-medium transition-colors text-sm">
         <ArrowRight className="w-4 h-4" />

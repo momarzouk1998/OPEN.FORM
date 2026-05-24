@@ -90,7 +90,7 @@ export default function NotificationsPopover() {
 
     if (data) {
       setNotifications(data)
-      setUnreadCount(data.filter(n => !n.is_read).length)
+      setUnreadCount(data.filter((n: { is_read: boolean }) => !n.is_read).length)
     }
     setLoading(false)
   }

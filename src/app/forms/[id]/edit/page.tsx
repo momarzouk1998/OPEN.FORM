@@ -242,14 +242,14 @@ function EditFormContent() {
       })
       .on('presence', { event: 'join' }, () => {})
       .on('presence', { event: 'leave' }, () => {})
-      .on('broadcast', { event: 'form_update' }, ({ payload }) => {
+      .on('broadcast', { event: 'form_update' }, ({ payload }: { payload: any }) => {
         if (payload.userId === profile.id) return
         setFormData(prev => {
           if (!prev) return prev
           return { ...prev, ...payload.data }
         })
       })
-      .subscribe(async (status) => {
+      .subscribe(async (status: string) => {
         if (status === 'SUBSCRIBED') {
           setCollabStatus('connected')
           await channel.track({
@@ -916,7 +916,7 @@ const params = useParams()
 
 
 
-      const formattedQuestions: Question[] = (questions || []).map(q => {
+      const formattedQuestions: Question[] = (questions || []).map((q: any) => {
         const parsedOpts = q.options ? JSON.parse(q.options) : []
         let matrix_rows: MatrixRow[] | undefined
         let matrix_columns: MatrixColumn[] | undefined

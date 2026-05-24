@@ -80,7 +80,7 @@ export function useAppSettings() {
 
 
 
-      data?.forEach(setting => {
+      data?.forEach((setting: { key: string; value: string | null }) => {
 
         if (setting.value) {
 
@@ -111,4 +111,3 @@ export function useAppSettings() {
   return { settings, loading, refetch: fetchSettings }
 
 }
-

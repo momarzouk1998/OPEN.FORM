@@ -187,13 +187,13 @@ export default function ResultsPage() {
 
       if (statsData && statsData.length > 0) {
         const total = statsData.length
-        const totalScore = statsData.reduce((sum, r) => sum + (Number(r.score) || 0), 0)
-        const totalMax = statsData.reduce((sum, r) => sum + (Number(r.max_score) || 0), 0)
+        const totalScore = statsData.reduce((sum: number, r: { score: number | string | null }) => sum + (Number(r.score) || 0), 0)
+        const totalMax = statsData.reduce((sum: number, r: { max_score: number | string | null }) => sum + (Number(r.max_score) || 0), 0)
         const avgScore = totalMax > 0 ? (totalScore / totalMax * 100) : 0
 
         const weekAgo = new Date()
         weekAgo.setDate(weekAgo.getDate() - 7)
-        const thisWeek = statsData.filter(r =>
+        const thisWeek = statsData.filter((r: { submitted_at: string }) =>
           new Date(r.submitted_at) >= weekAgo
         ).length
 

@@ -88,7 +88,7 @@ export default function ProfilePage() {
 
       if (prefs) {
         const prefMap: { assignment: boolean } = { assignment: true }
-        prefs.forEach(p => {
+        prefs.forEach((p: { notification_type: string; enabled: boolean }) => {
           if (p.notification_type === 'assignment') prefMap.assignment = p.enabled
         })
         setNotifPrefs(prefMap)

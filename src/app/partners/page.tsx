@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import type { PartnerProfile, PartnerIdea } from '@/types'
 import Link from 'next/link'
+import PublicHeader from '@/components/PublicHeader'
 
 export default function PartnersPage() {
   const [partners, setPartners] = useState<(PartnerProfile & { 
@@ -24,7 +25,7 @@ export default function PartnersPage() {
   }, [])
 
   const loadData = async () => {
-    const { data: { user: u } } = await supabase.auth.getUser()
+    const { data: { user: u } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }))
     setUser(u)
 
     const { data: profiles } = await supabase
@@ -89,7 +90,7 @@ export default function PartnersPage() {
         const { count: sc } = await supabase
           .from('form_responses')
           .select('*', { count: 'exact', head: true })
-          .in('form_id', formIds.map(f => f.id))
+          .in('form_id', formIds.map((f: { id: string }) => f.id))
         submissionsCount = sc || 0
       }
 
@@ -147,14 +148,16 @@ export default function PartnersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center pt-16">
+        <PublicHeader />
         <div className="animate-spin rounded-full h-10 w-10 border-4 border-indigo-600 border-t-transparent" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 pt-16">
+      <PublicHeader />
       {/* Header */}
       <div className="bg-gradient-to-l from-indigo-600 to-purple-700 text-white">
         <div className="max-w-6xl mx-auto px-4 py-16 text-center">

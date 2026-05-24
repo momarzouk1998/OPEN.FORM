@@ -42,7 +42,7 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
 
         // Count responses only for this user's forms
         if (forms.length > 0) {
-          const formIds = forms.map(f => f.id)
+          const formIds = forms.map((f: { id: string }) => f.id)
           const { count } = await supabase
             .from('form_responses')
             .select('*', { count: 'exact', head: true })
