@@ -6,7 +6,15 @@ import type { PartnerProfile, PartnerIdea } from '@/types'
 import Link from 'next/link'
 
 export default function PartnersPage() {
-  const [partners, setPartners] = useState<(PartnerProfile & { ideas?: PartnerIdea[] })[]>([])
+  const [partners, setPartners] = useState<(PartnerProfile & { 
+    ideas?: PartnerIdea[]
+    likes_count?: number
+    liked_by_me?: boolean
+    forms_count?: number
+    templates_count?: number
+    templates_preview?: any[]
+    submissions_count?: number
+  })[]>([])
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const supabase = createClient()
@@ -189,7 +197,15 @@ function PartnerCard({
   userId,
   onLike
 }: {
-  partner: PartnerProfile & { ideas?: PartnerIdea[] }
+  partner: PartnerProfile & { 
+    ideas?: PartnerIdea[]
+    likes_count?: number
+    liked_by_me?: boolean
+    forms_count?: number
+    templates_count?: number
+    templates_preview?: any[]
+    submissions_count?: number
+  }
   userId?: string
   onLike: (partnerId: string) => void
 }) {
