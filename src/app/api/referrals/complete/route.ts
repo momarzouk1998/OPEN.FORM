@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     const { data: rpcData, error: rpcErr } = await svc.rpc('increment_referral', { referral_code: referralCode, referred_id: referredId, referred_email: referredEmail })
     if (rpcErr) {
       // Fallback: do operations sequentially with service role client
-      const { data: referrer } = await svc.from('profiles').select('id').eq('referral_code', referralCode).single()
+      const { data: referrer } = await svc.from('profiles').select('id, referral_count').eq('referral_code', referralCode).single()
       if (!referrer) return NextResponse.json({ error: 'referrer not found' }, { status: 404 })
 
       const { error: insertErr } = await svc.from('referrals').insert({ referrer_id: referrer.id, referred_email: referredEmail, referred_id: referredId, status: 'completed' })
