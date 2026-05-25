@@ -1,35 +1,47 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
+import { createClient } from '@/utils/supabase/client'
 
 const NAV_LINKS = [
   { id: 'hero', label: 'الرئيسية' },
   { id: 'features', label: 'المميزات' },
   { id: 'templates', label: 'القوالب' },
+  { id: 'partners', label: 'شركاؤنا' },
   { id: 'pricing', label: 'الأسعار' },
   { id: 'contact', label: 'تواصل معنا' },
 ]
 
 export default function PublicProjectsView() {
   const [mobileOpen, setMobileOpen] = useState(false)
-  const ctaRef = useRef<HTMLAnchorElement>(null)
-  const [ctaShake, setCtaShake] = useState(false)
+  const [partners, setPartners] = useState<any[]>([])
+  const [ideasMap, setIdeasMap] = useState<Record<string, any[]>>({})
 
   useEffect(() => {
-    const el = ctaRef.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setCtaShake(true)
-          setTimeout(() => setCtaShake(false), 700)
+    const supabase = createClient()
+    ;(async () => {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, avatar_url, company, bio, referral_code, referral_count')
+        .eq('is_partner', true)
+        .limit(6)
+      if (profiles) {
+        setPartners(profiles)
+        const im: Record<string, any[]> = {}
+        for (const p of profiles) {
+          const { data: ideas } = await supabase
+            .from('partner_ideas')
+            .select('text, implemented')
+            .eq('partner_id', p.id)
+            .order('created_at', { ascending: false })
+            .limit(2)
+          if (ideas) im[p.id] = ideas
         }
-      },
-      { threshold: 0.5 }
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
+        setIdeasMap(im)
+      }
+    })()
   }, [])
 
   const scrollTo = (id: string) => {
@@ -39,30 +51,6 @@ export default function PublicProjectsView() {
 
   return (
     <div dir="rtl" className="min-h-screen bg-white font-sans">
-      <style>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          10%, 30%, 50%, 70%, 90% { transform: translateX(-6px); }
-          20%, 40%, 60%, 80% { transform: translateX(6px); }
-        }
-        .animate-shake {
-          animation: shake 0.6s ease-in-out;
-        }
-      `}</style>
-
-      {/* Floating WhatsApp Button */}
-      <a
-        href="https://wa.me/201558282760"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-green-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-green-600 hover:scale-110 transition-all duration-300"
-        aria-label="واتساب"
-      >
-        <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-        </svg>
-      </a>
-
       {/* ===== HEADER ===== */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100/80 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -86,7 +74,7 @@ export default function PublicProjectsView() {
               className="hidden sm:inline-flex px-4 py-2 text-sm text-gray-700 hover:text-blue-600 font-medium transition-colors"
             >تسجيل الدخول</Link>
             <Link href="/register"
-              className="px-5 py-2 bg-blue-600 text-white text-sm rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/25 font-medium"
+              className="px-5 py-2 bg-gradient-to-l from-blue-600 to-indigo-600 text-white text-sm rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/25 font-medium"
             >ابدأ مجاناً</Link>
             <button onClick={() => setMobileOpen(!mobileOpen)} className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -114,11 +102,11 @@ export default function PublicProjectsView() {
         <div className="relative max-w-6xl mx-auto px-4 w-full">
           <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
             <div className="flex-1 text-center lg:text-right">
-              <div className="inline-block px-4 py-1.5 bg-white text-pink-600 rounded-full text-sm font-medium mb-6 border border-blue-500">
+              <div className="inline-block px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-medium mb-6">
                 منصة نماذج واستبيانات احترافية
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6">
-                أنشئ <span className="text-pink-500">نماذج</span> احترافية
+                أنشئ <span className="text-blue-600">نماذج</span> احترافية
                 <br />
                 في دقائق
               </h1>
@@ -127,14 +115,14 @@ export default function PublicProjectsView() {
                 تحليلات ذكية، وروابط مختصرة — كل هذا مجاناً
               </p>
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4">
-                <Link href="/register" ref={ctaRef}
-                  className={`px-8 py-4 bg-blue-600 text-white rounded-2xl hover:brightness-110 transition-all font-bold shadow-xl shadow-blue-500/20 flex items-center gap-2 text-lg ${ctaShake ? 'animate-shake' : ''}`}
+                <Link href="/register"
+                  className="px-8 py-4 bg-gradient-to-l from-blue-600 to-indigo-600 text-white rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all font-semibold shadow-xl shadow-blue-500/30 flex items-center gap-2 text-lg"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                   أنشئ نموذجك الأول مجاناً
                 </Link>
                 <button onClick={() => scrollTo('features')}
-                  className="px-8 py-4 bg-white text-blue-600 rounded-2xl hover:bg-blue-50 transition-colors font-semibold border-2 border-blue-200 flex items-center gap-2 text-lg"
+                  className="px-8 py-4 bg-white text-blue-700 rounded-2xl hover:bg-blue-50 transition-colors font-semibold border-2 border-blue-200 flex items-center gap-2 text-lg"
                 >
                   اكتشف المميزات
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
@@ -144,13 +132,13 @@ export default function PublicProjectsView() {
 
             <div className="flex-1 flex justify-center lg:justify-end">
               <div className="relative">
-                <div className="w-72 h-72 sm:w-80 sm:h-80 bg-gradient-to-br from-blue-500 to-pink-500 rounded-3xl shadow-2xl shadow-blue-500/20 flex items-center justify-center">
+                <div className="w-72 h-72 sm:w-80 sm:h-80 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl shadow-2xl shadow-blue-500/30 flex items-center justify-center">
                   <svg className="w-40 h-40 text-white/90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
                 <div className="absolute -bottom-4 -left-4 bg-white rounded-2xl shadow-lg px-5 py-3 border border-gray-100">
-                  <p className="text-sm font-bold text-pink-500">بدون علامة مائية</p>
+                  <p className="text-sm font-bold text-gray-800">بدون علامة مائية</p>
                   <p className="text-xs text-gray-500">في جميع الخطط</p>
                 </div>
               </div>
@@ -170,7 +158,7 @@ export default function PublicProjectsView() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-4">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">مميزات متقدمة</h2>
-            <div className="w-20 h-1 bg-pink-500 rounded-full mx-auto mt-3 mb-6" />
+            <div className="w-20 h-1 bg-blue-600 rounded-full mx-auto mt-3 mb-6" />
             <p className="text-gray-600 text-lg max-w-2xl mx-auto">
               كل ما تحتاجه لإنشاء نماذج احترافية وجمع البيانات بذكاء
             </p>
@@ -189,9 +177,9 @@ export default function PublicProjectsView() {
               { icon: '🏷️', title: 'بدون علامة مائية', desc: 'جميع الخطط مجانية وخالية من العلامات المائية على النماذج' },
             ].map((f, i) => (
               <div key={i}
-                className="bg-gradient-to-b from-white to-pink-50/20 rounded-2xl p-6 border border-gray-100 hover:shadow-lg hover:border-pink-200 transition-all duration-300"
+                className="bg-gradient-to-b from-blue-50/50 to-white rounded-2xl p-6 border border-blue-100/60 hover:shadow-lg hover:border-blue-200 transition-all duration-300"
               >
-                <div className="w-14 h-14 rounded-xl bg-white flex items-center justify-center text-2xl mb-4 shadow-sm border border-gray-100">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-2xl mb-4 shadow-lg shadow-blue-200/50">
                   <span>{f.icon}</span>
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-2">{f.title}</h3>
@@ -240,7 +228,7 @@ export default function PublicProjectsView() {
           <div className="text-center mt-10">
             <Link
               href="/templates"
-              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-blue-600 text-white font-bold text-sm hover:brightness-110 transition-all shadow-lg shadow-blue-500/25"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-gradient-to-l from-blue-600 to-indigo-600 text-white font-bold text-sm hover:shadow-xl hover:shadow-blue-200/50 transition-all duration-300"
             >
               تصفح جميع القوالب
               <span>←</span>
@@ -249,7 +237,93 @@ export default function PublicProjectsView() {
         </div>
       </section>
 
+      {/* ===== PARTNERS ===== */}
+      <section id="partners" className="py-20 px-4 bg-gradient-to-b from-indigo-50/40 via-white to-purple-50/30">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-4">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">🚀 شركاء النجاح</h2>
+            <div className="w-20 h-1 bg-indigo-600 rounded-full mx-auto mt-3 mb-6" />
+            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+              نخبة من منشئي النماذج المتميزين الذين يساهمون في إثراء المنصة بأفكارهم
+            </p>
+          </div>
 
+          {partners.length === 0 ? (
+            <div className="text-center py-12 text-gray-400">جاري تحميل الشركاء...</div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
+                {partners.map((p) => (
+                  <div key={p.id} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg hover:border-indigo-200 transition-all duration-300">
+                    <div className="bg-gradient-to-l from-indigo-500 to-purple-600 p-5 text-center">
+                      <div className="w-16 h-16 mx-auto rounded-full border-4 border-white/50 overflow-hidden bg-white/20 relative">
+                        {p.avatar_url ? (
+                          <Image 
+                            src={p.avatar_url} 
+                            alt={p.name} 
+                            fill
+                            className="object-cover" 
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white text-xl font-bold">{p.name?.charAt(0)}</div>
+                        )}
+                      </div>
+                      <h3 className="text-white font-bold mt-2">{p.name}</h3>
+                      {p.company && <p className="text-indigo-200 text-xs">{p.company}</p>}
+                    </div>
+
+                    {p.bio && (
+                      <div className="px-4 pt-3">
+                        <p className="text-gray-600 text-xs leading-relaxed line-clamp-2">{p.bio}</p>
+                      </div>
+                    )}
+
+                    {ideasMap[p.id] && ideasMap[p.id].length > 0 && (
+                      <div className="px-4 pt-3">
+                        <h4 className="text-[10px] font-bold text-gray-800 mb-1.5 flex items-center gap-1">
+                          <svg className="w-3 h-3 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1z" /></svg>
+                          الأفكار
+                        </h4>
+                        <div className="space-y-1.5">
+                          {ideasMap[p.id].map((idea: any, i: number) => (
+                            <div key={i} className="flex items-start gap-1.5 p-2 rounded-xl bg-gray-50 border border-gray-100">
+                              <span className={`mt-0.5 w-3 h-3 rounded-full border-2 shrink-0 flex items-center justify-center ${idea.implemented ? 'bg-green-500 border-green-500' : 'border-gray-300'}`}>
+                                {idea.implemented && <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                              </span>
+                              <p className="text-[11px] text-gray-700 leading-relaxed">{idea.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="px-4 py-3 flex items-center justify-between border-t border-gray-100 mt-3">
+                      <div className="flex items-center gap-1 text-xs text-gray-400">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                        {p.referral_count || 0} إحالة
+                      </div>
+                      <Link href="/partners" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
+                        عرض الكل
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="text-center mt-10">
+                <Link href="/partners"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-l from-indigo-600 to-purple-600 text-white rounded-2xl hover:from-indigo-700 hover:to-purple-700 transition-all font-semibold shadow-lg shadow-indigo-500/25"
+                >
+                  اكتشف جميع الشركاء
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                </Link>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
 
       {/* ===== PRICING ===== */}
       <section id="pricing" className="py-20 px-4 bg-gray-50">
@@ -289,7 +363,7 @@ export default function PublicProjectsView() {
                   </li>
                 ))}
               </ul>
-              <Link href="/register" className="block w-full py-3 text-center bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium shadow-lg shadow-blue-500/25">اشتري الآن</Link>
+              <Link href="/register" className="block w-full py-3 text-center bg-gradient-to-l from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-colors font-medium shadow-lg shadow-blue-500/25">اشتري الآن</Link>
             </div>
 
             <div className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-lg transition-shadow">
@@ -322,7 +396,7 @@ export default function PublicProjectsView() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Link href="/register"
-              className="px-8 py-4 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-all font-bold shadow-lg shadow-blue-500/25 flex items-center gap-2"
+              className="px-8 py-4 bg-white text-blue-700 rounded-2xl hover:bg-blue-50 transition-all font-bold shadow-xl flex items-center gap-2"
             >
               أنشئ حسابك مجاناً
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
@@ -353,7 +427,7 @@ export default function PublicProjectsView() {
             <input type="tel" placeholder="رقم الهاتف" className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
             <textarea rows={4} placeholder="رسالتك..." className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
             <button type="submit"
-              className="w-full py-4 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-all font-bold shadow-lg shadow-blue-500/25 text-lg"
+              className="w-full py-4 bg-gradient-to-l from-blue-600 to-indigo-600 text-white rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all font-bold shadow-lg shadow-blue-500/25 text-lg"
             >
               إرسال
             </button>

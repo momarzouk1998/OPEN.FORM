@@ -1,60 +1,11 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-50: #ecfdff;
-  --color-brand-100: #cffafe;
-  --color-brand-500: #12D8D8;
-  --color-brand-600: #0ebaba;
-  --color-brand-900: #115e5e;
-
-  /* Overriding standard colors to match logo brand */
-  --color-blue-50: #ecfdff;
-  --color-blue-100: #cffafe;
-  --color-blue-200: #a5f3fc;
-  --color-blue-300: #67e8f9;
-  --color-blue-400: #22d3ee;
-  --color-blue-500: #12D8D8;
-  --color-blue-600: #0ebaba;
-  --color-blue-700: #0d9e9e;
-  --color-blue-800: #0c7a7a;
-  --color-blue-900: #115e5e;
-  --color-blue-950: #0a4a4a;
-
-  --color-indigo-50: #ecfdff;
-  --color-indigo-100: #cffafe;
-  --color-indigo-200: #a5f3fc;
-  --color-indigo-300: #67e8f9;
-  --color-indigo-400: #22d3ee;
-  --color-indigo-500: #12D8D8;
-  --color-indigo-600: #0ebaba;
-  --color-indigo-700: #0d9e9e;
-  --color-indigo-800: #0c7a7a;
-  --color-indigo-900: #115e5e;
-  --color-indigo-950: #0a4a4a;
-
-  --color-pink-50: #fff1f1;
-  --color-pink-100: #ffdfdf;
-  --color-pink-200: #ffc8c8;
-  --color-pink-300: #ffb8b8;
-  --color-pink-400: #ffa8a8;
-  --color-pink-500: #FFA0A0;
-  --color-pink-600: #ff8a8a;
-  --color-pink-700: #ff7070;
-  --color-pink-800: #e85a5a;
-  --color-pink-900: #cc4040;
-  --color-pink-950: #b33030;
-
-  --color-purple-50: #fff1f1;
-  --color-purple-100: #ffdfdf;
-  --color-purple-200: #ffc8c8;
-  --color-purple-300: #ffb8b8;
-  --color-purple-400: #ffa8a8;
-  --color-purple-500: #FFA0A0;
-  --color-purple-600: #ff8a8a;
-  --color-purple-700: #ff7070;
-  --color-purple-800: #e85a5a;
-  --color-purple-900: #cc4040;
-  --color-purple-950: #b33030;
+  --color-brand-50: #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;
+  --color-brand-900: #134e4a;
   
   --font-sans: var(--font-cairo), ui-sans-serif, system-ui, sans-serif;
 }
@@ -62,8 +13,6 @@
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
-  --color-primary: #12D8D8;
-  --color-secondary: #FFA0A0;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -77,10 +26,10 @@ body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-cairo), Arial, sans-serif;
-  /* Dynamic Background using logo colors */
+  /* Dynamic Background */
   background-image: 
-    radial-gradient(at 0% 0%, hsla(180,100%,45%,0.1) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, hsla(0,100%,81%,0.1) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, hsla(170,100%,74%,0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(253,100%,74%,0.15) 0px, transparent 50%);
   background-attachment: fixed;
 }
 

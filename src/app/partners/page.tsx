@@ -5,9 +5,9 @@ import { createClient } from '@/utils/supabase/client'
 import type { PartnerProfile, PartnerIdea } from '@/types'
 import Link from 'next/link'
 import PublicHeader from '@/components/PublicHeader'
+import Image from 'next/image'
 import { Globe, ExternalLink } from 'lucide-react'
 
-// Brand Icons as SVGs since they are removed in Lucide v1+
 const FacebookIcon = (props: any) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
@@ -22,7 +22,7 @@ const LinkedinIcon = (props: any) => (
 )
 const YoutubeIcon = (props: any) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.42a2.78 2.78 0 0 0-1.94 2C1 8.11 1 12 1 12s0 3.89.46 5.58a2.78 2.78 0 0 0 1.94 2c1.72.42 8.6.42 8.6.42s6.88 0 8.6-.42a2.78 2.78 0 0 0 1.94-2C23 15.89 23 12 23 12s0-3.89-.46-5.58z" />
+    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.94 2c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z" />
     <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" />
   </svg>
 )
@@ -57,86 +57,75 @@ export default function PartnersPage() {
 
     if (!profiles) { setLoading(false); return }
 
-    const ids = (profiles as any[]).map(p => (p as any).id)
+    const enriched: any[] = []
 
-    // Batch all queries in parallel
-    const [
-      ideasRes,
-      likesCountRes,
-      myLikesRes,
-      formsRes,
-      templatesRes
-    ] = await Promise.all([
-      // All ideas for all partners
-      supabase.from('partner_ideas').select('*').in('partner_id', ids).order('created_at', { ascending: false }),
-      // Like counts per partner
-      supabase.from('partner_likes').select('partner_id', { count: 'exact', head: true }).in('partner_id', ids),
-      // My likes (if logged in)
-      u ? supabase.from('partner_likes').select('partner_id').in('partner_id', ids).eq('user_id', u.id) : Promise.resolve({ data: [] }),
-      // All forms for all partners (id + owner)
-      supabase.from('forms').select('id, created_by').in('created_by', ids),
-      // All approved templates for all partners
-      supabase.from('user_templates').select('*').in('created_by', ids).eq('approved', true).order('created_at', { ascending: false })
-    ])
+    for (const p of profiles) {
+      // Ideas
+      const { data: ideas } = await supabase
+        .from('partner_ideas')
+        .select('*')
+        .eq('partner_id', p.id)
+        .order('created_at', { ascending: false })
 
-    const ideas = ideasRes.data || []
-    const likesData = likesCountRes.data || []
-    const myLikesSet = new Set((myLikesRes as any)?.data?.map((l: any) => l.partner_id) || [])
-    const allForms = formsRes.data || []
-    const allTemplates = templatesRes.data || []
+      // Likes count
+      const { count: likesCount } = await supabase
+        .from('partner_likes')
+        .select('*', { count: 'exact', head: true })
+        .eq('partner_id', p.id)
 
-    const likesMap: Record<string, number> = {}
-    likesData.forEach((l: any) => { likesMap[l.partner_id] = (likesMap[l.partner_id] || 0) + 1 })
-
-    const formsMap: Record<string, string[]> = {}
-    allForms.forEach((f: any) => {
-      if (!formsMap[f.created_by]) formsMap[f.created_by] = []
-      formsMap[f.created_by].push(f.id)
-    })
-
-    const templatesMap: Record<string, any[]> = {}
-    allTemplates.forEach((t: any) => {
-      if (!templatesMap[t.created_by]) templatesMap[t.created_by] = []
-      templatesMap[t.created_by].push(t)
-    })
-
-    // Batch submissions count for all forms
-    const allFormIds = allForms.map((f: any) => f.id)
-    let submissionsByForm: Record<string, number> = {}
-    if (allFormIds.length > 0) {
-      const { data: respData } = await supabase
-        .from('form_responses')
-        .select('form_id')
-        .in('form_id', allFormIds)
-      if (respData) {
-        respData.forEach((r: any) => {
-          submissionsByForm[r.form_id] = (submissionsByForm[r.form_id] || 0) + 1
-        })
+      // Liked by me
+      let likedByMe = false
+      if (u) {
+        const { data: like } = await supabase
+          .from('partner_likes')
+          .select('id')
+          .eq('partner_id', p.id)
+          .eq('user_id', u.id)
+          .maybeSingle()
+        likedByMe = !!like
       }
-    }
 
-    const ideasMap: Record<string, any[]> = {}
-    ideas.forEach((idea: any) => {
-      if (!ideasMap[idea.partner_id]) ideasMap[idea.partner_id] = []
-      ideasMap[idea.partner_id].push(idea)
-    })
+      // Forms count
+      const { count: formsCount } = await supabase
+        .from('forms')
+        .select('*', { count: 'exact', head: true })
+        .eq('created_by', p.id)
 
-    const enriched = (profiles as any[]).map((p: any) => {
-      const partnerFormIds = formsMap[p.id] || []
-      const partnerSubmissionCount = partnerFormIds.reduce((sum, fid) => sum + (submissionsByForm[fid] || 0), 0)
-      const partnerTemplates = templatesMap[p.id] || []
+      // Templates (approved) - fetch up to 6 for preview
+      const { data: templatesList } = await supabase
+        .from('user_templates')
+        .select('*')
+        .eq('created_by', p.id)
+        .eq('approved', true)
+        .order('created_at', { ascending: false })
+        .limit(6)
 
-      return {
+      // Total submissions on all forms
+      const { data: formIds } = await supabase
+        .from('forms')
+        .select('id')
+        .eq('created_by', p.id)
+
+      let submissionsCount = 0
+      if (formIds && formIds.length > 0) {
+        const { count: sc } = await supabase
+          .from('form_responses')
+          .select('*', { count: 'exact', head: true })
+          .in('form_id', formIds.map((f: { id: string }) => f.id))
+        submissionsCount = sc || 0
+      }
+
+      enriched.push({
         ...p,
-        ideas: ideasMap[p.id] || [],
-        likes_count: likesMap[p.id] || 0,
-        liked_by_me: myLikesSet.has(p.id),
-        forms_count: partnerFormIds.length,
-        templates_count: partnerTemplates.length,
-        templates_preview: partnerTemplates.slice(0, 6),
-        submissions_count: partnerSubmissionCount
-      }
-    })
+        ideas: ideas || [],
+        likes_count: likesCount || 0,
+        liked_by_me: likedByMe,
+        forms_count: formsCount || 0,
+        templates_count: (templatesList || []).length || 0,
+        templates_preview: templatesList || [],
+        submissions_count: submissionsCount
+      })
+    }
 
     setPartners(enriched)
     setLoading(false)
@@ -188,16 +177,19 @@ export default function PartnersPage() {
   }
 
   return (
-    <div dir="rtl" className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/50 to-pink-50/20 pb-12">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 pt-16">
       <PublicHeader />
-
-      {/* Hero Section */}
-      <div className="bg-gradient-to-l from-blue-500 to-pink-500 text-white py-16 px-4 mb-12">
-        <div className="max-w-7xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">شركاء النجاح</h1>
-          <p className="text-blue-50 text-lg max-w-2xl mx-auto opacity-90">
-            نفتخر بنخبة من المبدعين الذين ساهموا في تطوير المنصة ومشاركة أفكارهم وتجاربهم
+      {/* Header */}
+      <div className="bg-gradient-to-l from-indigo-600 to-purple-700 text-white">
+        <div className="max-w-6xl mx-auto px-4 py-16 text-center">
+          <h1 className="text-4xl font-bold mb-3">🚀 شركاء النجاح</h1>
+          <p className="text-indigo-200 text-lg max-w-2xl mx-auto">
+            نخبة من منشئي النماذج المتميزين الذين يساهمون في إثراء المنصة بأفكارهم وإبداعاتهم
           </p>
+          <div className="flex items-center justify-center gap-2 mt-4 text-indigo-200 text-sm">
+            <span className="w-2 h-2 rounded-full bg-green-400" />
+            <span>{partners.length} شريك</span>
+          </div>
         </div>
       </div>
 
@@ -254,12 +246,31 @@ function PartnerCard({
   }
 
   return (
-    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg hover:border-blue-200 transition-all duration-300 flex flex-col h-full">
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg hover:border-indigo-200 transition-all duration-300 flex flex-col h-full">
       {/* Card Header */}
-      <div className="bg-gradient-to-l from-blue-500 to-pink-500 p-5 text-center relative overflow-hidden">
+      <div className="bg-gradient-to-l from-indigo-500 to-purple-600 p-5 text-center relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
+        <div className="relative w-24 h-24 mx-auto mb-3">
+          <div className="w-full h-full rounded-full border-4 border-white/50 overflow-hidden bg-white/20 shadow-inner">
+            {partner.avatar_url ? (
+              <Image 
+                src={partner.avatar_url} 
+                alt={partner.name} 
+                width={96} 
+                height={96} 
+                className="w-full h-full object-cover"
+                priority={false}
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-white text-3xl font-bold bg-indigo-400">
+                {partner.name?.charAt(0) || '?'}
+              </div>
+            )}
+          </div>
+        </div>
         <h3 className="text-white font-bold text-xl mt-2 mb-1">{partner.name}</h3>
-        {partner.company && <p className="text-blue-50 text-sm font-medium">{partner.company}</p>}
+        {partner.company && <p className="text-indigo-100 text-sm font-medium">{partner.company}</p>}
       </div>
 
       {/* Social Icons - Now part of the header area for better visibility */}

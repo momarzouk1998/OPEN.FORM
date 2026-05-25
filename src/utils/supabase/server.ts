@@ -29,10 +29,11 @@ export const createClient = async () => {
   )
 }
 
-/** Service-role client (bypasses RLS) — only use in API routes, never client-side. Falls back to anon key if service role key is not set. */
+/** Service-role client (bypasses RLS) — only use in API routes, never client-side. */
 export const createServiceClient = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  return createSupabaseClient(url!, key!, { auth: { autoRefreshToken: false, persistSession: false } })
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!key) throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set — service client unavailable')
+  return createSupabaseClient(url!, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 

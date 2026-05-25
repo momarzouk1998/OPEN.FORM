@@ -1956,7 +1956,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
                   {(group.items || []).filter(prod => prod.available !== false).map((prod) => {
                     const qty = cart[prod.id] || 0
                     return (
-                      <div key={prod.id} className="border border-gray-200 rounded-xl overflow-hidden hover:border-pink-300 hover:shadow-md transition-all">
+                      <div key={prod.id} className="border border-gray-200 rounded-xl overflow-hidden hover:border-blue-300 hover:shadow-md transition-all">
                         {prod.image_url && (
                           <div className="h-36 bg-gray-50 overflow-hidden relative">
                             <Image 
@@ -1972,15 +1972,15 @@ export default function FormFiller({ form, questions, existingResponse: propExis
                           <h4 className="font-bold text-gray-900 text-sm">{prod.name}</h4>
                           {prod.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{prod.description}</p>}
                           <div className="flex items-center justify-between mt-2">
-                            <span className="text-lg font-bold text-pink-600">{prod.price.toLocaleString()} <span className="text-xs font-normal">EGP</span></span>
+                            <span className="text-lg font-bold text-blue-700">{prod.price.toLocaleString()} <span className="text-xs font-normal">EGP</span></span>
                             {qty > 0 ? (
                               <div className="flex items-center gap-2">
                                 <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: Math.max(0, qty - 1) }))} className="w-7 h-7 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-sm font-bold hover:bg-red-200">−</button>
                                 <span className="text-sm font-bold w-5 text-center">{qty}</span>
-                                <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: qty + 1 }))} className="w-7 h-7 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center text-sm font-bold hover:bg-blue-200">+</button>
+                                <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: qty + 1 }))} className="w-7 h-7 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold hover:bg-blue-200">+</button>
                               </div>
                             ) : (
-                              <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: 1 }))} className="px-3 py-1.5 bg-blue-500 text-white text-xs rounded-lg hover:brightness-110 transition-colors">إضافة</button>
+                              <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: 1 }))} className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors">إضافة</button>
                             )}
                           </div>
                         </div>
@@ -1991,10 +1991,10 @@ export default function FormFiller({ form, questions, existingResponse: propExis
               </div>
             ))}
             {cartCount > 0 && (
-              <div className="mt-4 p-3 bg-gradient-to-l from-blue-50 to-pink-50 rounded-xl border border-blue-100 flex items-center justify-between">
+              <div className="mt-4 p-3 bg-gradient-to-l from-blue-50 to-indigo-50 rounded-xl border border-blue-100 flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">إجمالي الطلب</p>
-                  <p className="text-xl font-bold text-pink-600">{cartTotal.toLocaleString()} <span className="text-sm font-normal">EGP</span></p>
+                  <p className="text-xl font-bold text-blue-700">{cartTotal.toLocaleString()} <span className="text-sm font-normal">EGP</span></p>
                 </div>
                 <p className="text-xs text-gray-500">{cartCount} منتج{cartCount > 1 ? 'ات' : ''}</p>
               </div>
@@ -2691,7 +2691,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
 
             const renderCard = (question: Question, idx: number) => (
               <div className="flex items-start gap-3 mb-4">
-                <span className="w-7 h-7 bg-gradient-to-br from-blue-500 to-pink-500 text-white rounded-lg flex items-center justify-center font-bold text-xs shrink-0 form-themed-primary-bg">
+                <span className="w-7 h-7 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg flex items-center justify-center font-bold text-xs shrink-0 form-themed-primary-bg">
                   {idx + 1}
                 </span>
                 <div className="flex-1 min-w-0">
@@ -2700,7 +2700,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
                     {question.required && !DISPLAY_ONLY_QUESTION_TYPES.includes(question.type) && <span className="text-red-500 mr-1">*</span>}
                   </h3>
                   {question.type !== 'file_upload' && (
-                    <p className="text-pink-500 text-xs mt-1 font-medium form-themed-primary-text">
+                    <p className="text-blue-500 text-xs mt-1 font-medium form-themed-primary-text">
                       {getQuestionMaxScore(question)} نقطة
                     </p>
                   )}
@@ -2796,7 +2796,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
               {!isLastPage && (
                 <button
                   onClick={goToNextPage}
-                  className="flex-1 py-3.5 bg-gradient-to-l from-blue-500 to-pink-500 text-white font-semibold rounded-xl hover:brightness-110 transition-all shadow-lg shadow-blue-500/25 form-themed-primary-bg"
+                  className="flex-1 py-3.5 bg-gradient-to-l from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/25 form-themed-primary-bg"
                 >
                   التالي
                 </button>
@@ -2809,7 +2809,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
                   style={{
                     background: (form.page_titles as any)?._submit_button?.color
                       ? (form.page_titles as any)._submit_button.color
-                      : 'linear-gradient(to left, #12D8D8, #FFA0A0)',
+                      : 'linear-gradient(to left, #059669, #16a34a)',
                     color: (form.page_titles as any)?._submit_button?.textColor || '#ffffff',
                   }}
                 >
@@ -2853,7 +2853,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
                     }}
                     className={`w-2.5 h-2.5 rounded-full transition-all ${
                       p === currentPage
-                        ? 'bg-pink-500 w-6 form-themed-primary-bg'
+                        ? 'bg-blue-600 w-6 form-themed-primary-bg'
                         : 'bg-gray-300 hover:bg-gray-400'
                     }`}
                     title={`صفحة ${p}`}

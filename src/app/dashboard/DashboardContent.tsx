@@ -23,9 +23,7 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
   const [formCount, setFormCount] = useState(0)
   const [responseCount, setResponseCount] = useState(0)
   const [forms, setForms] = useState<any[]>([])
-  const [formResponseCounts, setFormResponseCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
   const router = useRouter()
   const supabase = createClient()
   const { settings } = useAppSettings()
@@ -42,27 +40,14 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
         setForms(forms)
         setFormCount(forms.length || 0)
 
+        // Count responses only for this user's forms
         if (forms.length > 0) {
           const formIds = forms.map((f: { id: string }) => f.id)
-          // Total count
           const { count } = await supabase
             .from('form_responses')
             .select('*', { count: 'exact', head: true })
             .in('form_id', formIds)
           setResponseCount(count || 0)
-
-          // Per-form counts
-          const { data: respRows } = await supabase
-            .from('form_responses')
-            .select('form_id')
-            .in('form_id', formIds)
-          if (respRows) {
-            const counts: Record<string, number> = {}
-            respRows.forEach((r: any) => {
-              counts[r.form_id] = (counts[r.form_id] || 0) + 1
-            })
-            setFormResponseCounts(counts)
-          }
         }
       } catch (e) {
         console.error('Error fetching dashboard data:', e)
@@ -73,24 +58,19 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
     fetchData()
   }, [profile.id])
 
-  const filteredForms = forms.filter(f =>
-    f.name?.toLowerCase().includes(search.toLowerCase()) ||
-    f.description?.toLowerCase().includes(search.toLowerCase())
-  )
-
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/login')
   }
 
   return (
-    <div dir="rtl" className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/50 to-pink-50/20">
+    <div dir="rtl" className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50/30">
       <Header user={profile} settings={settings} onMenuClick={() => setSidebarOpen(true)} />
 
       {unreadCount > 0 && (
         <Link
           href="/notifications"
-          className="block bg-pink-500 text-white text-center py-2 px-4 text-sm font-medium hover:bg-pink-600 transition-colors"
+          className="block bg-blue-600 text-white text-center py-2 px-4 text-sm font-medium hover:bg-blue-700 transition-colors"
         >
           لديك {unreadCount} إشعار{unreadCount !== 1 ? 'ات' : ''} غير مقروء
         </Link>
@@ -109,10 +89,10 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
           <div className="px-6 pt-8 pb-6 border-b border-gray-100">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200/50">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200/50">
                   <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 </div>
-                <span className="font-bold text-lg text-gray-800">Forms<span className="text-pink-500">.OpenappO</span></span>
+                <span className="font-bold text-lg text-gray-800">Forms<span className="text-blue-600">.OpenappO</span></span>
               </div>
               <button onClick={() => setSidebarOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -121,7 +101,7 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
           </div>
 
           <nav className="flex-1 px-4 py-6 overflow-y-auto space-y-1">
-            <Link href="/dashboard" onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 px-4 py-3 text-pink-600 bg-pink-50 rounded-xl font-medium">
+            <Link href="/dashboard" onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 px-4 py-3 text-blue-600 bg-blue-50 rounded-xl font-medium">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
               الرئيسية
             </Link>
@@ -174,7 +154,7 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
             </Link>
             <Link
               href="/forms/create"
-              className="px-5 py-3 bg-gradient-to-l from-blue-500 to-pink-500 text-white rounded-xl hover:brightness-110 transition-all font-medium flex items-center gap-2 shadow-lg shadow-blue-500/25"
+              className="px-5 py-3 bg-gradient-to-l from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all font-medium flex items-center gap-2 shadow-lg shadow-blue-500/25"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
               إنشاء نموذج جديد
@@ -222,29 +202,11 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
           </div>
         ) : forms.length > 0 ? (
           <div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-gray-900">نماذجي</h2>
-              {/* Search */}
-              <div className="relative w-full sm:w-64">
-                <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <input
-                  type="text"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="ابحث عن نموذج..."
-                  className="w-full pr-9 pl-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
             </div>
-            {filteredForms.length === 0 && (
-              <p className="text-center text-gray-400 py-8">لا توجد نتائج للبحث</p>
-            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredForms.map((form) => {
-                const respCount = formResponseCounts[form.id] || 0
-                return (
+              {forms.map((form) => (
                 <div
                   key={form.id}
                   className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all group"
@@ -259,13 +221,6 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
                         <p className="text-gray-500 text-sm truncate">{form.description || 'لا يوجد وصف'}</p>
                       </div>
                     </div>
-                    {/* Response count badge */}
-                    <div className="flex items-center gap-1.5 mb-3">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium ${respCount > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-50 text-gray-400'}`}>
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-                        {respCount} {respCount === 1 ? 'رد' : 'ردود'}
-                      </span>
-                    </div>
                     <div className="flex items-center justify-between text-xs text-gray-400 pt-3 border-t border-gray-50">
                       <span>{new Date(form.created_at).toLocaleDateString('ar-SA')}</span>
                       <div className="flex gap-2">
@@ -277,7 +232,7 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
                           معاينة
                         </Link>
                         <Link
-                          href={`/forms/${form.serial_number || form.id}/edit?tab=results`}
+                          href={`/admin/results?formId=${form.id}`}
                           onClick={(e) => e.stopPropagation()}
                           className="text-green-600 hover:text-green-700 font-medium transition-colors px-2 py-1 hover:bg-green-50 rounded-lg"
                         >
@@ -287,8 +242,7 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
                     </div>
                   </Link>
                 </div>
-                )
-              })}
+              ))}
             </div>
           </div>
         ) : (

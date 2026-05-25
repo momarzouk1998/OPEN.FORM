@@ -2,21 +2,21 @@
 
 
 
-import { useState, useEffect, useRef, Suspense, lazy } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 
 import { createClient } from '@/utils/supabase/client'
 
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { type ProductGroup } from '@/components/ProductGroupsEditor'
-import { type PaymentMethod } from '@/components/PaymentMethodsEditor'
 
 const ImageUpload = dynamic(() => import('@/components/ImageUpload'), { ssr: false })
 const RichTextEditor = dynamic(() => import('@/components/RichTextEditor'), { ssr: false })
 const ProductGroupsEditor = dynamic(() => import('@/components/ProductGroupsEditor'), { ssr: false })
 const PaymentMethodsEditor = dynamic(() => import('@/components/PaymentMethodsEditor'), { ssr: false })
 const FormFiller = dynamic(() => import('../FormFiller'), { ssr: false })
+import type { ProductGroup } from '@/components/ProductGroupsEditor'
+import type { PaymentMethod } from '@/components/PaymentMethodsEditor'
 
 import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
@@ -3026,7 +3026,7 @@ const params = useParams()
                                           المنطق الشرطي
                                         </label>
                                         <button onClick={() => {
-                                          const firstQ = (formData?.questions || []).find((q: any) => q.id !== q.id)
+                                          const firstQ = (formData?.questions || []).find((otherQ: any) => otherQ.id !== q.id)
                                           if (firstQ) {
                                             updateQuestion(qi, { visibility_rules: [{ question_id: firstQ.id, operator: 'equals', value: '' }] })
                                           }
@@ -3038,8 +3038,8 @@ const params = useParams()
                                             <div key={ri} className="flex items-center gap-1 text-xs">
                                               <span className="text-indigo-600 font-medium shrink-0">إذا</span>
                                               <select value={rule.question_id} onChange={(e) => { const r = [...(q.visibility_rules || [])]; r[ri] = { ...r[ri], question_id: e.target.value }; updateQuestion(qi, { visibility_rules: r }) }} className="flex-1 min-w-0 px-1.5 py-1 bg-white border border-indigo-200 rounded text-xs">
-                                                {(formData?.questions || []).filter((q: any) => q.id !== q.id).map((q: any) => (
-                                                  <option key={q.id} value={q.id}>{q.text ? q.text.slice(0, 15) : 'سؤال'}</option>
+                                                {(formData?.questions || []).filter((otherQ: any) => otherQ.id !== q.id).map((otherQ: any) => (
+                                                  <option key={otherQ.id} value={otherQ.id}>{otherQ.text ? otherQ.text.slice(0, 15) : 'سؤال'}</option>
                                                 ))}
                                               </select>
                                               <select value={rule.operator || 'equals'} onChange={(e) => { const r = [...(q.visibility_rules || [])]; r[ri] = { ...r[ri], operator: e.target.value }; updateQuestion(qi, { visibility_rules: r }) }} className="px-1.5 py-1 bg-white border border-indigo-200 rounded text-xs">

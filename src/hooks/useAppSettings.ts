@@ -72,9 +72,9 @@ export function useAppSettings() {
 
         app_logo: '',
 
-        app_name: 'أحلى شباب',
+    app_name: 'Forms.OpenappO',
 
-        app_description: 'منصة متكاملة لإدارة المتطوعين والمشاريع'
+    app_description: 'منصة متكاملة لإنشاء النماذج والاستبيانات'
 
       }
 

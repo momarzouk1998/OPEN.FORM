@@ -83,17 +83,16 @@ function RegisterForm() {
          // Handle referral code from search params
          const referralCode = searchParams.get('ref')
          
-         const { error: profileError } = await supabase
-           .from('profiles')
-           .upsert({
-             id: data.user.id,
-             email: formData.email,
-             name: formData.name,
-             phone: formData.phone,
-             gender: 'male',
-             role: 'volunteer',
-             status: 'approved'
-           })
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: data.user.id,
+              email: formData.email,
+              name: formData.name,
+              phone: formData.phone,
+              role: 'volunteer',
+              status: 'approved'
+            })
            .eq('id', data.user.id)
 
          if (profileError) console.error('Profile update error:', profileError)
