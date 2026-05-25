@@ -108,7 +108,7 @@ export default function ProfilePage() {
     setSuccess('')
 
     if (!formData.name.trim()) {
-      setError('يرجن إدخال الاسم')
+      setError('يرجى إدخال الاسم')
       return
     }
 
@@ -150,34 +150,53 @@ export default function ProfilePage() {
     e.preventDefault()
     setError('')
 
+    if (!passwordData.current_password) {
+      setError('يرجى إدخال كلمة المرور الحالية')
+      return
+    }
+
     if (!passwordData.new_password) {
-      setError('يرجن إدخال الباسورد الجديد')
+      setError('يرجى إدخال كلمة المرور الجديدة')
       return
     }
 
     if (passwordData.new_password.length < 6) {
-      setError('الباسورد يجب أن يكون 6 أحرف على الأقل')
+      setError('كلمة المرور يجب أن تكون 6 أحرف على الأقل')
       return
     }
 
     if (passwordData.new_password !== passwordData.confirm_password) {
-      setError('الباسورد الجديد غير متطابق')
+      setError('كلمة المرور الجديدة غير متطابقة')
       return
     }
 
     setSaving(true)
     try {
+      // Verify current password first by re-signing in
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user?.email) throw new Error('لم يتم العثور على المستخدم')
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: passwordData.current_password
+      })
+      if (signInError) {
+        setError('كلمة المرور الحالية غير صحيحة')
+        setSaving(false)
+        return
+      }
+
       const { error: updateError } = await supabase.auth.updateUser({
         password: passwordData.new_password
       })
 
       if (updateError) throw updateError
 
-      setSuccess('تم تغيير الباسورد بنجاح')
+      setSuccess('تم تغيير كلمة المرور بنجاح')
       setPasswordData({ current_password: '', new_password: '', confirm_password: '' })
       setShowPasswordChange(false)
     } catch (err: any) {
-      setError(err.message || 'حدث خطأ أثناء تغيير الباسورد')
+      setError(err.message || 'حدث خطأ أثناء تغيير كلمة المرور')
     } finally {
       setSaving(false)
     }
@@ -574,25 +593,37 @@ export default function ProfilePage() {
           {showPasswordChange && (
             <form onSubmit={handleChangePassword} className="mt-4 space-y-4 pt-4 border-t">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">الباسورد الجديد *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">كلمة المرور الحالية *</label>
                 <input
                   type="password"
-                  value={passwordData.new_password}
-                  onChange={(e) => setPasswordData(prev => ({ ...prev, new_password: e.target.value }))}
+                  value={passwordData.current_password}
+                  onChange={(e) => setPasswordData(prev => ({ ...prev, current_password: e.target.value }))}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="أدخل الباسوورد الجديد"
+                  placeholder="أدخل كلمة المرور الحالية"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">تأكيد الباسورد *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">كلمة المرور الجديدة *</label>
+                <input
+                  type="password"
+                  value={passwordData.new_password}
+                  onChange={(e) => setPasswordData(prev => ({ ...prev, new_password: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="6 أحرف على الأقل"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">تأكيد كلمة المرور *</label>
                 <input
                   type="password"
                   value={passwordData.confirm_password}
                   onChange={(e) => setPasswordData(prev => ({ ...prev, confirm_password: e.target.value }))}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="أعد إدخال الباسوورد"
+                  placeholder="أعد إدخال كلمة المرور الجديدة"
                   required
                 />
               </div>
@@ -612,7 +643,7 @@ export default function ProfilePage() {
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                     </svg>
-                    تغيير الباسورد
+                    تغيير كلمة المرور
                   </>
                 )}
               </button>

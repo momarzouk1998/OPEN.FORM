@@ -2,22 +2,17 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
-import { createClient } from '@/utils/supabase/client'
 
 const NAV_LINKS = [
   { id: 'hero', label: 'الرئيسية' },
   { id: 'features', label: 'المميزات' },
   { id: 'templates', label: 'القوالب' },
-  { id: 'partners', label: 'شركاؤنا' },
   { id: 'pricing', label: 'الأسعار' },
   { id: 'contact', label: 'تواصل معنا' },
 ]
 
 export default function PublicProjectsView() {
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [partners, setPartners] = useState<any[]>([])
-  const [ideasMap, setIdeasMap] = useState<Record<string, any[]>>({})
   const ctaRef = useRef<HTMLAnchorElement>(null)
   const [ctaShake, setCtaShake] = useState(false)
 
@@ -35,31 +30,6 @@ export default function PublicProjectsView() {
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [])
-
-  useEffect(() => {
-    const supabase = createClient()
-    ;(async () => {
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, name, avatar_url, company, bio, referral_code, referral_count')
-        .eq('is_partner', true)
-        .limit(6)
-      if (profiles) {
-        setPartners(profiles)
-        const im: Record<string, any[]> = {}
-        for (const p of profiles) {
-          const { data: ideas } = await supabase
-            .from('partner_ideas')
-            .select('text, implemented')
-            .eq('partner_id', p.id)
-            .order('created_at', { ascending: false })
-            .limit(2)
-          if (ideas) im[p.id] = ideas
-        }
-        setIdeasMap(im)
-      }
-    })()
   }, [])
 
   const scrollTo = (id: string) => {
@@ -279,86 +249,7 @@ export default function PublicProjectsView() {
         </div>
       </section>
 
-      {/* ===== PARTNERS ===== */}
-      <section id="partners" className="py-20 px-4 bg-gradient-to-b from-indigo-50/40 via-white to-purple-50/30">
-        <div className="max-w-6xl mx-auto">
 
-          {partners.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">جاري تحميل الشركاء...</div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
-                {partners.map((p) => (
-                  <div key={p.id} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg hover:border-indigo-200 transition-all duration-300">
-                    <div className="bg-gradient-to-l from-indigo-500 to-purple-600 p-5 text-center">
-                      <div className="w-16 h-16 mx-auto rounded-full border-4 border-white/50 overflow-hidden bg-white/20 relative">
-                        {p.avatar_url ? (
-                          <Image 
-                            src={p.avatar_url} 
-                            alt={p.name} 
-                            fill
-                            className="object-cover" 
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-white text-xl font-bold">{p.name?.charAt(0)}</div>
-                        )}
-                      </div>
-                      <h3 className="text-white font-bold mt-2">{p.name}</h3>
-                      {p.company && <p className="text-indigo-200 text-xs">{p.company}</p>}
-                    </div>
-
-                    {p.bio && (
-                      <div className="px-4 pt-3">
-                        <p className="text-gray-600 text-xs leading-relaxed line-clamp-2">{p.bio}</p>
-                      </div>
-                    )}
-
-                    {ideasMap[p.id] && ideasMap[p.id].length > 0 && (
-                      <div className="px-4 pt-3">
-                        <h4 className="text-[10px] font-bold text-gray-800 mb-1.5 flex items-center gap-1">
-                          <svg className="w-3 h-3 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1z" /></svg>
-                          الأفكار
-                        </h4>
-                        <div className="space-y-1.5">
-                          {ideasMap[p.id].map((idea: any, i: number) => (
-                            <div key={i} className="flex items-start gap-1.5 p-2 rounded-xl bg-gray-50 border border-gray-100">
-                              <span className={`mt-0.5 w-3 h-3 rounded-full border-2 shrink-0 flex items-center justify-center ${idea.implemented ? 'bg-green-500 border-green-500' : 'border-gray-300'}`}>
-                                {idea.implemented && <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                              </span>
-                              <p className="text-[11px] text-gray-700 leading-relaxed">{idea.text}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="px-4 py-3 flex items-center justify-between border-t border-gray-100 mt-3">
-                      <div className="flex items-center gap-1 text-xs text-gray-400">
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
-                        {p.referral_count || 0} إحالة
-                      </div>
-                      <Link href="/partners" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
-                        عرض الكل
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="text-center mt-10">
-                <Link href="/partners"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl hover:brightness-110 transition-all font-semibold shadow-lg shadow-blue-500/25"
-                >
-                  اكتشف جميع الشركاء
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                </Link>
-              </div>
-            </>
-          )}
-        </div>
-      </section>
 
       {/* ===== PRICING ===== */}
       <section id="pricing" className="py-20 px-4 bg-gray-50">

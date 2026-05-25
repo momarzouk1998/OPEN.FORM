@@ -18,8 +18,8 @@ const NAV_ITEMS = [
 export default function FooterBar() {
   const pathname = usePathname()
 
-  // Don't show on login or form filler page
-  if (pathname === '/login' || pathname.startsWith('/forms/')) return null
+  // Don't show on login, form filler, or landing page
+  if (pathname === '/' || pathname === '/login' || pathname.startsWith('/forms/')) return null
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-t border-gray-200/60 safe-area-bottom">

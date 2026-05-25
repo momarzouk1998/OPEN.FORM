@@ -23,7 +23,9 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
   const [formCount, setFormCount] = useState(0)
   const [responseCount, setResponseCount] = useState(0)
   const [forms, setForms] = useState<any[]>([])
+  const [formResponseCounts, setFormResponseCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
   const router = useRouter()
   const supabase = createClient()
   const { settings } = useAppSettings()
@@ -40,14 +42,27 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
         setForms(forms)
         setFormCount(forms.length || 0)
 
-        // Count responses only for this user's forms
         if (forms.length > 0) {
           const formIds = forms.map((f: { id: string }) => f.id)
+          // Total count
           const { count } = await supabase
             .from('form_responses')
             .select('*', { count: 'exact', head: true })
             .in('form_id', formIds)
           setResponseCount(count || 0)
+
+          // Per-form counts
+          const { data: respRows } = await supabase
+            .from('form_responses')
+            .select('form_id')
+            .in('form_id', formIds)
+          if (respRows) {
+            const counts: Record<string, number> = {}
+            respRows.forEach((r: any) => {
+              counts[r.form_id] = (counts[r.form_id] || 0) + 1
+            })
+            setFormResponseCounts(counts)
+          }
         }
       } catch (e) {
         console.error('Error fetching dashboard data:', e)
@@ -57,6 +72,11 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
     }
     fetchData()
   }, [profile.id])
+
+  const filteredForms = forms.filter(f =>
+    f.name?.toLowerCase().includes(search.toLowerCase()) ||
+    f.description?.toLowerCase().includes(search.toLowerCase())
+  )
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -202,11 +222,29 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
           </div>
         ) : forms.length > 0 ? (
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <h2 className="text-lg font-bold text-gray-900">نماذجي</h2>
+              {/* Search */}
+              <div className="relative w-full sm:w-64">
+                <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="ابحث عن نموذج..."
+                  className="w-full pr-9 pl-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
             </div>
+            {filteredForms.length === 0 && (
+              <p className="text-center text-gray-400 py-8">لا توجد نتائج للبحث</p>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {forms.map((form) => (
+              {filteredForms.map((form) => {
+                const respCount = formResponseCounts[form.id] || 0
+                return (
                 <div
                   key={form.id}
                   className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all group"
@@ -221,6 +259,13 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
                         <p className="text-gray-500 text-sm truncate">{form.description || 'لا يوجد وصف'}</p>
                       </div>
                     </div>
+                    {/* Response count badge */}
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium ${respCount > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-50 text-gray-400'}`}>
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        {respCount} {respCount === 1 ? 'رد' : 'ردود'}
+                      </span>
+                    </div>
                     <div className="flex items-center justify-between text-xs text-gray-400 pt-3 border-t border-gray-50">
                       <span>{new Date(form.created_at).toLocaleDateString('ar-SA')}</span>
                       <div className="flex gap-2">
@@ -232,7 +277,7 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
                           معاينة
                         </Link>
                         <Link
-                          href={`/admin/results?formId=${form.id}`}
+                          href={`/forms/${form.serial_number || form.id}/edit?tab=results`}
                           onClick={(e) => e.stopPropagation()}
                           className="text-green-600 hover:text-green-700 font-medium transition-colors px-2 py-1 hover:bg-green-50 rounded-lg"
                         >
@@ -242,7 +287,8 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
                     </div>
                   </Link>
                 </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         ) : (
