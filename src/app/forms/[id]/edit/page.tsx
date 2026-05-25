@@ -1058,8 +1058,11 @@ const params = useParams()
       newQuestion.text = 'المنتجات'
       newQuestion.options = [{ id: `g_${Date.now()}`, name: '', items: [] }] as any
     } else if (type === 'payment_info_block') {
-      newQuestion.text = 'بيانات الدفع'
-      newQuestion.options = [{ id: `pm_${Date.now()}`, method: 'bank', label: '', value: '', details: '' }] as any
+      newQuestion.text = 'بيانات الدفع (جنيه مصري)'
+      newQuestion.options = [
+        { id: `pm_${Date.now()}_1`, method: 'instapay', label: 'انستاباي', value: '01558282760', details: 'جميع المدفوعات بالجنيه المصري' },
+        { id: `pm_${Date.now()}_2`, method: 'wallet', label: 'محفظة', value: '01558282760', details: 'بعد الدفع أرسل صورة الإيصال عبر واتساب' }
+      ] as any
     } else if (type === 'match_items') {
       newQuestion.matrix_rows = [
         { id: `left_${Date.now()}_1`, text: 'عنصر 1', required: true },

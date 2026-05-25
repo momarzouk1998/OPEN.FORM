@@ -2,12 +2,23 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/utils/supabase/server'
 import { sendEmail } from '@/utils/resend'
 
+// Simple in-memory rate limiting: max 1 request per email per 60 seconds
+const rateLimitMap = new Map<string, number>()
+const RATE_LIMIT_MS = 60_000
+
 export async function POST(request: Request) {
   try {
     const { email } = await request.json()
 
     if (!email || !email.includes('@')) {
       return NextResponse.json({ error: 'البريد الإلكتروني غير صحيح' }, { status: 400 })
+    }
+
+    // Rate limit check
+    const lastSent = rateLimitMap.get(email.toLowerCase())
+    if (lastSent && Date.now() - lastSent < RATE_LIMIT_MS) {
+      const remaining = Math.ceil((RATE_LIMIT_MS - (Date.now() - lastSent)) / 1000)
+      return NextResponse.json({ error: `يرجى الانتظار ${remaining} ثانية قبل طلب كود جديد` }, { status: 429 })
     }
 
     // Detect email provider
@@ -66,6 +77,9 @@ export async function POST(request: Request) {
         </div>
       `
     })
+
+    // Update rate limit on success
+    rateLimitMap.set(email.toLowerCase(), Date.now())
 
     return NextResponse.json({ success: true, message: 'تم إرسال كود التحقق إلى بريدك الإلكتروني' })
   } catch (error) {

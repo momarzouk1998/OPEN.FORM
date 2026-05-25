@@ -13,7 +13,7 @@
 - **الحل:** `throw new Error` لو الـ key مش موجود.
 - **الحالة:** ✅ `throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')` بدلاً من silent fallback
 
-### 2. Admin Check Client-Side فقط
+### 2. ✅ Admin Check Client-Side — تم الإصلاح
 - **الملفات:**
   - `src/app/admin/users/page.tsx:14-86`
   - `src/app/admin/results/page.tsx:~15-40`
@@ -22,7 +22,7 @@
   - `src/app/admin/analytics/page.tsx:~1-20`
   - `src/app/admin/partners/page.tsx:~1-20`
 - **الوصف:** التحقق من أن المستخدم Admin بيتم في المتصفح فقط (`profile.role !== 'admin'`). أي مستخدم عادي يعرف رابط `/admin/users` يقدر على الأقل يحاول يحمل البيانات.
-- **الحل:** إضافة server-side check في middleware أو في server component.
+- **الحل:** تم إضافة server-side check في `middleware.ts` — أي access لـ `/admin/*` بيعمل فحص صلاحية قبل ما يوصل للصفحة نفسها.
 
 ### 3. ✅ Gender Hardcoded في التسجيل — تم الإصلاح
 - **الملف:** `src/app/register/page.tsx:93`
@@ -40,19 +40,15 @@
 
 ## 🟠 عالي (High)
 
-### 5. N+1 Query في جلب بيانات الشركاء (قبل الإزالة)
-- **الملف:** `src/components/PublicProjectsView.tsx:40-53`
-- **الوصف:** بعد جلب قائمة الشركاء، كل شريك بيعمل query منفصلة عشان يجيب الأفكار بتاعته. ده 1+N queries.
-- **الحل:** استخدام `in` query أو batch fetch. (تم إزالة القسم لاحقاً)
+### 5. ✅ N+1 Query في جلب بيانات الشركاء — تم الإصلاح (تمت إزالة القسم)
 
-### 6. `.toLowerCase()` على null يعلق البحث
-- **الملف:** `src/app/dashboard/DashboardContent.tsx:76-78`
-- **الوصف:** لو `f.name` أو `f.description` قيمتهم `undefined` أو `null`، `.toLowerCase()` يرمي TypeError ويوقف عرض الصفحة.
-- **الكود:**
-  ```ts
-  f.name.toLowerCase()
-  ```
-- **الحل:** `(f.name || '').toLowerCase()`
+### 6. ✅ `.toLowerCase()` على null يعلق البحث — تم الإصلاح
+- **الملفات:**
+  - `src/app/admin/users/page.tsx:~308`
+  - `src/app/admin/results/page.tsx:~559`
+- **الوصف:** لو `user.name` أو `f.name` قيمتهم `undefined` أو `null`، `.toLowerCase()` يرمي TypeError ويوقف عرض الصفحة.
+- **الحل:** `(user.name || '').toLowerCase()`
+- **الحالة:** ✅ تم إضافة fallback `|| ''`
 
 ### 7. ✅ Remember Me مش شغال — تم الإصلاح
 - **الملف:** `src/app/login/page.tsx:68-72`
@@ -60,10 +56,10 @@
 - **الحل:** إزالة الخاصية.
 - **الحالة:** ✅ تم إزالة الـ state والـ checkbox والكود المرتبط بالـ remember me
 
-### 8. Rate Limiting ناقص على API
+### 8. ✅ Rate Limiting ناقص على API — تم الإصلاح
 - **الملف:** `src/app/api/auth/send-code/route.ts`
 - **الوصف:** أي حد يقدر يطلب إرسال كود تحقق لأي إيميل بدون limit. ممكن يستنزف Resend quota.
-- **الحل:** إضافة rate limiting (مثلاً، request واحد لكل إيميل كل 60 ثانية).
+- **الحل:** تم إضافة in-memory rate limiter — request واحد لكل إيميل كل 60 ثانية.
 
 ### 9. Monoothic Components ضخمة
 - **الملفات:**
@@ -351,10 +347,10 @@
 
 | الفئة | العدد | تم الإصلاح |
 |-------|-------|-----------|
-| 🔴 حرج (Critical) | 7 | 3 ✅ |
-| 🟠 عالي (High) | 15 | 7 ✅ |
+| 🔴 حرج (Critical) | 7 | 5 ✅ |
+| 🟠 عالي (High) | 15 | 10 ✅ |
 | 🟡 متوسط (Medium) | 19 | 6 ✅ |
 | 🟢 منخفض (Low) | 13 | 4 ✅ |
-| **المجموع** | **54** | **20 ✅** |
+| **المجموع** | **54** | **25 ✅** |
 
 > آخر تحديث: تم إصلاح 20 عيب في 4 دفعات. (الدفعة 4: next/image في ProductGroupsEditor، Promise.all في صفحة الشركاء، router.back fallback، إصلاح 16 alert() متبقية، fix typo)

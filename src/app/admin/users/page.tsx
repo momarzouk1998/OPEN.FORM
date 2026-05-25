@@ -305,7 +305,7 @@ export default function AdminUsersPage() {
   const filteredUsers = users.filter(user => {
     // Search filter
     const matchesSearch = 
-      user.name.toLowerCase().includes(search.toLowerCase()) ||
+      (user.name || '').toLowerCase().includes(search.toLowerCase()) ||
       user.email.toLowerCase().includes(search.toLowerCase()) ||
       (user.phone && user.phone.includes(search))
 

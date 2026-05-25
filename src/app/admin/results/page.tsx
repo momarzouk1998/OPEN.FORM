@@ -556,7 +556,7 @@ export default function ResultsPage() {
   const filteredFormsList = forms.filter(f => {
     if (searchQuery) {
       const searchLower = searchQuery.toLowerCase()
-      if (!f.name.toLowerCase().includes(searchLower)) {
+      if (!(f.name || '').toLowerCase().includes(searchLower)) {
         return false
       }
     }

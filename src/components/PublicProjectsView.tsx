@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/utils/supabase/client'
+import { toast } from '@/lib/toast'
 
 const NAV_LINKS = [
   { id: 'hero', label: 'الرئيسية' },
@@ -18,6 +19,12 @@ export default function PublicProjectsView() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [partners, setPartners] = useState<any[]>([])
   const [ideasMap, setIdeasMap] = useState<Record<string, any[]>>({})
+  const [contactName, setContactName] = useState('')
+  const [contactEmail, setContactEmail] = useState('')
+  const [contactPhone, setContactPhone] = useState('')
+  const [contactType, setContactType] = useState('inquiry')
+  const [contactMessage, setContactMessage] = useState('')
+  const [contactSubmitting, setContactSubmitting] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -419,17 +426,62 @@ export default function PublicProjectsView() {
             <p className="text-gray-600 text-lg">لديك استفسار؟ فريقنا يسعد بمساعدتك</p>
           </div>
 
-          <form className="max-w-xl mx-auto mt-8 space-y-5" onSubmit={e => e.preventDefault()}>
+          <form className="max-w-xl mx-auto mt-8 space-y-5" onSubmit={async (e) => {
+            e.preventDefault()
+            if (!contactName.trim() || !contactEmail.trim() || !contactMessage.trim()) {
+              toast('يرجى ملء جميع الحقول المطلوبة')
+              return
+            }
+            setContactSubmitting(true)
+            try {
+              const res = await fetch('/api/contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: contactName, email: contactEmail, phone: contactPhone, type: contactType, message: contactMessage })
+              })
+              const data = await res.json()
+              if (!res.ok) throw new Error(data.error)
+              toast('تم إرسال رسالتك بنجاح، سنتواصل معك قريباً', 'success')
+              setContactName('')
+              setContactEmail('')
+              setContactPhone('')
+              setContactType('inquiry')
+              setContactMessage('')
+            } catch (err: any) {
+              toast(err.message || 'حدث خطأ أثناء الإرسال')
+            } finally {
+              setContactSubmitting(false)
+            }
+          }}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <input type="text" placeholder="الاسم" className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
-              <input type="email" placeholder="البريد الإلكتروني" className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+              <input type="text" placeholder="الاسم *" required value={contactName} onChange={e => setContactName(e.target.value)}
+                className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+              <input type="email" placeholder="البريد الإلكتروني *" required value={contactEmail} onChange={e => setContactEmail(e.target.value)}
+                className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
             </div>
-            <input type="tel" placeholder="رقم الهاتف" className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
-            <textarea rows={4} placeholder="رسالتك..." className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
-            <button type="submit"
-              className="w-full py-4 bg-gradient-to-l from-blue-600 to-indigo-600 text-white rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all font-bold shadow-lg shadow-blue-500/25 text-lg"
+            <input type="tel" placeholder="رقم الهاتف (اختياري)" value={contactPhone} onChange={e => setContactPhone(e.target.value)}
+              className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+            <div className="flex gap-3">
+              {[
+                { value: 'complaint', label: '📢 شكوى' },
+                { value: 'suggestion', label: '💡 اقتراح' },
+                { value: 'inquiry', label: '❓ استفسار' },
+              ].map(opt => (
+                <button key={opt.value} type="button" onClick={() => setContactType(opt.value)}
+                  className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium border-2 transition-all ${
+                    contactType === opt.value ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <textarea rows={4} placeholder="رسالتك *" required value={contactMessage} onChange={e => setContactMessage(e.target.value)}
+              className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+            <button type="submit" disabled={contactSubmitting}
+              className="w-full py-4 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-all font-bold shadow-lg shadow-blue-500/25 text-lg disabled:opacity-50"
             >
-              إرسال
+              {contactSubmitting ? 'جاري الإرسال...' : 'إرسال'}
             </button>
           </form>
         </div>
