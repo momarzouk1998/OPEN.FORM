@@ -1,3 +1,14 @@
+## Git Deployment for AI Agents
+When the user says "انشر على جيت هب" or "deploy to GitHub":
+1. Run `git status` to check current state
+2. Run `git diff --stat` to see what changed
+3. Stage all files: `git add -A`
+4. Commit with a descriptive Arabic+English message: `git commit -m "type: short description in English"
+5. Push: `git push origin main`
+6. Confirm to the user the commit hash was pushed
+
+Always check `git status` first — if working tree clean, tell user nothing to deploy.
+
 ## Goal
 - Build and deploy an Arabic form builder with appointment booking, conditional logic, auto-save, drag-and-drop reordering, collaboration, payment info display, role-filtered response management, admin user controls, email verification via Resend, admin ban/limits, static_text rich text editor, custom submit button, offer countdown timer, products system with Supabase Storage images & cart, test/quiz mode toggle, إضافات question types, and a "شركاء النجاح" partner showcase page with ideas, likes, templates, and referrals.
 
