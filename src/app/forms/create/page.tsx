@@ -12,6 +12,7 @@ import type { QuestionType, QuestionOption, FormTemplate } from '@/types'
 import { TEMPLATE_CATEGORIES } from '@/types'
 import { generateShortCode } from '@/lib/shortCode'
 import { QUESTION_TYPES, ITEM_CATEGORIES, DISPLAY_ONLY_QUESTION_TYPES, DATE_RANGE_MODE_OPTIONS, WEEKDAY_OPTIONS, APPOINTMENT_META_ID } from '@/constants/questionTypes'
+import { toast } from '@/lib/toast'
 
 // Question/Item type definitions with detailed explanations
 // Organized by category for better UX
@@ -630,12 +631,12 @@ const supabase = createClient()
 
   const saveForm = async () => {
     if (!formData.name.trim()) {
-      alert('يرجن إدخال اسم الفورم')
+      toast('يرجى إدخال اسم الفورم')
       return
     }
 
     if ((formData.questions || []).length === 0) {
-      alert('يرجن إضافة سؤال واحد على الأقل')
+      toast('يرجى إضافة سؤال واحد على الأقل')
       return
     }
 

@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import imageCompression from 'browser-image-compression'
 import type { Gender, NotificationType } from '@/types'
+import { toast } from '@/lib/toast'
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<any>(null)
@@ -267,7 +268,7 @@ export default function ProfilePage() {
       <header className="bg-white shadow-sm">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <button
-            onClick={() => router.back()}
+            onClick={() => { if (window.history.length > 1) router.back(); else router.push('/dashboard') }}
             className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -361,15 +362,15 @@ export default function ProfilePage() {
                   const ext = file.name.split('.').pop()
                   const path = `avatars/${profile.id}-${Date.now()}.${ext}`
                   const { error: upErr } = await supabase.storage.from('project-images').upload(path, compressedFile)
-                  if (upErr) { alert('فشل رفع الصورة'); return }
+                  if (upErr) { toast('فشل رفع الصورة'); return }
                   const { data: { publicUrl } } = supabase.storage.from('project-images').getPublicUrl(path)
                   const { error: updErr } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', profile.id)
-                  if (updErr) { alert('فشل حفظ الصورة'); return }
+                  if (updErr) { toast('فشل حفظ الصورة'); return }
                   setProfile((prev: any) => ({ ...prev, avatar_url: publicUrl }))
                   setSuccess('تم تحديث الصورة بنجاح')
                 } catch (err) {
                   console.error(err)
-                  alert('حدث خطأ أثناء معالجة الصورة')
+                  toast('حدث خطأ أثناء معالجة الصورة')
                 } finally {
                   setSaving(false)
                 }
@@ -558,7 +559,7 @@ export default function ProfilePage() {
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(`${window.location.origin}/register?ref=${profile.referral_code}`)
-                  alert('تم نسخ الرابط!')
+                  toast('تم نسخ الرابط!', 'success')
                 }}
                 className="px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors"
               >

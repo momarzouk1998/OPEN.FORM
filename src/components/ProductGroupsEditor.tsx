@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/client'
 import { toast } from '@/lib/toast'
+import Image from 'next/image'
 
 export interface ProductItem {
   id: string
@@ -85,7 +86,7 @@ export default function ProductGroupsEditor({ groups, onChange }: ProductGroupsE
               <div key={item.id || itemIndex} className="flex gap-2 items-start p-2 bg-gray-50 rounded-xl border border-gray-100">
                 {item.image_url ? (
                   <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-gray-200 shrink-0">
-                    <img src={item.image_url} alt={item.name || 'منتج'} className="w-full h-full object-cover" />
+                    <Image src={item.image_url} alt={item.name || 'منتج'} fill className="object-cover" />
                     <button
                       onClick={() => updateItem(groupIndex, itemIndex, { image_url: '' })}
                       className="absolute top-0 right-0 w-3.5 h-3.5 bg-red-500 text-white text-[8px] rounded-full flex items-center justify-center"

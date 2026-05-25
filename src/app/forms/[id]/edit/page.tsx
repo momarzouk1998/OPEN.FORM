@@ -25,6 +25,7 @@ import { CSS } from '@dnd-kit/utilities'
 import type { QuestionType, QuestionOption, ThemeSettings } from '@/types'
 import { generateShortCode } from '@/lib/shortCode'
 import { QUESTION_TYPES, ITEM_CATEGORIES, DISPLAY_ONLY_QUESTION_TYPES, DATE_RANGE_MODE_OPTIONS, WEEKDAY_OPTIONS, APPOINTMENT_META_ID } from '@/constants/questionTypes'
+import { toast } from '@/lib/toast'
 
 
 
@@ -1298,17 +1299,12 @@ const params = useParams()
 
     if (!formData || !formData.name.trim()) {
 
-      alert('يرجى إدخال اسم الفورم')
-
+      toast('يرجى إدخال اسم الفورم')
       return
-
     }
 
-
-
     if ((formData.questions || []).length === 0) {
-
-      alert('يرجى إضافة سؤال واحد على الأقل')
+      toast('يرجى إضافة سؤال واحد على الأقل')
 
       return
 
@@ -1446,7 +1442,7 @@ const params = useParams()
 
 
 
-      alert('تم حفظ التعديلات بنجاح')
+      toast('تم حفظ التعديلات بنجاح', 'success')
 
       router.push('/dashboard')
 
@@ -1454,7 +1450,7 @@ const params = useParams()
 
       console.error('Error saving form:', error)
 
-      alert('حدث خطأ أثناء حفظ التعديلات')
+      toast('حدث خطأ أثناء حفظ التعديلات')
 
     } finally {
 
@@ -1723,7 +1719,7 @@ const params = useParams()
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">{formData?.is_active ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /> : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />}</svg>
                   <span className={formData?.is_active ? 'text-green-700' : 'text-red-600'}>{formData?.is_active ? 'مفعل' : 'معطل'}</span>
                 </button>
-                <button onClick={() => { setShowActionMenu(false); const code = formData?.short_code; const serial = formData?.serial_number || formId; const link = code ? `${window.location.origin}/f/${code}` : `${window.location.origin}/forms/${serial}`; navigator.clipboard.writeText(link); alert('تم نسخ الرابط: ' + link) }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right">
+                <button onClick={() => { setShowActionMenu(false); const code = formData?.short_code; const serial = formData?.serial_number || formId; const link = code ? `${window.location.origin}/f/${code}` : `${window.location.origin}/forms/${serial}`; navigator.clipboard.writeText(link); toast('تم نسخ الرابط!', 'success') }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-right">
                   <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
                   نسخ رابط المشاركة
                 </button>
@@ -2042,7 +2038,7 @@ const params = useParams()
                                   const ext = file.name.split('.').pop()
                                   const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`
                                   const { error } = await supabaseClient.storage.from('products').upload(fileName, file)
-                                  if (error) { alert('فشل رفع الصورة'); return }
+                                  if (error) { toast('فشل رفع الصورة'); return }
                                   const { data: { publicUrl } } = supabaseClient.storage.from('products').getPublicUrl(fileName)
                                   const newGroups = [...(formData?.products || [])]
                                   newGroups[gi] = { ...newGroups[gi], items: group.items.map((it: any, i2: number) => i2 === ii ? { ...it, image_url: publicUrl } : it) }
@@ -3685,41 +3681,41 @@ const params = useParams()
              </button>
              <button
                onClick={async () => {
-                 if (!templateTitle.trim()) {
-                   alert('يرجى إدخال اسم القالب')
-                   return
-                 }
-                 
-                 setConvertToTemplateLoading(true)
-                 
-                 try {
-                   const supabase = createClient()
-                   
-                   // First create the template record
-                    const { data: templateData, error: templateError } = await supabase
-                      .from('user_templates')
-                      .insert({
-                        name: templateTitle,
-                        description: templateDescription,
-                        created_by: profile?.id,
-                        form_id: formData?.id,
-                        approved: false
-                      })
-                      .select()
-                      .single()
-                     
-                   if (templateError) throw templateError
-                   
-                   alert('تم إنشاء القالب بنجاح! سيظهر في القائمة بعد موافقة المشرف')
-                   setShowConvertToTemplate(false)
-                   setTemplateTitle('')
-                   setTemplateDescription('')
-                 } catch (error: any) {
-                   console.error('Template creation error:', error)
-                   alert(error.message || 'فشل إنشاء القالب')
-                 } finally {
-                   setConvertToTemplateLoading(false)
-                 }
+                  if (!templateTitle.trim()) {
+                    toast('يرجى إدخال اسم القالب')
+                    return
+                  }
+                  
+                  setConvertToTemplateLoading(true)
+                  
+                  try {
+                    const supabase = createClient()
+                    
+                    // First create the template record
+                     const { data: templateData, error: templateError } = await supabase
+                       .from('user_templates')
+                       .insert({
+                         name: templateTitle,
+                         description: templateDescription,
+                         created_by: profile?.id,
+                         form_id: formData?.id,
+                         approved: false
+                       })
+                       .select()
+                       .single()
+                      
+                    if (templateError) throw templateError
+                    
+                    toast('تم إنشاء القالب بنجاح! سيظهر في القائمة بعد موافقة المشرف', 'success')
+                    setShowConvertToTemplate(false)
+                    setTemplateTitle('')
+                    setTemplateDescription('')
+                  } catch (error: any) {
+                    console.error('Template creation error:', error)
+                    toast(error.message || 'فشل إنشاء القالب')
+                  } finally {
+                    setConvertToTemplateLoading(false)
+                  }
                }}
                disabled={convertToTemplateLoading}
                className={`px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50`}

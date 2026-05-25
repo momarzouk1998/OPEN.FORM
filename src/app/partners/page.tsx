@@ -57,56 +57,23 @@ export default function PartnersPage() {
 
     if (!profiles) { setLoading(false); return }
 
-    const enriched: any[] = []
+    const enriched = await Promise.all(profiles.map(async (p: any) => {
+      const [ideasResult, likesCountResult, formsCountResult, templatesResult, formIdsResult] = await Promise.all([
+        supabase.from('partner_ideas').select('*').eq('partner_id', p.id).order('created_at', { ascending: false }),
+        supabase.from('partner_likes').select('*', { count: 'exact', head: true }).eq('partner_id', p.id),
+        supabase.from('forms').select('*', { count: 'exact', head: true }).eq('created_by', p.id),
+        supabase.from('user_templates').select('*').eq('created_by', p.id).eq('approved', true).order('created_at', { ascending: false }).limit(6),
+        supabase.from('forms').select('id').eq('created_by', p.id),
+      ])
 
-    for (const p of profiles) {
-      // Ideas
-      const { data: ideas } = await supabase
-        .from('partner_ideas')
-        .select('*')
-        .eq('partner_id', p.id)
-        .order('created_at', { ascending: false })
-
-      // Likes count
-      const { count: likesCount } = await supabase
-        .from('partner_likes')
-        .select('*', { count: 'exact', head: true })
-        .eq('partner_id', p.id)
-
-      // Liked by me
       let likedByMe = false
       if (u) {
-        const { data: like } = await supabase
-          .from('partner_likes')
-          .select('id')
-          .eq('partner_id', p.id)
-          .eq('user_id', u.id)
-          .maybeSingle()
+        const { data: like } = await supabase.from('partner_likes').select('id').eq('partner_id', p.id).eq('user_id', u.id).maybeSingle()
         likedByMe = !!like
       }
 
-      // Forms count
-      const { count: formsCount } = await supabase
-        .from('forms')
-        .select('*', { count: 'exact', head: true })
-        .eq('created_by', p.id)
-
-      // Templates (approved) - fetch up to 6 for preview
-      const { data: templatesList } = await supabase
-        .from('user_templates')
-        .select('*')
-        .eq('created_by', p.id)
-        .eq('approved', true)
-        .order('created_at', { ascending: false })
-        .limit(6)
-
-      // Total submissions on all forms
-      const { data: formIds } = await supabase
-        .from('forms')
-        .select('id')
-        .eq('created_by', p.id)
-
       let submissionsCount = 0
+      const formIds = formIdsResult.data
       if (formIds && formIds.length > 0) {
         const { count: sc } = await supabase
           .from('form_responses')
@@ -115,17 +82,17 @@ export default function PartnersPage() {
         submissionsCount = sc || 0
       }
 
-      enriched.push({
+      return {
         ...p,
-        ideas: ideas || [],
-        likes_count: likesCount || 0,
+        ideas: ideasResult.data || [],
+        likes_count: likesCountResult.count || 0,
         liked_by_me: likedByMe,
-        forms_count: formsCount || 0,
-        templates_count: (templatesList || []).length || 0,
-        templates_preview: templatesList || [],
+        forms_count: formsCountResult.count || 0,
+        templates_count: (templatesResult.data || []).length || 0,
+        templates_preview: templatesResult.data || [],
         submissions_count: submissionsCount
-      })
-    }
+      }
+    }))
 
     setPartners(enriched)
     setLoading(false)
