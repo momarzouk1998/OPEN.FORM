@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from '@/lib/toast'
 
 export default function AdminFormsPage() {
   const [forms, setForms] = useState<any[]>([])
@@ -46,7 +47,7 @@ export default function AdminFormsPage() {
       setForms(forms.filter(f => f.id !== id));
     } catch (e) {
       console.error(e);
-      alert('حدث خطأ أثناء الحذف');
+      toast('حدث خطأ أثناء الحذف')
     }
   }
 

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useFormAutoSave, useConditionalRedirect, type RedirectRule } from '@/hooks/useFormFeatures'
+import { DISPLAY_ONLY_QUESTION_TYPES, APPOINTMENT_META_ID } from '@/constants/questionTypes'
 
 interface QuestionOption {
   id: string
@@ -38,17 +39,6 @@ interface Question {
   page?: number
   visibility_rules?: VisibilityRule[]
 }
-
-const DISPLAY_ONLY_QUESTION_TYPES = [
-  'static_text',
-  'static_image',
-  'terms',
-  'countdown_timer',
-  'products_block',
-  'payment_info_block',
-]
-
-const APPOINTMENT_META_ID = 'appointment_settings'
 
 interface Form {
   id: string

@@ -72,27 +72,32 @@
 - **الوصف:** التعديل على أي feature يستلزم فهم الـ component كامل. صيانة صعبة، وأداء بطيء في initial load.
 - **الحل:** تقسيم كل component لمكونات أصغر (مثلاً: QuestionRenderer, ThemePanel, SettingsModal).
 
-### 10. constants مكررة في create و edit
+### 10. constants مكررة في 4 ملفات ✅
 - **الملفات:**
   - `src/app/forms/create/page.tsx:17-47`
   - `src/app/forms/[id]/edit/page.tsx:31-59`
-- **الوصف:** `QUESTION_TYPES`، `DISPLAY_ONLY_QUESTION_TYPES`، `WEEKDAY_OPTIONS`، `DATE_RANGE_MODE_OPTIONS` معرفين في الملفين بشكل متطابق تقريباً. أي إضافة نوع سؤال جديد لازم تتغير في مكانين.
-- **الحل:** نقل الـ constants إلى `src/types/index.ts` أو ملف `src/constants.ts`.
+  - `src/app/forms/[id]/FormFiller.tsx:42-49`
+  - `src/app/templates/[id]/page.tsx:23-51`
+- **الوصف:** `QUESTION_TYPES`، `DISPLAY_ONLY_QUESTION_TYPES`، `WEEKDAY_OPTIONS`، `DATE_RANGE_MODE_OPTIONS` معرفين في 3 ملفات بشكل متطابق. أي إضافة نوع سؤال جديد لازم تتغير في 4 مكانين.
+- **الحل:** تم نقل كل الـ constants المشتركة إلى `src/constants/questionTypes.ts` (ملف جديد). الـ 3 ملفات الأساسية تستورد منه دلوقتي. `QUESTION_TYPE_LABELS` و `TYPE_COLORS` في الـ templates page متروكين عشان هم خاصين بعرض القالب فقط.
 
-### 11. DISPLAY_ONLY_QUESTION_TYPES ناقصة
-- **الملف:** `src/app/forms/create/page.tsx:57-64`
-- **الوصف:** المصفوفة بتوحش أنواع الأسئلة اللي بتعرض بس وما بتجمعش بيانات (زي `divider`, `youtube`, `signature`). أي نوع جديد مش جامع بيانات هي计入 في حساب النقاط غلط.
-- **الحل:** تحديث المصفوفة لتشمل كل أنواع العرض فقط.
-- **ملاحظة:** استخدم `DISPLAY_ONLY_QUESTION_TYPES` من الملف المشترك بعد تطبيق النقل.
+### 11. DISPLAY_ONLY_QUESTION_TYPES ناقصة ✅
+- **الملفات:**
+  - `src/app/forms/create/page.tsx:57-64`
+  - `src/app/forms/[id]/edit/page.tsx:68-75`
+  - `src/app/forms/[id]/FormFiller.tsx:42-49`
+- **الوصف:** المصفوفة بتوحش `youtube` و `divider` (بس ناقصين). `signature` مش display-only عشان بيجمع بيانات — صحيح انه مش موجود.
+- **الحل:** إضافة `youtube` و `divider` إلى المصفوفات الثلاثة. تم الإصلاح في commit a9fca63.
 
-### 12. `alert()` في كل مكان
+### 12. `alert()` في كل مكان ✅
 - **الملفات:**
   - `src/components/ImageUpload.tsx:61`
   - `src/components/ProductGroupsEditor.tsx:48`
   - `src/app/admin/forms/page.tsx:49`
-  - `src/app/admin/users/page.tsx:97`
+  - `src/app/admin/users/page.tsx:138`
 - **الوصف:** استخدام `alert()` بدلاً من toast/modal. مش mobile-friendly وبيحظر الـ JS execution.
-- **الحل:** إضافة نظام toast notifications موحد.
+- **الحل:** تم إنشاء نظام toast خفيف (`src/lib/toast.ts` + `src/components/ToastContainer.tsx` + مضاف في `layout.tsx`). كل الـ `alert()` اتغيرت إلى `toast()`.
+- **ملاحظة:** `window.confirm()` في admin/users خط 97 محتفظ به لأنه قرار مستخدم حقيقي (تأكيد حذف).
 
 ---
 

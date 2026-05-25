@@ -19,6 +19,7 @@ const reemKufi = Reem_Kufi({
 import { createClient } from '@/utils/supabase/server';
 import ServiceWorker from '@/components/ServiceWorker';
 import FooterBar from '@/components/FooterBar';
+import ToastContainer from '@/components/ToastContainer';
 
 export async function generateMetadata(): Promise<Metadata> {
   let appName = "Forms.OpenappO";
@@ -83,6 +84,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans antialiased pb-16 overflow-x-hidden">
         <ServiceWorker />
         {children}
+        <ToastContainer />
         <FooterBar />
       </body>
     </html>

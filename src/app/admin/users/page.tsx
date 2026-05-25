@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from '@/lib/toast'
 import type { User, UserRole, AccountStatus, Gender, Project, UserProject } from '@/types'
 
 type FilterStatus = 'all' | 'pending' | 'approved' | 'rejected'
@@ -135,7 +136,7 @@ export default function AdminUsersPage() {
         
         if (resetError) throw resetError
         
-        alert('تم إعادة تعيين الباسورد بنجاح. الباسورد الجديد: 123456')
+        toast('تم إعادة تعيين الباسورد بنجاح. الباسورد الجديد: 123456', 'success')
         setActionLoading(false)
         return
       }

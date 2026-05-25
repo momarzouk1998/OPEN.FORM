@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import imageCompression from 'browser-image-compression'
 import Image from 'next/image'
+import { toast } from '@/lib/toast'
 
 interface ImageUploadProps {
   onImageUploaded: (url: string) => void
@@ -58,7 +59,7 @@ export default function ImageUpload({ onImageUploaded, currentImage, className =
       onImageUploaded(imageUrl)
 
     } catch (error: any) {
-      alert(error.message || 'حدث خطأ أثناء رفع الصورة')
+      toast(error.message || 'حدث خطأ أثناء رفع الصورة')
     } finally {
       setUploading(false)
     }

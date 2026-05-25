@@ -1,6 +1,7 @@
 'use client'
 
 import { createClient } from '@/utils/supabase/client'
+import { toast } from '@/lib/toast'
 
 export interface ProductItem {
   id: string
@@ -45,7 +46,7 @@ export default function ProductGroupsEditor({ groups, onChange }: ProductGroupsE
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`
     const { error } = await supabase.storage.from('products').upload(fileName, file)
     if (error) {
-      alert('فشل رفع الصورة')
+      toast('فشل رفع الصورة')
       return
     }
 
