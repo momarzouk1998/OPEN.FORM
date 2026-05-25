@@ -6,7 +6,27 @@ import type { PartnerProfile, PartnerIdea } from '@/types'
 import Link from 'next/link'
 import PublicHeader from '@/components/PublicHeader'
 import Image from 'next/image'
-import { Facebook, Linkedin, Youtube, Globe, ExternalLink } from 'lucide-react'
+import { Globe, ExternalLink } from 'lucide-react'
+
+// Brand Icons as SVGs since they are removed in Lucide v1+
+const FacebookIcon = (props: any) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+  </svg>
+)
+const LinkedinIcon = (props: any) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+    <rect width="4" height="12" x="2" y="9" />
+    <circle cx="4" cy="4" r="2" />
+  </svg>
+)
+const YoutubeIcon = (props: any) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.42a2.78 2.78 0 0 0-1.94 2C1 8.11 1 12 1 12s0 3.89.46 5.58a2.78 2.78 0 0 0 1.94 2c1.72.42 8.6.42 8.6.42s6.88 0 8.6-.42a2.78 2.78 0 0 0 1.94-2C23 15.89 23 12 23 12s0-3.89-.46-5.58z" />
+    <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" />
+  </svg>
+)
 
 export default function PartnersPage() {
   const [partners, setPartners] = useState<(PartnerProfile & { 
@@ -216,9 +236,9 @@ function PartnerCard({
 }) {
   // Separate social links from other links
   const socialLinks: { icon: any; url: string; color: string; label: string }[] = []
-  if (partner.facebook_url) socialLinks.push({ icon: Facebook, url: partner.facebook_url, color: 'hover:text-blue-600', label: 'فيسبوك' })
-  if (partner.linkedin_url) socialLinks.push({ icon: Linkedin, url: partner.linkedin_url, color: 'hover:text-blue-700', label: 'لينكدإن' })
-  if (partner.youtube_url) socialLinks.push({ icon: Youtube, url: partner.youtube_url, color: 'hover:text-red-600', label: 'يوتيوب' })
+  if (partner.facebook_url) socialLinks.push({ icon: FacebookIcon, url: partner.facebook_url, color: 'hover:text-blue-600', label: 'فيسبوك' })
+  if (partner.linkedin_url) socialLinks.push({ icon: LinkedinIcon, url: partner.linkedin_url, color: 'hover:text-blue-700', label: 'لينكدإن' })
+  if (partner.youtube_url) socialLinks.push({ icon: YoutubeIcon, url: partner.youtube_url, color: 'hover:text-red-600', label: 'يوتيوب' })
   
   const otherLinks: { label: string; url: string }[] = []
   if (partner.other_links) {

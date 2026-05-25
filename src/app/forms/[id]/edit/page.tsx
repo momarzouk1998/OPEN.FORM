@@ -9,6 +9,8 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
+import { type ProductGroup } from '@/components/ProductGroupsEditor'
+import { type PaymentMethod } from '@/components/PaymentMethodsEditor'
 
 const ImageUpload = dynamic(() => import('@/components/ImageUpload'), { ssr: false })
 const RichTextEditor = dynamic(() => import('@/components/RichTextEditor'), { ssr: false })
