@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
+import imageCompression from 'browser-image-compression'
 import type { Gender, NotificationType } from '@/types'
 
 export default function ProfilePage() {
@@ -304,9 +306,14 @@ export default function ProfilePage() {
 
           {/* Avatar */}
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-200 bg-gray-100">
+            <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-200 bg-gray-100 relative">
               {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt={profile.name} className="w-full h-full object-cover" />
+                <Image 
+                  src={profile.avatar_url} 
+                  alt={profile.name || 'Avatar'} 
+                  fill
+                  className="object-cover" 
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-400 text-2xl font-bold">
                   {profile?.name?.charAt(0) || '?'}
@@ -320,17 +327,33 @@ export default function ProfilePage() {
               <input type="file" accept=".jpg,.jpeg,.png,.gif" className="hidden" onChange={async (e) => {
                 if (!e.target.files?.[0]) return
                 const file = e.target.files[0]
-                if (file.size > 5 * 1024 * 1024) { alert('حجم الصورة يجب أن يكون أقل من 5 ميجابايت'); return }
-                const supabase = createClient()
-                const ext = file.name.split('.').pop()
-                const path = `avatars/${profile.id}-${Date.now()}.${ext}`
-                const { error: upErr } = await supabase.storage.from('project-images').upload(path, file)
-                if (upErr) { alert('فشل رفع الصورة'); return }
-                const { data: { publicUrl } } = supabase.storage.from('project-images').getPublicUrl(path)
-                const { error: updErr } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', profile.id)
-                if (updErr) { alert('فشل حفظ الصورة'); return }
-                setProfile((prev: any) => ({ ...prev, avatar_url: publicUrl }))
-                setSuccess('تم تحديث الصورة بنجاح')
+                
+                try {
+                  setSaving(true)
+                  // Compress image
+                  const options = {
+                    maxSizeMB: 1,
+                    maxWidthOrHeight: 1024,
+                    useWebWorker: true
+                  }
+                  const compressedFile = await imageCompression(file, options)
+                  
+                  const supabase = createClient()
+                  const ext = file.name.split('.').pop()
+                  const path = `avatars/${profile.id}-${Date.now()}.${ext}`
+                  const { error: upErr } = await supabase.storage.from('project-images').upload(path, compressedFile)
+                  if (upErr) { alert('فشل رفع الصورة'); return }
+                  const { data: { publicUrl } } = supabase.storage.from('project-images').getPublicUrl(path)
+                  const { error: updErr } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', profile.id)
+                  if (updErr) { alert('فشل حفظ الصورة'); return }
+                  setProfile((prev: any) => ({ ...prev, avatar_url: publicUrl }))
+                  setSuccess('تم تحديث الصورة بنجاح')
+                } catch (err) {
+                  console.error(err)
+                  alert('حدث خطأ أثناء معالجة الصورة')
+                } finally {
+                  setSaving(false)
+                }
               }} />
             </label>
           </div>

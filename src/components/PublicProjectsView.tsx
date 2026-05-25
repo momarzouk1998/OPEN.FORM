@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient } from '@/utils/supabase/client'
 
 const NAV_LINKS = [
@@ -255,9 +256,15 @@ export default function PublicProjectsView() {
                 {partners.map((p) => (
                   <div key={p.id} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg hover:border-indigo-200 transition-all duration-300">
                     <div className="bg-gradient-to-l from-indigo-500 to-purple-600 p-5 text-center">
-                      <div className="w-16 h-16 mx-auto rounded-full border-4 border-white/50 overflow-hidden bg-white/20">
+                      <div className="w-16 h-16 mx-auto rounded-full border-4 border-white/50 overflow-hidden bg-white/20 relative">
                         {p.avatar_url ? (
-                          <img src={p.avatar_url} alt={p.name} className="w-full h-full object-cover" />
+                          <Image 
+                            src={p.avatar_url} 
+                            alt={p.name} 
+                            fill
+                            className="object-cover" 
+                            loading="lazy"
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-white text-xl font-bold">{p.name?.charAt(0)}</div>
                         )}

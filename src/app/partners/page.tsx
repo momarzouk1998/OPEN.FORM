@@ -5,6 +5,8 @@ import { createClient } from '@/utils/supabase/client'
 import type { PartnerProfile, PartnerIdea } from '@/types'
 import Link from 'next/link'
 import PublicHeader from '@/components/PublicHeader'
+import Image from 'next/image'
+import { Facebook, Linkedin, Youtube, Globe, ExternalLink } from 'lucide-react'
 
 export default function PartnersPage() {
   const [partners, setPartners] = useState<(PartnerProfile & { 
@@ -212,107 +214,136 @@ function PartnerCard({
   userId?: string
   onLike: (partnerId: string) => void
 }) {
-  // Build other links array from partner fields
+  // Separate social links from other links
+  const socialLinks: { icon: any; url: string; color: string; label: string }[] = []
+  if (partner.facebook_url) socialLinks.push({ icon: Facebook, url: partner.facebook_url, color: 'hover:text-blue-600', label: 'فيسبوك' })
+  if (partner.linkedin_url) socialLinks.push({ icon: Linkedin, url: partner.linkedin_url, color: 'hover:text-blue-700', label: 'لينكدإن' })
+  if (partner.youtube_url) socialLinks.push({ icon: Youtube, url: partner.youtube_url, color: 'hover:text-red-600', label: 'يوتيوب' })
+  
   const otherLinks: { label: string; url: string }[] = []
-  if (partner.facebook_url) otherLinks.push({ label: 'فيسبوك', url: partner.facebook_url })
-  if (partner.linkedin_url) otherLinks.push({ label: 'لينكدإن', url: partner.linkedin_url })
-  if (partner.youtube_url) otherLinks.push({ label: 'يوتيوب', url: partner.youtube_url })
   if (partner.other_links) {
     const parsed = typeof partner.other_links === 'string' ? JSON.parse(partner.other_links) : partner.other_links
     if (Array.isArray(parsed)) parsed.forEach((l: any) => otherLinks.push(l))
   }
 
   return (
-    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg hover:border-indigo-200 transition-all duration-300">
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg hover:border-indigo-200 transition-all duration-300 flex flex-col h-full">
       {/* Card Header */}
-      <div className="bg-gradient-to-l from-indigo-500 to-purple-600 p-5 text-center">
-        <div className="w-20 h-20 mx-auto rounded-full border-4 border-white/50 overflow-hidden bg-white/20">
-          {partner.avatar_url ? (
-            <img src={partner.avatar_url} alt={partner.name} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-white text-2xl font-bold">
-              {partner.name?.charAt(0) || '?'}
-            </div>
-          )}
+      <div className="bg-gradient-to-l from-indigo-500 to-purple-600 p-5 text-center relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
+        <div className="relative w-24 h-24 mx-auto mb-3">
+          <div className="w-full h-full rounded-full border-4 border-white/50 overflow-hidden bg-white/20 shadow-inner">
+            {partner.avatar_url ? (
+              <Image 
+                src={partner.avatar_url} 
+                alt={partner.name} 
+                width={96} 
+                height={96} 
+                className="w-full h-full object-cover"
+                priority={false}
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-white text-3xl font-bold bg-indigo-400">
+                {partner.name?.charAt(0) || '?'}
+              </div>
+            )}
+          </div>
         </div>
-        <h3 className="text-white font-bold text-lg mt-3">{partner.name}</h3>
-        {partner.company && <p className="text-indigo-200 text-sm">{partner.company}</p>}
+        <h3 className="text-white font-bold text-xl mt-2 mb-1">{partner.name}</h3>
+        {partner.company && <p className="text-indigo-100 text-sm font-medium">{partner.company}</p>}
       </div>
 
+      {/* Social Icons - Now part of the header area for better visibility */}
+      {socialLinks.length > 0 && (
+        <div className="flex justify-center gap-4 py-3 bg-indigo-50/50 border-b border-gray-100">
+          {socialLinks.map((link, i) => (
+            <a
+              key={i}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={link.label}
+              className={`p-2 rounded-full bg-white shadow-sm text-gray-400 ${link.color} transition-all duration-200 hover:scale-110 active:scale-95`}
+            >
+              <link.icon className="w-5 h-5" />
+            </a>
+          ))}
+        </div>
+      )}
+
       {/* Stats Row */}
-      <div className="grid grid-cols-4 divide-x divide-gray-100 border-b border-gray-100">
+      <div className="grid grid-cols-4 divide-x divide-gray-100 border-b border-gray-100 bg-white">
         <StatBox label="نماذج" value={partner.forms_count || 0} />
         <StatBox label="قوالب" value={partner.templates_count || 0} />
         <StatBox label="إجابات" value={partner.submissions_count || 0} />
         <StatBox label="إحالات" value={partner.referral_count || 0} />
       </div>
 
-      {/* Bio */}
-      {partner.bio && (
-        <div className="px-5 pt-4">
-          <p className="text-gray-600 text-sm leading-relaxed">{partner.bio}</p>
-        </div>
-      )}
+      <div className="flex-1">
+        {/* Bio */}
+        {partner.bio && (
+          <div className="px-5 pt-4">
+            <p className="text-gray-600 text-sm leading-relaxed line-clamp-3 hover:line-clamp-none transition-all duration-300">{partner.bio}</p>
+          </div>
+        )}
 
-      {/* Social Links */}
-      {otherLinks.length > 0 && (
-        <div className="px-5 pt-3 flex flex-wrap gap-2">
-          {otherLinks.map((link, i) => (
-            <a
-              key={i}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-indigo-100 hover:text-indigo-700 transition-colors"
-            >
-              {link.label}
-            </a>
-          ))}
-        </div>
-      )}
-
-      {/* Ideas */}
-      {partner.ideas && partner.ideas.length > 0 && (
-        <div className="px-5 pt-4 pb-2">
-          <h4 className="text-xs font-bold text-gray-800 mb-2 flex items-center gap-1.5">
-            <svg className="w-3.5 h-3.5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1z" />
-            </svg>
-            الأفكار والمقترحات
-          </h4>
-          <div className="space-y-2">
-            {partner.ideas.map(idea => (
-              <div
-                key={idea.id}
-                className="flex items-start gap-2 p-2.5 rounded-xl bg-gray-50 border border-gray-100"
+        {/* Other Links */}
+        {otherLinks.length > 0 && (
+          <div className="px-5 pt-3 flex flex-wrap gap-2">
+            {otherLinks.map((link, i) => (
+              <a
+                key={i}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10px] px-2.5 py-1 rounded-lg bg-gray-50 text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 transition-colors border border-gray-100 flex items-center gap-1"
               >
-                <span className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${
-                  idea.implemented
-                    ? 'bg-green-500 border-green-500'
-                    : 'border-gray-300'
-                }`}>
-                  {idea.implemented && (
-                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-700 leading-relaxed">{idea.text}</p>
-                  <span className={`text-[10px] font-medium ${
-                    idea.implemented ? 'text-green-600' : 'text-gray-400'
-                  }`}>
-                    {idea.implemented ? '✓ تم التنفيذ' : '○ قيد الانتظار'}
-                  </span>
-                </div>
-              </div>
+                <Globe className="w-3 h-3" />
+                {link.label}
+              </a>
             ))}
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Ideas */}
+        {partner.ideas && partner.ideas.length > 0 && (
+          <div className="px-5 pt-4 pb-2">
+            <h4 className="text-xs font-bold text-gray-800 mb-2 flex items-center gap-1.5">
+              <span className="p-1 rounded bg-amber-100">
+                <Globe className="w-3 h-3 text-amber-600" />
+              </span>
+              الأفكار والمقترحات
+            </h4>
+            <div className="space-y-2">
+              {partner.ideas.slice(0, 2).map(idea => (
+                <div
+                  key={idea.id}
+                  className="flex items-start gap-2 p-2.5 rounded-xl bg-gray-50 border border-gray-100"
+                >
+                  <span className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${
+                    idea.implemented
+                      ? 'bg-green-500 border-green-500'
+                      : 'border-gray-300'
+                  }`}>
+                    {idea.implemented && (
+                      <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-700 leading-relaxed truncate">{idea.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Like Button + Referral */}
-      <div className="px-5 py-4 flex items-center justify-between border-t border-gray-100 mt-3">
+      <div className="px-5 py-4 flex items-center justify-between border-t border-gray-100 mt-auto">
         <VisitorLikeButton partner={partner} onLike={() => onLike(partner.id)} userId={userId} />
 
         {partner.referral_code && (
@@ -325,9 +356,7 @@ function PartnerCard({
             }}
             className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-indigo-600 transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-            </svg>
+            <ExternalLink className="w-4 h-4" />
             رابط إحالة
           </button>
         )}
@@ -335,11 +364,11 @@ function PartnerCard({
 
       {/* Templates preview */}
       {partner.templates_preview && partner.templates_preview.length > 0 && (
-        <div className="px-5 pb-5">
+        <div className="px-5 pb-5 border-t border-gray-50 pt-3">
           <h4 className="text-xs font-bold text-gray-800 mb-2">قوالب المنشئ</h4>
           <div className="grid grid-cols-2 gap-2">
-            {partner.templates_preview.map((t: any) => (
-              <Link key={t.id} href={`/templates/${t.id}`} className="text-xs p-2 rounded-lg bg-gray-50 border border-gray-100 text-gray-700 hover:bg-indigo-50">
+            {partner.templates_preview.slice(0, 4).map((t: any) => (
+              <Link key={t.id} href={`/templates/${t.id}`} className="text-[10px] p-2 rounded-lg bg-gray-50 border border-gray-100 text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 truncate transition-all">
                 {t.name}
               </Link>
             ))}

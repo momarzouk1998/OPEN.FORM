@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { PartnerIdea, PartnerLike, Referral, UserTemplate, PartnerProfile } from '@/types'
 
 export default function AdminPartnersPage() {
@@ -148,14 +149,22 @@ export default function AdminPartnersPage() {
                   <tbody className="divide-y divide-gray-200">
                     {partners.map(partner => (
                       <tr key={partner.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap flex items-center">
-                          {partner.avatar_url ? (
-                            <img src={partner.avatar_url} alt={partner.name} className="h-10 w-10 rounded-full" />
-                          ) : (
-                            <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 font-medium">
-                              {partner.name?.charAt(0) || '?'}
-                            </div>
-                          )}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="h-10 w-10 flex-shrink-0 relative">
+                            {partner.avatar_url ? (
+                              <Image 
+                                src={partner.avatar_url} 
+                                alt={partner.name} 
+                                fill
+                                className="rounded-full object-cover" 
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
+                                {partner.name?.charAt(0) || '?'}
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{partner.name}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{partner.company || '-'}</td>
@@ -197,13 +206,21 @@ export default function AdminPartnersPage() {
                 {ideas.map(idea => (
                   <div key={idea.id} className="border rounded-xl p-4 bg-gray-50">
                     <div className="flex items-start space-x-3">
-                      {idea.profiles?.[0]?.avatar_url ? (
-                        <img src={idea.profiles[0].avatar_url} alt={idea.profiles[0].name} className="h-10 w-10 rounded-full" />
-                      ) : (
-                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 font-medium">
-                          {idea.profiles?.[0]?.name?.charAt(0) || '?'}
-                        </div>
-                      )}
+                      <div className="h-10 w-10 flex-shrink-0 relative">
+                        {idea.profiles?.[0]?.avatar_url ? (
+                          <Image 
+                            src={idea.profiles[0].avatar_url} 
+                            alt={idea.profiles[0].name} 
+                            fill
+                            className="rounded-full object-cover" 
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 font-medium">
+                            {idea.profiles?.[0]?.name?.charAt(0) || '?'}
+                          </div>
+                        )}
+                      </div>
                       <div className="flex-1">
                         <h3 className="font-medium text-gray-900">{idea.text}</h3>
                         <div className="mt-2 flex items-center gap-2">
@@ -272,13 +289,21 @@ export default function AdminPartnersPage() {
             {templates.map(template => (
               <div key={template.id} className="border rounded-xl p-4 bg-gray-50">
                 <div className="flex items-start space-x-3">
-                  {template.profiles?.[0]?.avatar_url ? (
-                    <img src={template.profiles[0].avatar_url} alt={template.profiles[0].name} className="h-10 w-10 rounded-full" />
-                  ) : (
-                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 font-medium">
-                      {template.profiles?.[0]?.name?.charAt(0) || '?'}
-                    </div>
-                  )}
+                  <div className="h-10 w-10 flex-shrink-0 relative">
+                    {template.profiles?.[0]?.avatar_url ? (
+                      <Image 
+                        src={template.profiles[0].avatar_url} 
+                        alt={template.profiles[0].name} 
+                        fill
+                        className="rounded-full object-cover" 
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 font-medium">
+                        {template.profiles?.[0]?.name?.charAt(0) || '?'}
+                      </div>
+                    )}
+                  </div>
                   <div className="flex-1">
                         <h3 className="font-medium text-gray-900">{template.name}</h3>
                         <p className="mt-1 text-sm text-gray-600 line-clamp-2">{template.description}</p>

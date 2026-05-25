@@ -2,17 +2,19 @@
 
 
 
-import { useState, useEffect, useRef, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense, lazy } from 'react'
 
 import { createClient } from '@/utils/supabase/client'
 
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
-import ImageUpload from '@/components/ImageUpload'
-import RichTextEditor from '@/components/RichTextEditor'
-import ProductGroupsEditor, { type ProductGroup } from '@/components/ProductGroupsEditor'
-import PaymentMethodsEditor, { type PaymentMethod } from '@/components/PaymentMethodsEditor'
-import FormFiller from '../FormFiller'
+import dynamic from 'next/dynamic'
+
+const ImageUpload = dynamic(() => import('@/components/ImageUpload'), { ssr: false })
+const RichTextEditor = dynamic(() => import('@/components/RichTextEditor'), { ssr: false })
+const ProductGroupsEditor = dynamic(() => import('@/components/ProductGroupsEditor'), { ssr: false })
+const PaymentMethodsEditor = dynamic(() => import('@/components/PaymentMethodsEditor'), { ssr: false })
+const FormFiller = dynamic(() => import('../FormFiller'), { ssr: false })
 
 import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'

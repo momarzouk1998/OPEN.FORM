@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useFormAutoSave, useConditionalRedirect, type RedirectRule } from '@/hooks/useFormFeatures'
 
 interface QuestionOption {
@@ -1957,8 +1958,14 @@ export default function FormFiller({ form, questions, existingResponse: propExis
                     return (
                       <div key={prod.id} className="border border-gray-200 rounded-xl overflow-hidden hover:border-blue-300 hover:shadow-md transition-all">
                         {prod.image_url && (
-                          <div className="h-36 bg-gray-50 overflow-hidden">
-                            <img src={prod.image_url} alt={prod.name} className="w-full h-full object-cover" />
+                          <div className="h-36 bg-gray-50 overflow-hidden relative">
+                            <Image 
+                              src={prod.image_url} 
+                              alt={prod.name} 
+                              fill
+                              className="object-cover"
+                              loading="lazy"
+                            />
                           </div>
                         )}
                         <div className="p-3">
@@ -2040,7 +2047,16 @@ export default function FormFiller({ form, questions, existingResponse: propExis
         return (
           <div className="flex justify-center rounded-xl overflow-hidden bg-gray-50 border border-gray-100 p-2">
             {imageUrl ? (
-              <img src={imageUrl} alt={question.text} className="max-w-full h-auto rounded-lg" />
+              <div className="relative w-full h-auto min-h-[100px]">
+                <Image 
+                  src={imageUrl} 
+                  alt={question.text} 
+                  width={800} 
+                  height={600} 
+                  className="max-w-full h-auto rounded-lg object-contain mx-auto"
+                  loading="lazy"
+                />
+              </div>
             ) : (
               <div className="w-full py-12 flex flex-col items-center justify-center text-gray-400">
                 <svg className="w-12 h-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2588,8 +2604,14 @@ export default function FormFiller({ form, questions, existingResponse: propExis
                     return (
                       <div key={prod.id} className="border border-gray-200 rounded-xl overflow-hidden hover:border-blue-300 hover:shadow-md transition-all">
                         {prod.image_url && (
-                          <div className="h-36 bg-gray-50 overflow-hidden">
-                            <img src={prod.image_url} alt={prod.name} className="w-full h-full object-cover" />
+                          <div className="h-36 bg-gray-50 overflow-hidden relative">
+                            <Image 
+                              src={prod.image_url} 
+                              alt={prod.name} 
+                              fill
+                              className="object-cover"
+                              loading="lazy"
+                            />
                           </div>
                         )}
                         <div className="p-3">

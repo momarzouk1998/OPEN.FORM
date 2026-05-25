@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import imageCompression from 'browser-image-compression'
+import Image from 'next/image'
 
 interface ImageUploadProps {
   onImageUploaded: (url: string) => void
@@ -24,16 +26,13 @@ export default function ImageUpload({ onImageUploaded, currentImage, className =
 
       const file = event.target.files[0]
       
-      // التحقق من نوع الملف (مسموح: JPG, PNG, GIF)
-      const allowed = ['image/jpeg', 'image/png', 'image/gif']
-      if (!allowed.includes(file.type)) {
-        throw new Error('يجب اختيار صورة من نوع JPG أو PNG أو GIF')
+      // Compress image
+      const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1024,
+        useWebWorker: true
       }
-
-      // التحقق من حجم الملف (أقل من 5 ميجا)
-      if (file.size > 5 * 1024 * 1024) {
-        throw new Error('حجم الصورة يجب أن يكون أقل من 5 ميجابايت')
-      }
+      const compressedFile = await imageCompression(file, options)
 
       // إنشاء اسم فريد للملف
       const fileExt = file.name.split('.').pop()
@@ -43,7 +42,7 @@ export default function ImageUpload({ onImageUploaded, currentImage, className =
       // رفع الصورة
       const { error: uploadError } = await supabase.storage
         .from('project-images')
-        .upload(filePath, file)
+        .upload(filePath, compressedFile)
 
       if (uploadError) {
         throw uploadError
@@ -74,11 +73,12 @@ export default function ImageUpload({ onImageUploaded, currentImage, className =
       <div className="flex items-center gap-4">
         {/* معاينة الصورة */}
         {preview && (
-          <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-gray-200">
-            <img 
+          <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-gray-200 relative">
+            <Image 
               src={preview} 
               alt="معاينة الصورة" 
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
             />
           </div>
         )}
