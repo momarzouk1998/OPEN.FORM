@@ -258,25 +258,6 @@ function PartnerCard({
       {/* Card Header */}
       <div className="bg-gradient-to-l from-blue-500 to-pink-500 p-5 text-center relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
-        <div className="relative w-24 h-24 mx-auto mb-3">
-          <div className="w-full h-full rounded-full border-4 border-white/50 overflow-hidden bg-white/20 shadow-inner">
-            {partner.avatar_url ? (
-               <Image 
-                 src={partner.avatar_url} 
-                 alt={partner.name} 
-                 width={96} 
-                 height={96} 
-                 className="w-full h-full object-cover"
-                 priority={false}
-                 loading="lazy"
-               />
-             ) : (
-              <div className="w-full h-full flex items-center justify-center text-white text-3xl font-bold bg-blue-400">
-                {partner.name?.charAt(0) || '?'}
-              </div>
-            )}
-          </div>
-        </div>
         <h3 className="text-white font-bold text-xl mt-2 mb-1">{partner.name}</h3>
         {partner.company && <p className="text-blue-50 text-sm font-medium">{partner.company}</p>}
       </div>

@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       html: `
         <div dir="rtl" style="font-family: 'Cairo', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; background: #f8fafc; border-radius: 16px;">
           <div style="text-align: center; margin-bottom: 24px;">
-            <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #2563eb, #4f46e5); border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+            <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #12D8D8, #0ebaba); border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px;">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                 <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
               </svg>
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
             <p style="font-size: 15px; color: #475569; margin: 0 0 16px;">مرحباً،</p>
             <p style="font-size: 15px; color: #475569; margin: 0 0 20px;">استخدم الكود التالي للتحقق من بريدك الإلكتروني:</p>
             <div style="text-align: center; margin: 24px 0; letter-spacing: 8px;">
-              <span style="font-size: 36px; font-weight: bold; color: #2563eb; background: #eff6ff; padding: 12px 24px; border-radius: 12px; display: inline-block;">${code}</span>
+              <span style="font-size: 36px; font-weight: bold; color: #12D8D8; background: #ecfdff; padding: 12px 24px; border-radius: 12px; display: inline-block;">${code}</span>
             </div>
             <p style="font-size: 13px; color: #94a3b8; margin: 0;">هذا الكود صالح لمدة <strong>10 دقائق</strong> فقط.</p>
             <p style="font-size: 13px; color: #94a3b8; margin: 8px 0 0;">إذا لم تطلب هذا الكود، يمكنك تجاهل هذه الرسالة.</p>

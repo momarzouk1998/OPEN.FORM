@@ -936,7 +936,7 @@ export default function AdminUsersPage() {
                       >
                         <div
                           className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold shrink-0"
-                          style={{ backgroundColor: project.color || '#10B981' }}
+                          style={{ backgroundColor: project.color || '#12D8D8' }}
                         >
                           {project.icon ? (
                             <span className="text-lg">{project.icon}</span>
