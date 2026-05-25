@@ -46,7 +46,7 @@ export default function Header({ user, settings, onMenuClick, showMenuButton = t
               </button>
             )}
 
-            <Link href="/dashboard" className="flex items-center gap-2.5">
+            <Link href="/" className="flex items-center gap-2.5">
               <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200/50">
                 <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
               </div>
@@ -55,7 +55,7 @@ export default function Header({ user, settings, onMenuClick, showMenuButton = t
           </div>
 
           <nav className="hidden lg:flex items-center gap-1">
-            <Link href="/dashboard" className="px-3.5 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium">
+            <Link href="/" className="px-3.5 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium">
               الرئيسية
             </Link>
             <Link href="/templates" className="px-3.5 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium">
@@ -83,7 +83,7 @@ export default function Header({ user, settings, onMenuClick, showMenuButton = t
 
       {!onMenuClick && mobileMenuOpen && (
         <div className="lg:hidden bg-white border-b border-gray-100 px-4 py-2 flex flex-col gap-1 shadow-sm">
-          <Link href="/dashboard" className="px-3 py-2.5 text-gray-700 hover:bg-blue-50 rounded-lg text-sm font-medium">الرئيسية</Link>
+          <Link href="/" className="px-3 py-2.5 text-gray-700 hover:bg-blue-50 rounded-lg text-sm font-medium">الرئيسية</Link>
           <Link href="/templates" className="px-3 py-2.5 text-gray-700 hover:bg-blue-50 rounded-lg text-sm font-medium">القوالب</Link>
           <Link href="/partners" className="px-3 py-2.5 text-gray-700 hover:bg-indigo-50 rounded-lg text-sm font-medium">شركاء النجاح</Link>
           <Link href="/profile" className="px-3 py-2.5 text-gray-700 hover:bg-blue-50 rounded-lg text-sm font-medium">الملف الشخصي</Link>
