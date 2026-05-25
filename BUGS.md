@@ -100,10 +100,11 @@
 
 ## 🟡 متوسط (Medium)
 
-### 13. `any`Types في كل مكان
+### 13. ✅ `any`Types في كل مكان — تم الإصلاح جزئيًا
 - **الملفات:** في أنحاء الكود كلها (أكثر من 50 موقع)
 - **الوصف:** استخدام `Record<string, any>`، `any[]`، `settings: any` بدلاً من types معرفة. بيقلل IDE support ويزيد فرص الأخطاء.
 - **الحل:** تعريف types لكل API response، form settings، profile data.
+- **الحالة:** ✅ تم إصلاح `any` types في `QuestionRenderer.tsx` بالكامل (Answers, BookedSlots, FormData, QuestionOption, matrix types, إلخ) — 0 استخدامات لـ `: any` في الملف
 
 ### 14. ✅ `dir="rtl"`ناقص — تم الإصلاح
 - **الملفات:**
