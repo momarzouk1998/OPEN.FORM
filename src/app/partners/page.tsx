@@ -188,19 +188,16 @@ export default function PartnersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 pt-16">
+    <div dir="rtl" className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/50 to-pink-50/20 pb-12">
       <PublicHeader />
-      {/* Header */}
-      <div className="bg-gradient-to-l from-indigo-600 to-purple-700 text-white">
-        <div className="max-w-6xl mx-auto px-4 py-16 text-center">
-          <h1 className="text-4xl font-bold mb-3">🚀 شركاء النجاح</h1>
-          <p className="text-indigo-200 text-lg max-w-2xl mx-auto">
-            نخبة من منشئي النماذج المتميزين الذين يساهمون في إثراء المنصة بأفكارهم وإبداعاتهم
+
+      {/* Hero Section */}
+      <div className="bg-gradient-to-l from-blue-500 to-pink-500 text-white py-16 px-4 mb-12">
+        <div className="max-w-7xl mx-auto text-center">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">شركاء النجاح</h1>
+          <p className="text-blue-50 text-lg max-w-2xl mx-auto opacity-90">
+            نفتخر بنخبة من المبدعين الذين ساهموا في تطوير المنصة ومشاركة أفكارهم وتجاربهم
           </p>
-          <div className="flex items-center justify-center gap-2 mt-4 text-indigo-200 text-sm">
-            <span className="w-2 h-2 rounded-full bg-green-400" />
-            <span>{partners.length} شريك</span>
-          </div>
         </div>
       </div>
 
@@ -257,15 +254,31 @@ function PartnerCard({
   }
 
   return (
-    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg hover:border-indigo-200 transition-all duration-300 flex flex-col h-full">
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg hover:border-blue-200 transition-all duration-300 flex flex-col h-full">
       {/* Card Header */}
-      <div className="bg-gradient-to-l from-indigo-500 to-purple-600 p-5 text-center relative overflow-hidden">
+      <div className="bg-gradient-to-l from-blue-500 to-pink-500 p-5 text-center relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
-          <div className="w-24 h-24 mx-auto mb-3 rounded-full border-4 border-white/50 bg-indigo-400/80 flex items-center justify-center text-white text-3xl font-bold shadow-inner">
-            {partner.name?.charAt(0) || '?'}
+        <div className="relative w-24 h-24 mx-auto mb-3">
+          <div className="w-full h-full rounded-full border-4 border-white/50 overflow-hidden bg-white/20 shadow-inner">
+            {partner.avatar_url ? (
+               <Image 
+                 src={partner.avatar_url} 
+                 alt={partner.name} 
+                 width={96} 
+                 height={96} 
+                 className="w-full h-full object-cover"
+                 priority={false}
+                 loading="lazy"
+               />
+             ) : (
+              <div className="w-full h-full flex items-center justify-center text-white text-3xl font-bold bg-blue-400">
+                {partner.name?.charAt(0) || '?'}
+              </div>
+            )}
           </div>
+        </div>
         <h3 className="text-white font-bold text-xl mt-2 mb-1">{partner.name}</h3>
-        {partner.company && <p className="text-indigo-100 text-sm font-medium">{partner.company}</p>}
+        {partner.company && <p className="text-blue-50 text-sm font-medium">{partner.company}</p>}
       </div>
 
       {/* Social Icons - Now part of the header area for better visibility */}

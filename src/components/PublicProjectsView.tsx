@@ -102,11 +102,11 @@ export default function PublicProjectsView() {
         <div className="relative max-w-6xl mx-auto px-4 w-full">
           <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
             <div className="flex-1 text-center lg:text-right">
-              <div className="inline-block px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-medium mb-6">
+              <div className="inline-block px-4 py-1.5 bg-pink-50 text-pink-600 rounded-full text-sm font-medium mb-6 border border-pink-100">
                 منصة نماذج واستبيانات احترافية
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6">
-                أنشئ <span className="text-blue-600">نماذج</span> احترافية
+                أنشئ <span className="text-pink-500">نماذج</span> احترافية
                 <br />
                 في دقائق
               </h1>
@@ -116,13 +116,13 @@ export default function PublicProjectsView() {
               </p>
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4">
                 <Link href="/register"
-                  className="px-8 py-4 bg-gradient-to-l from-blue-600 to-indigo-600 text-white rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all font-semibold shadow-xl shadow-blue-500/30 flex items-center gap-2 text-lg"
+                  className="px-8 py-4 bg-gradient-to-l from-blue-500 to-pink-500 text-white rounded-2xl hover:brightness-110 transition-all font-semibold shadow-xl shadow-blue-500/20 flex items-center gap-2 text-lg"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                   أنشئ نموذجك الأول مجاناً
                 </Link>
                 <button onClick={() => scrollTo('features')}
-                  className="px-8 py-4 bg-white text-blue-700 rounded-2xl hover:bg-blue-50 transition-colors font-semibold border-2 border-blue-200 flex items-center gap-2 text-lg"
+                  className="px-8 py-4 bg-white text-blue-600 rounded-2xl hover:bg-blue-50 transition-colors font-semibold border-2 border-blue-200 flex items-center gap-2 text-lg"
                 >
                   اكتشف المميزات
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
@@ -132,13 +132,13 @@ export default function PublicProjectsView() {
 
             <div className="flex-1 flex justify-center lg:justify-end">
               <div className="relative">
-                <div className="w-72 h-72 sm:w-80 sm:h-80 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl shadow-2xl shadow-blue-500/30 flex items-center justify-center">
+                <div className="w-72 h-72 sm:w-80 sm:h-80 bg-gradient-to-br from-blue-500 to-pink-500 rounded-3xl shadow-2xl shadow-blue-500/20 flex items-center justify-center">
                   <svg className="w-40 h-40 text-white/90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
                 <div className="absolute -bottom-4 -left-4 bg-white rounded-2xl shadow-lg px-5 py-3 border border-gray-100">
-                  <p className="text-sm font-bold text-gray-800">بدون علامة مائية</p>
+                  <p className="text-sm font-bold text-pink-500">بدون علامة مائية</p>
                   <p className="text-xs text-gray-500">في جميع الخطط</p>
                 </div>
               </div>
@@ -158,7 +158,7 @@ export default function PublicProjectsView() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-4">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">مميزات متقدمة</h2>
-            <div className="w-20 h-1 bg-blue-600 rounded-full mx-auto mt-3 mb-6" />
+            <div className="w-20 h-1 bg-pink-500 rounded-full mx-auto mt-3 mb-6" />
             <p className="text-gray-600 text-lg max-w-2xl mx-auto">
               كل ما تحتاجه لإنشاء نماذج احترافية وجمع البيانات بذكاء
             </p>
@@ -177,9 +177,9 @@ export default function PublicProjectsView() {
               { icon: '🏷️', title: 'بدون علامة مائية', desc: 'جميع الخطط مجانية وخالية من العلامات المائية على النماذج' },
             ].map((f, i) => (
               <div key={i}
-                className="bg-gradient-to-b from-blue-50/50 to-white rounded-2xl p-6 border border-blue-100/60 hover:shadow-lg hover:border-blue-200 transition-all duration-300"
+                className="bg-gradient-to-b from-white to-pink-50/20 rounded-2xl p-6 border border-gray-100 hover:shadow-lg hover:border-pink-200 transition-all duration-300"
               >
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-2xl mb-4 shadow-lg shadow-blue-200/50">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-pink-500 flex items-center justify-center text-2xl mb-4 shadow-lg shadow-blue-200/50">
                   <span>{f.icon}</span>
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-2">{f.title}</h3>
