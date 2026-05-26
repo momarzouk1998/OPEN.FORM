@@ -35,7 +35,7 @@ export default function EarningsPage() {
       const { data: settingsData } = await supabase.from('app_settings').select('key, value')
       if (settingsData) {
         const map: Record<string, string> = {}
-        settingsData.forEach(s => { map[s.key] = s.value })
+        settingsData.forEach((s: { key: string; value: string }) => { map[s.key] = s.value })
         setSettings(map)
       }
 
