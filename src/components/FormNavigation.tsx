@@ -19,7 +19,7 @@ interface FormNavigationProps {
   onPageClick: (page: number) => void
 }
 
-export default function FormNavigation({ isFirstPage, isLastPage, submitting, pages, currentPage, form, answersCount, project, autoSave, onPrev, onNext, onSubmit, onPageClick }: FormNavigationProps) {
+export default function FormNavigation({ isFirstPage, isLastPage, submitting, pages, currentPage, isPreview, form, answersCount, project, autoSave, onPrev, onNext, onSubmit, onPageClick }: FormNavigationProps) {
   const router = useRouter()
 
   if (pages.length === 0) return null
