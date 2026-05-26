@@ -31,8 +31,8 @@ export async function POST(request: Request) {
       }, { status: 400 })
     }
 
-    // Generate 6-digit code
-    const code = Math.floor(100000 + Math.random() * 900000).toString()
+    // Generate 6-digit code using crypto
+    const code = crypto.randomInt(100000, 999999).toString()
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
 
     // Store code in Supabase (service role bypasses RLS)

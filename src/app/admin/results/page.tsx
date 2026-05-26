@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
+import { toast } from '@/lib/toast'
 
 interface FormResponse {
   id: string
@@ -126,6 +127,11 @@ export default function ResultsPage() {
   const [sortDirection, setSortDirection] = useState<SortDir>('desc')
   const [showAnalytics, setShowAnalytics] = useState(false)
 
+  // Pagination state
+  const [responsePage, setResponsePage] = useState(0)
+  const [responseTotalCount, setResponseTotalCount] = useState(0)
+  const responsePageSize = 50
+
   useEffect(() => {
     checkUserAndFetchData()
   }, [])
@@ -137,7 +143,7 @@ export default function ResultsPage() {
       const formId = params.get('formId')
       if (formId) {
         const form = forms.find(f => f.id === formId)
-        if (form) handleFormClick(form)
+        if (form) handleFormClick(form, 0)
       }
     }
   }, [loading, forms])
@@ -161,6 +167,7 @@ export default function ResultsPage() {
       await fetchData(profile)
     } catch (error) {
       console.error('Error:', error)
+      toast('حدث خطأ أثناء التحقق من البيانات')
       router.push('/login')
     }
   }
@@ -203,14 +210,16 @@ export default function ResultsPage() {
       setLoading(false)
     } catch (error) {
       console.error('Error:', error)
+      toast('حدث خطأ أثناء تحميل البيانات')
       setLoading(false)
     }
   }
 
-  async function handleFormClick(form: Form) {
+  async function handleFormClick(form: Form, pageNum = 0) {
     setActiveForm(form)
     setLoadingForm(true)
     setResponseSearch('')
+    setResponsePage(pageNum)
     setSortColumn('submitted_at')
     setSortDirection('desc')
     setShowAnalytics(false)
@@ -223,31 +232,49 @@ export default function ResultsPage() {
 
       setFormQuestions(questions || [])
 
-      const { data: responses } = await supabase
+      // Get total count
+      const { count } = await supabase
         .from('form_responses')
-        .select(`
-          id,
-          form_id,
-          user_id,
-          score,
-          max_score,
-          submitted_at,
-          answers,
-          profiles(name, email, gender)
-        `)
+        .select('id', { count: 'exact', head: true })
         .eq('form_id', form.id)
-        .order('submitted_at', { ascending: false })
 
-      let filteredResponses = responses || []
+      const total = count || 0
+      setResponseTotalCount(total)
+
+      // Fetch current page with range
+      const from = pageNum * responsePageSize
+      const to = Math.min(from + responsePageSize - 1, total - 1)
+      let fetchedResponses: FormResponse[] = []
+      if (from <= to && total > 0) {
+        const { data: responses } = await supabase
+          .from('form_responses')
+          .select(`
+            id,
+            form_id,
+            user_id,
+            score,
+            max_score,
+            submitted_at,
+            answers,
+            profiles(name, email, gender)
+          `)
+          .eq('form_id', form.id)
+          .order('submitted_at', { ascending: false })
+          .range(from, to)
+
+        fetchedResponses = (responses || []) as FormResponse[]
+      }
+
       if (user?.role === 'supervisor') {
-        filteredResponses = filteredResponses.filter((r: any) =>
+        fetchedResponses = fetchedResponses.filter((r: any) =>
           r.profiles?.gender === user.gender
         )
       }
 
-      setFormResponses(filteredResponses as FormResponse[])
+      setFormResponses(fetchedResponses)
     } catch (error) {
       console.error('Error fetching form details:', error)
+      toast('حدث خطأ أثناء تحميل الردود')
     }
     setLoadingForm(false)
   }
@@ -416,6 +443,48 @@ export default function ResultsPage() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+  }
+
+  const responseTotalPages = Math.ceil(responseTotalCount / responsePageSize)
+
+  function handleResponsePageChange(newPage: number) {
+    if (newPage < 0 || newPage >= responseTotalPages) return
+    setResponsePage(newPage)
+    if (!activeForm) return
+    setLoadingForm(true)
+    // Re-fetch with new page
+    const fetchPage = async () => {
+      const from = newPage * responsePageSize
+      const to = Math.min(from + responsePageSize - 1, responseTotalCount - 1)
+      let fetchedResponses: FormResponse[] = []
+      if (from <= to && responseTotalCount > 0) {
+        const { data: responses } = await supabase
+          .from('form_responses')
+          .select(`
+            id,
+            form_id,
+            user_id,
+            score,
+            max_score,
+            submitted_at,
+            answers,
+            profiles(name, email, gender)
+          `)
+          .eq('form_id', activeForm.id)
+          .order('submitted_at', { ascending: false })
+          .range(from, to)
+
+        fetchedResponses = (responses || []) as FormResponse[]
+      }
+      if (user?.role === 'supervisor') {
+        fetchedResponses = fetchedResponses.filter((r: any) =>
+          r.profiles?.gender === user.gender
+        )
+      }
+      setFormResponses(fetchedResponses)
+      setLoadingForm(false)
+    }
+    fetchPage()
   }
 
   // Analytics computation
@@ -669,7 +738,7 @@ export default function ResultsPage() {
                       placeholder="اسم النموذج..."
                       className="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     />
-                    <svg className="w-5 h-5 text-gray-400 absolute right-3 top-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-5 h-5 text-gray-400 absolute start-3 top-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                   </div>
@@ -754,12 +823,12 @@ export default function ResultsPage() {
                       placeholder="بحث باسم المستخدم أو البريد..."
                       className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
                     />
-                    <svg className="w-4 h-4 text-gray-400 absolute left-3 top-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-4 h-4 text-gray-400 absolute end-3 top-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                   </div>
                   <span className="text-sm text-gray-500">
-                    {processedResponses.length} / {formResponses.length} ردود
+                    {formResponses.length} / {responseTotalCount} ردود
                   </span>
                   <button
                     onClick={() => setShowAnalytics(!showAnalytics)}
@@ -780,6 +849,29 @@ export default function ResultsPage() {
                     </svg>
                     تصدير Excel
                   </button>
+
+                  {/* Response Pagination */}
+                  {responseTotalPages > 1 && (
+                    <div className="flex items-center gap-2 mr-auto">
+                      <span className="text-xs text-gray-500 whitespace-nowrap">
+                        {responsePage + 1} / {responseTotalPages}
+                      </span>
+                      <button
+                        onClick={() => handleResponsePageChange(responsePage - 1)}
+                        disabled={responsePage === 0}
+                        className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        السابق
+                      </button>
+                      <button
+                        onClick={() => handleResponsePageChange(responsePage + 1)}
+                        disabled={responsePage >= responseTotalPages - 1}
+                        className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        التالي
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Analytics Section */}

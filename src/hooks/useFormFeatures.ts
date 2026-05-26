@@ -19,8 +19,8 @@ export function useFormAutoSave(formId: string) {
         const parsed = JSON.parse(raw)
         return parsed?.answers || {}
       }
-    } catch {
-      // ignore parse errors
+    } catch (e) {
+      console.error('Error loading draft from localStorage:', e)
     }
     return {}
   }, [storageKey])
@@ -34,8 +34,8 @@ export function useFormAutoSave(formId: string) {
         answers,
         savedAt: new Date().toISOString()
       }))
-    } catch {
-      // ignore quota errors
+    } catch (e) {
+      console.error('Error saving draft to localStorage:', e)
     }
   }, [storageKey])
 
@@ -55,7 +55,8 @@ export function useFormAutoSave(formId: string) {
       if (hours > 0) return `منذ ${hours} ساعة`
       if (mins > 0) return `منذ ${mins} دقيقة`
       return 'منذ لحظات'
-    } catch {
+    } catch (e) {
+      console.error('Error reading draft age from localStorage:', e)
       return null
     }
   }, [storageKey])
@@ -63,7 +64,11 @@ export function useFormAutoSave(formId: string) {
   // Clear the draft (after successful submit)
   const clearDraft = useCallback(() => {
     if (typeof window === 'undefined') return
-    localStorage.removeItem(storageKey)
+    try {
+      localStorage.removeItem(storageKey)
+    } catch (e) {
+      console.error('Error clearing draft from localStorage:', e)
+    }
   }, [storageKey])
 
   const hasDraft = useCallback((): boolean => {

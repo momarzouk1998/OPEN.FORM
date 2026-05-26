@@ -54,6 +54,7 @@ export default function PaymentMethodsEditor({ methods, onChange }: PaymentMetho
               onClick={() => onChange(safeMethods.filter((_, innerIndex) => innerIndex !== index))}
               className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
               title="حذف طريقة الدفع"
+              aria-label="حذف طريقة الدفع"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

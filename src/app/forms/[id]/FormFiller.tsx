@@ -1,14 +1,19 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import Image from 'next/image'
 import { useFormAutoSave, useConditionalRedirect, type RedirectRule } from '@/hooks/useFormFeatures'
-import { DISPLAY_ONLY_QUESTION_TYPES, APPOINTMENT_META_ID } from '@/constants/questionTypes'
-import { parseOptions, parseMatrixData, normalizeProductGroups, normalizePaymentMethods, formatCountdown, copyPaymentValue, type Question, type ProductGroup, type PaymentMethod, type VisibilityRule } from '@/lib/formFillerUtils'
-import QuestionRenderer from '@/components/QuestionRenderer'
+import { parseOptions, parseMatrixData, normalizeProductGroups, normalizePaymentMethods, getVisibilityRules, getAvailabilityStatus, getAppointmentConfig, getAutoAppointment, type Question } from '@/lib/formFillerUtils'
+import { calculateScore } from '@/lib/scoringUtils'
+import FormFillerHeader from '@/components/FormFillerHeader'
+import { FormClosedScreen, FormSubmittedScreen, RetryConfirmModal } from '@/components/FormFillerScreens'
+import { FormProductsSection, FormOfferCountdownBanner } from '@/components/FormProductsSection'
+import { FormPaymentInfo } from '@/components/FormPaymentInfo'
+import FormNavigation from '@/components/FormNavigation'
+import FormFillerDraftBanner from '@/components/FormFillerDraftBanner'
+import FormFillerErrorAlert from '@/components/FormFillerErrorAlert'
+import FormFillerQuestionGroup from '@/components/FormFillerQuestionGroup'
 
 interface Form {
   id: string
@@ -43,14 +48,17 @@ interface FormFillerProps {
 }
 
 function getRespondentId(): string {
-  // Get or generate a unique ID for anonymous users (stored in localStorage)
   const key = 'jotform_respondent_id'
-  let id = localStorage.getItem(key)
-  if (!id) {
-    id = crypto.randomUUID()
-    localStorage.setItem(key, id)
+  try {
+    let id = localStorage.getItem(key)
+    if (!id) {
+      id = crypto.randomUUID()
+      localStorage.setItem(key, id)
+    }
+    return id
+  } catch {
+    return crypto.randomUUID()
   }
-  return id
 }
 
 const getThemeSettings = (form: any) => {
@@ -198,50 +206,8 @@ export default function FormFiller({ form, questions, existingResponse: propExis
   const [displayQuestions, setDisplayQuestions] = useState<Question[]>([]);
   const [isExpired, setIsExpired] = useState(false);
 
-  const getAvailabilityStatus = () => {
-    const availability = (form.page_titles as any)?._availability
-    if (!availability?.enabled || isPreview) return { closed: false, reason: '' }
-
-    const now = new Date()
-    if (availability.mode === 'range') {
-      const startsAt = availability.starts_at ? new Date(availability.starts_at) : null
-      const endsAt = availability.ends_at ? new Date(availability.ends_at) : null
-      if (startsAt && now < startsAt) return { closed: true, reason: 'النموذج لم يفتح بعد' }
-      if (endsAt && now > endsAt) return { closed: true, reason: 'تم إغلاق النموذج' }
-      return { closed: false, reason: '' }
-    }
-
-    const weekly = Array.isArray(availability.weekly) ? availability.weekly : []
-    const today = String(now.getDay())
-    const currentMinutes = now.getHours() * 60 + now.getMinutes()
-    const isOpen = weekly.some((slot: any) => {
-      if (String(slot.day) !== today || !slot.start || !slot.end) return false
-      const [startHour, startMinute] = String(slot.start).split(':').map(Number)
-      const [endHour, endMinute] = String(slot.end).split(':').map(Number)
-      const startMinutes = (startHour || 0) * 60 + (startMinute || 0)
-      const endMinutes = (endHour || 0) * 60 + (endMinute || 0)
-      return currentMinutes >= startMinutes && currentMinutes <= endMinutes
-    })
-
-    return {
-      closed: !isOpen,
-      reason: 'النموذج مغلق الآن حسب جدول التشغيل'
-    }
-  }
-
   // Extract visibility_rules from question (may be in q.visibility_rules or inside options._visibility_rules)
-  const getVisibilityRules = (q: any): VisibilityRule[] | undefined => {
-    if (q.visibility_rules && q.visibility_rules.length > 0) return q.visibility_rules
-    if (typeof q.options === 'string') {
-      try {
-        const opts = JSON.parse(q.options)
-        if (opts && opts._visibility_rules && opts._visibility_rules.length > 0) return opts._visibility_rules
-      } catch { return undefined }
-    } else if (q.options && q.options._visibility_rules && q.options._visibility_rules.length > 0) {
-      return q.options._visibility_rules
-    }
-    return undefined
-  }
+  // Uses imported getVisibilityRules from formFillerUtils
 
   // Conditional logic: compute visible questions based on visibility rules
   const visibleQuestions = useMemo(() => {
@@ -277,7 +243,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
   const isLastPage = pageIndex >= totalPages - 1
 
   useEffect(() => {
-    const availabilityStatus = getAvailabilityStatus()
+    const availabilityStatus = getAvailabilityStatus(form.page_titles, isPreview)
     if (availabilityStatus.closed) {
       setClosedReason(availabilityStatus.reason)
       setIsExpired(true)
@@ -415,12 +381,6 @@ export default function FormFiller({ form, questions, existingResponse: propExis
     return () => clearInterval(interval)
   }, [questions, submitted])
 
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
-
   const goToNextPage = () => {
     const currentQs = displayQuestions.filter(q => (q.page || 1) === currentPage)
     for (const q of currentQs) {
@@ -503,149 +463,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
     setShowRetryConfirm(false)
   }
 
-  const getQuestionMaxScore = (q: Question): number => {
-    const opts = parseOptions(q.options)
-
-    switch (q.type) {
-      case 'text':
-      case 'textarea':
-        return q.points || 0
-      case 'single_choice':
-        return Math.max(0, ...(Array.isArray(opts) ? opts : []).map((o: any) => o.points || 0))
-      case 'multiple_choice':
-        return (Array.isArray(opts) ? opts : []).reduce((sum: number, o: any) => sum + (o.points || 0), 0)
-      case 'dropdown':
-        if (opts.dropdown_type === 'multiple') {
-          return ((opts.correct_option_ids || []) as string[]).reduce((sum: number, id: string) => {
-            const opt = (opts.options || []).find((o: any) => o.id === id)
-            return sum + (opt?.points || 0)
-          }, 0)
-        }
-        if (opts.correct_option_ids?.length) {
-          const opt = (opts.options || []).find((o: any) => o.id === opts.correct_option_ids[0])
-          return opt?.points || 0
-        }
-        return Math.max(0, ...(Array.isArray(opts) ? opts : []).map((o: any) => o.points || 0))
-      case 'scale':
-        return Math.max(10, ...(Array.isArray(opts) ? opts : []).map((o: any) => o.points || 0))
-      case 'ranking':
-        return (Array.isArray(opts) ? opts : []).reduce((sum: number, o: any) => sum + (o.points || 0), 0)
-      case 'matrix': {
-        const md = parseMatrixData(q)
-        if (md) {
-          const colSum = (md.matrix_columns || []).reduce((s: number, c: any) => s + (c.points || 0), 0)
-          return colSum * (md.matrix_rows || []).length
-        }
-        return 0
-      }
-      default:
-        return 0
-    }
-  }
-
-  const calculateScore = () => {
-    let score = 0
-    let maxScore = 0
-
-    visibleQuestions.forEach((q) => {
-      const answer = answers[q.id]
-      const options = parseOptions(q.options)
-
-      if (q.type === 'matrix') {
-        const matrixData = parseMatrixData(q)
-        if (matrixData) {
-          maxScore += (matrixData.matrix_columns || []).reduce((sum: number, col: any) => sum + (col.points || 0), 0) * (matrixData.matrix_rows || []).length
-          const rowAnswers = answer || {}
-          Object.values(rowAnswers).forEach((val: any) => {
-            if (Array.isArray(val)) {
-              val.forEach((colId: string) => {
-                const col = (matrixData.matrix_columns || []).find((c: any) => c.id === colId)
-                if (col) score += col.points || 0
-              })
-            } else if (val) {
-              const col = (matrixData.matrix_columns || []).find((c: any) => c.id === val)
-              if (col) score += col.points || 0
-            }
-          })
-        }
-        return
-      }
-
-      // Compute maxScore (always, regardless of answer)
-      if (q.type === 'text' || q.type === 'textarea') {
-        maxScore += q.points || 0
-      } else if (q.type === 'single_choice') {
-        maxScore += Math.max(0, ...(Array.isArray(options) ? options : []).map((o: any) => o.points || 0))
-      } else if (q.type === 'multiple_choice') {
-        maxScore += (Array.isArray(options) ? options : []).reduce((sum: number, o: any) => sum + (o.points || 0), 0)
-      } else if (q.type === 'ranking') {
-        maxScore += (Array.isArray(options) ? options : []).reduce((sum: number, o: any) => sum + (o.points || 0), 0)
-      } else if (q.type === 'scale') {
-        maxScore += Math.max(10, ...(Array.isArray(options) ? options : []).map((o: any) => o.points || 0))
-      } else if (q.type === 'dropdown') {
-        const dropOpts = options.options || options
-        if (Array.isArray(dropOpts)) {
-          if (options.dropdown_type === 'multiple') {
-            maxScore += ((options.correct_option_ids || []) as string[]).reduce((sum: number, id: string) => {
-              const opt = dropOpts.find((o: any) => o.id === id)
-              return sum + (opt?.points || 0)
-            }, 0)
-          } else if (options.correct_option_ids?.length) {
-            const opt = dropOpts.find((o: any) => o.id === options.correct_option_ids[0])
-            maxScore += opt?.points || 0
-          } else {
-            maxScore += Math.max(0, ...dropOpts.map((o: any) => o.points || 0))
-          }
-        }
-      }
-
-      if (answer === undefined || answer === null || answer === '') return
-
-      if (q.type === 'single_choice' && options.length > 0) {
-          const optId = typeof answer === 'object' ? (answer as any).option_id : answer
-          const mainOption = options.find((opt: any) => opt.id === optId)
-          if (mainOption) {
-            if (q.has_counter && mainOption.counter_target) {
-              const count = typeof answer === 'object' ? ((answer as any).count || 0) : 0
-              if (count >= mainOption.counter_target) {
-                score += mainOption.points || 0
-              }
-            } else {
-              score += mainOption.points || 0
-            }
-          }
-        } else if (q.type === 'multiple_choice' && options.length > 0 && Array.isArray(answer)) {
-          answer.forEach((selectedId: string) => {
-            const mainOption = options.find((opt: any) => opt.id === selectedId)
-            if (mainOption) {
-              score += mainOption.points || 0
-            }
-          })
-        
-        } else if (q.type === 'dropdown' && options.dropdown_type === 'multiple' && Array.isArray(answer)) {
-          const dropOpts = options.options || []
-          answer.forEach((id: string) => {
-            const opt = dropOpts.find((o: any) => o.id === id)
-            if (opt && (options.correct_option_ids || []).includes(id)) {
-              score += opt.points || 0
-            }
-          })
-        } else if (q.type === 'ranking' && Array.isArray(answer) && Array.isArray(options)) {
-          answer.forEach((optId: string, pos: number) => {
-            const correctOptAtPos = options[pos]
-            if (correctOptAtPos && optId === correctOptAtPos.id) {
-              score += correctOptAtPos.points || 0
-            }
-          })
-        } else if (q.type === 'scale') {
-          score += parseFloat(String(answer)) || 0
-        } else if (q.type === 'text' || q.type === 'textarea') {
-          score += String(answer).trim() ? (q.points || 0) : 0
-        }
-      })
-
-    return { score, maxScore }
-  }
+  // Uses imported getQuestionMaxScore and calculateScore from scoringUtils
 
   // Auto-save answers with debounce
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -726,7 +544,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
           const appt = typeof answer === 'object' ? answer as any : {}
           const apptConfig = getAppointmentConfig(q)
           if (apptConfig.mode === 'auto') {
-            const latestAutoAppointment = getAutoAppointment(q)
+            const latestAutoAppointment = getAutoAppointment(q, bookedSlots)
             if (!latestAutoAppointment || appt.date !== latestAutoAppointment.date || appt.time !== latestAutoAppointment.time) {
               setError(`تم تحديث الموعد المتاح في السؤال: ${q.text}. يرجى تأكيد الموعد المقترح مرة أخرى قبل الإرسال.`)
               setSubmitting(false); return
@@ -798,7 +616,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
       }
     }
 
-    const { score, maxScore } = calculateScore()
+    const { score, maxScore } = calculateScore(visibleQuestions, answers)
 
     if (isPreview) {
       setTimeout(() => {
@@ -909,676 +727,149 @@ export default function FormFiller({ form, questions, existingResponse: propExis
     }
   }
 
-  // Appointment calendar utility functions
-  function getAppointmentConfig(question: Question) {
-    const opts = parseOptions(question.options)
-    const meta = opts.find((opt: any) => opt.id === APPOINTMENT_META_ID) || {}
-    return {
-      mode: meta.validation_type === 'custom' || meta.validation_type === 'auto' ? meta.validation_type : 'fixed',
-      customBy: meta.validation_category === 'date' ? 'date' : 'weekday',
-      single: meta.validation_value !== 'shared',
-    }
-  }
-
-  function getAppointmentSlots(question: Question) {
-    return parseOptions(question.options).filter((opt: any) => opt.id !== APPOINTMENT_META_ID && opt.text)
-  }
-
-  function getBookedAppointmentCount(questionId: string) {
-    const qSlots = bookedSlots[questionId]
-    if (!qSlots) return 0
-    return Object.values(qSlots).reduce((sum, daySlots) => sum + daySlots.length, 0)
-  }
-
-  function getAutoAppointment(question: Question) {
-    const slot = getAppointmentSlots(question)[0]
-    const startValue = slot?.validation_value || ''
-    const intervalMinutes = Math.max(1, Number(slot?.validation_min) || 30)
-    if (!startValue) return null
-
-    const start = new Date(startValue)
-    if (Number.isNaN(start.getTime())) return null
-
-    const next = new Date(start.getTime() + getBookedAppointmentCount(question.id) * intervalMinutes * 60000)
-    const date = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`
-    const time = `${String(next.getHours()).padStart(2, '0')}:${String(next.getMinutes()).padStart(2, '0')}`
-    return { date, time, intervalMinutes }
-  }
-
-  function getTimeSlotsForDate(question: Question, dateStr: string) {
-    const config = getAppointmentConfig(question)
-    const slots = getAppointmentSlots(question)
-    if (config.mode === 'fixed') return slots.map((slot: any) => slot.text)
-
-    if (config.customBy === 'date') {
-      return slots
-        .filter((slot: any) => (slot.validation_category || 'date') === 'date' && slot.validation_value === dateStr)
-        .map((slot: any) => slot.text)
-    }
-
-    const weekday = String(new Date(dateStr + 'T00:00:00').getDay())
-    return slots
-      .filter((slot: any) => (slot.validation_category || 'weekday') !== 'date' && String(slot.validation_value || '0') === weekday)
-      .map((slot: any) => slot.text)
-  }
-
-  function isDateFullyBooked(dateStr: string, questionId: string, timeSlots: string[], singleAppointment = true) {
-    if (!singleAppointment) return false
-    const qSlots = bookedSlots[questionId]
-    if (!qSlots || !qSlots[dateStr]) return false
-    return timeSlots.every(slot => qSlots[dateStr].includes(slot))
-  }
-
-  function getAvailableTimeSlots(dateStr: string, questionId: string, timeSlots: string[], singleAppointment = true) {
-    if (!singleAppointment) return timeSlots
-    const qSlots = bookedSlots[questionId]
-    if (!qSlots || !qSlots[dateStr]) return timeSlots
-    return timeSlots.filter(slot => !qSlots[dateStr].includes(slot))
-  }
-
-  function isSameDay(d1: Date, d2: Date) {
-    return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate()
-  }
+  // Appointment calendar functions imported from formFillerUtils
 
   if (isExpired && !submitted) {
-    return (
-      <div dir="rtl" className={`${isPreview ? 'min-h-full' : 'min-h-screen'} bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4 form-themed-container`}>
-        {renderThemeStyles()}
-        <div className="bg-white rounded-3xl shadow-xl shadow-blue-900/5 border border-gray-100 p-8 max-w-md w-full text-center form-themed-card">
-          <div className="w-16 h-16 mx-auto mb-5 bg-red-50 rounded-2xl flex items-center justify-center">
-            <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2 form-themed-text">النموذج غير متاح الآن</h2>
-          <p className="text-gray-500 text-sm form-themed-description">{closedReason}</p>
-        </div>
-      </div>
-    )
+    return <FormClosedScreen form={form} isPreview={isPreview} closedReason={closedReason} />
   }
 
   if (submitted) {
-    const { score, maxScore } = calculateScore()
-    const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0
-    const siteUrl = 'https://forms.openappo.com'
-
     return (
-      <div dir="rtl" className={`${isPreview ? 'min-h-full' : 'min-h-screen'} bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4 form-themed-container`}>
-        {renderThemeStyles()}
-        <div className="bg-white rounded-3xl shadow-xl shadow-blue-900/5 border border-gray-100 p-8 max-w-md w-full text-center form-themed-card">
-          <div className="w-20 h-20 mx-auto mb-5 bg-gradient-to-br from-emerald-100 to-green-100 rounded-full flex items-center justify-center">
-            <svg className="w-10 h-10 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-1 form-themed-text">تم إرسال طلبك بنجاح ✅</h2>
-          {redirectMessage && <p className="text-gray-500 text-sm mb-4 form-themed-description">{redirectMessage}</p>}
-          {form.default_redirect_url || (form.redirect_rules && form.redirect_rules.length > 0) ? (
-            <p className="text-xs text-gray-400 mb-5 animate-pulse">سيتم توجيهك خلال لحظات...</p>
-          ) : null}
-
-          {!form.default_redirect_url && (!form.redirect_rules || form.redirect_rules.length === 0) && (
-            <>
-              {/* Total Responses Count */}
-              <div className="bg-gradient-to-l from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-5 mb-5">
-                <p className="text-gray-600 text-sm mb-1">
-                  صاحب هذا النموذج استقبل
-                </p>
-                <p className="text-3xl font-bold text-blue-700 font-mono" dir="ltr">
-                  {totalResponses.toLocaleString()}
-                </p>
-                <p className="text-gray-600 text-sm mt-1">
-                  طلب حتى الآن باستخدام <span className="font-bold text-blue-600">{form.name}</span>
-                </p>
-              </div>
-
-              {/* Score (only if form has scoring and is test mode) */}
-              {!!(form.page_titles as any)?._is_test && maxScore > 0 && (
-                <div className={`rounded-2xl p-4 mb-5 border ${
-                  percentage >= 70 ? 'bg-emerald-50 border-emerald-100' : percentage >= 50 ? 'bg-amber-50 border-amber-100' : 'bg-red-50 border-red-100'
-                }`}>
-                  <p className="text-gray-500 text-sm mb-1">درجتك</p>
-                  <p className={`text-3xl font-bold ${
-                    percentage >= 70 ? 'text-emerald-600' : percentage >= 50 ? 'text-amber-600' : 'text-red-600'
-                  }`}>
-                    {percentage}%
-                  </p>
-                  <p className="text-gray-400 text-xs mt-1">{score} من {maxScore} نقطة</p>
-                </div>
-              )}
-
-              {form.allow_multiple && allUserResponses && allUserResponses.length > 0 && (
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-5">
-                  <p className="text-blue-700 text-sm">
-                    هذا التسجيل رقم {allUserResponses.length} في هذا الفورم
-                  </p>
-                </div>
-              )}
-
-              <div className="flex gap-3 mb-4">
-                <Link
-                  href={project ? `/projects/${project.id}` : '/dashboard'}
-                  className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors text-sm"
-                >
-                  العودة
-                </Link>
-                <button
-                  onClick={() => {
-                    if (form.allow_multiple) {
-                      setSubmitted(false)
-                      setAnswers({})
-                      setShowRetryConfirm(false)
-                    } else {
-                      setShowRetryConfirm(true)
-                    }
-                  }}
-                  className="flex-1 py-3 bg-gradient-to-l from-blue-600 to-indigo-600 text-white rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 transition-colors shadow-lg shadow-blue-500/25 text-sm"
-                >
-                  {form.allow_multiple ? 'تسجيل جديد' : 'إعادة المحاولة'}
-                </button>
-              </div>
-
-              {/* Create Your Own Form */}
-              <a
-                href={siteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full py-3.5 bg-gradient-to-l from-emerald-500 to-green-600 text-white rounded-xl font-bold hover:from-emerald-600 hover:to-green-700 transition-all shadow-lg shadow-emerald-500/30 text-sm"
-              >
-                أنشئ نموذجك مجانًا 🚀
-              </a>
-            </>
-          )}
-        </div>
-      </div>
+      <FormSubmittedScreen
+        form={form}
+        visibleQuestions={visibleQuestions}
+        answers={answers}
+        isPreview={isPreview}
+        totalResponses={totalResponses}
+        allUserResponses={allUserResponses}
+        redirectMessage={redirectMessage}
+        project={project}
+        onNewSubmission={() => {
+          if (form.allow_multiple) {
+            setSubmitted(false)
+            setAnswers({})
+            setShowRetryConfirm(false)
+          } else {
+            setShowRetryConfirm(true)
+          }
+        }}
+      />
     )
   }
 
-  // Confirmation Modal for retry
   if (showRetryConfirm) {
     return (
-      <div dir="rtl" className={`${isPreview ? 'min-h-full' : 'min-h-screen'} bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4 form-themed-container`}>
-        {renderThemeStyles()}
-        <div className="bg-white rounded-3xl shadow-xl shadow-blue-900/5 border border-gray-100 p-8 max-w-md w-full form-themed-card">
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 mx-auto mb-4 bg-amber-100 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2 form-themed-text">تأكيد إعادة المحاولة</h2>
-            <p className="text-gray-500 form-themed-description">
-              هل أنت متأكد من حذف إجابتك السابقة وإعادة المحاولة؟
-            </p>
-            <p className="text-red-500 text-sm mt-2">
-              سيتم حذف درجتك السابقة ولا يمكن استرجاعها
-            </p>
-          </div>
-          
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowRetryConfirm(false)}
-              className="flex-1 py-3.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-              disabled={deletingResponse}
-            >
-              إلغاء
-            </button>
-            <button
-              onClick={handleRetry}
-              className="flex-1 py-3.5 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition-colors disabled:opacity-50 shadow-lg shadow-red-500/25"
-              disabled={deletingResponse}
-            >
-              {deletingResponse ? 'جاري الحذف...' : 'نعم، احذف وأعد المحاولة'}
-            </button>
-          </div>
-        </div>
-      </div>
+      <RetryConfirmModal
+        form={form}
+        isPreview={isPreview}
+        deletingResponse={deletingResponse}
+        onCancel={() => setShowRetryConfirm(false)}
+        onConfirm={handleRetry}
+      />
     )
   }
 
   return (
     <div dir="rtl" className={`${isPreview ? 'min-h-full' : 'min-h-screen'} bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50/30 form-themed-container`}>
       {renderThemeStyles()}
-      {/* Header */}
-      <header className="bg-white/95 backdrop-blur-md border-b border-gray-100/80 sticky top-0 z-10">
-        {isPreview && (
-          <div className="bg-orange-500 text-white text-xs py-1.5 text-center font-bold tracking-wide">
-            وضع المعاينة: يمكنك تجربة تعبئة النموذج، لن يتم حفظ الإجابات
-          </div>
-        )}
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-          <button
-            onClick={() => {
-              if (isPreview) return
-              router.back()
-            }}
-            disabled={isPreview}
-            className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors text-sm disabled:opacity-50"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            رجوع
-          </button>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-            </div>
-            <h1 className="text-sm font-bold text-gray-800">{form.name}</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            {timeLeft !== null && !submitted && !isExpired && (
-              <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
-                timeLeft < 60 ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-600'
-              }`}>
-                {formatTime(timeLeft)}
-              </span>
-            )}
-            <span className="text-xs text-gray-500 bg-gray-100 px-2.5 py-1 rounded-lg">
-              {visibleQuestions.length} سؤال
-            </span>
-          </div>
-        </div>
-        
-        {/* Page Info */}
-        <div className="px-4 py-1.5 bg-white/50 border-b border-gray-100/80">
-          <div className="max-w-3xl mx-auto flex items-center justify-between">
-            {totalPages > 1 && (
-              <span className="text-xs text-gray-500">
-                صفحة {pageIndex + 1} من {totalPages}
-              </span>
-            )}
-            <span className={`text-xs ${totalPages > 1 ? '' : 'mr-auto'} text-gray-400`}>
-              {Object.keys(answers).filter(k => visibleQuestions.some(q => q.id === k)).length} / {visibleQuestions.length} إجابة
-            </span>
-          </div>
-        </div>
-        {/* Progress Bar */}
-        <div className="h-1 bg-gray-50">
-          <div 
-            className="h-full bg-gradient-to-l from-blue-500 to-indigo-500 transition-all duration-500 rounded-full"
-            style={{ 
-              width: `${(Object.keys(answers).filter(k => visibleQuestions.some(q => q.id === k)).length / (visibleQuestions.length || 1)) * 100}%` 
-            }}
-          />
-        </div>
-      </header>
+      <FormFillerHeader
+        form={form}
+        isPreview={isPreview}
+        timeLeft={timeLeft}
+        visibleQuestions={visibleQuestions}
+        totalPages={totalPages}
+        pageIndex={pageIndex}
+        answersCount={Object.keys(answers).filter(k => visibleQuestions.some(q => q.id === k)).length}
+        onBack={() => { if (!isPreview) router.back() }}
+      />
 
       <main className="max-w-3xl mx-auto px-4 py-8 form-themed-width">
-        {/* Draft Restored Banner */}
-        {draftRestored && !draftDismissed && (
-          <div className="mb-4 flex items-center justify-between bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm">
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>
-                تم استعادة مسودتك المحفوظة ({autoSave.getDraftAge()}) — يمكنك المتابعة من حيث توقفت.
-              </span>
-            </div>
-            <button
-              onClick={() => { setDraftDismissed(true); setAnswers({}); autoSave.clearDraft() }}
-              className="mr-3 text-amber-600 hover:text-amber-900 font-medium whitespace-nowrap"
-            >
-              بدء من جديد
-            </button>
-          </div>
-        )}
+        <FormFillerDraftBanner
+          draftRestored={draftRestored}
+          draftDismissed={draftDismissed}
+          autoSave={autoSave}
+          onStartFresh={() => { setDraftDismissed(true); setAnswers({}); autoSave.clearDraft() }}
+        />
 
-        {/* Form Header */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 form-themed-card">
           <h2 className="text-xl font-bold text-gray-900 mb-2 form-themed-text">{form.name}</h2>
           <p className="text-gray-500 text-sm form-themed-description">{form.description || 'أجب على الأسئلة التالية'}</p>
           {project && (
             <div className="mt-3 flex items-center gap-2">
-              <span
-                className="w-2.5 h-2.5 rounded-full"
-                style={{ backgroundColor: project.color }}
-              />
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: project.color }} />
               <span className="text-gray-400 text-xs">{project.name}</span>
             </div>
           )}
         </div>
 
-        {/* Products (only if no products_block question type) */}
-        {!questions?.some(q => q.type === 'products_block') && productGroups.length > 0 && !submitted && (
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-6 form-themed-card">
-            <h3 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
-              <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
-              {/* Offer Countdown inline */}
-              {(() => {
-                const endStr = offerEndStr
-                const cd = offerCountdown
-                if (endStr && cd > 0) {
-                  return <span className="mr-auto text-sm font-mono text-red-500 tracking-wider" dir="ltr">{formatCountdown(cd)}</span>
-                }
-                return null
-              })()}
-            </h3>
-            {productGroups.map(group => (
-              <div key={group.id} className="mb-6 last:mb-0">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="h-0.5 flex-1 bg-gradient-to-l from-blue-100 to-transparent rounded-full" />
-                  <h4 className="text-sm font-bold text-gray-700 px-2">{group.name}</h4>
-                  <div className="h-0.5 flex-1 bg-gradient-to-r from-blue-100 to-transparent rounded-full" />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {group.items.filter(p => p.available !== false).map((prod) => {
-                    const qty = cart[prod.id] || 0
-                    return (
-                      <div key={prod.id} className="border border-gray-200 rounded-xl overflow-hidden hover:border-blue-300 hover:shadow-md transition-all">
-                        {prod.image_url && (
-                          <div className="h-36 bg-gray-50 overflow-hidden relative">
-                            <Image 
-                              src={prod.image_url} 
-                              alt={prod.name} 
-                              fill
-                              className="object-cover"
-                              loading="lazy"
-                            />
-                          </div>
-                        )}
-                        <div className="p-3">
-                          <h4 className="font-bold text-gray-900 text-sm">{prod.name}</h4>
-                          {prod.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{prod.description}</p>}
-                          <div className="flex items-center justify-between mt-2">
-                            <span className="text-lg font-bold text-blue-700">{prod.price.toLocaleString()} <span className="text-xs font-normal">EGP</span></span>
-                            {qty > 0 ? (
-                              <div className="flex items-center gap-2">
-                                <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: Math.max(0, qty - 1) }))} className="w-7 h-7 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-sm font-bold hover:bg-red-200">−</button>
-                                <span className="text-sm font-bold w-5 text-center">{qty}</span>
-                                <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: qty + 1 }))} className="w-7 h-7 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold hover:bg-blue-200">+</button>
-                              </div>
-                            ) : (
-                              <button onClick={() => setCart(prev => ({ ...prev, [prod.id]: 1 }))} className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors">إضافة</button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-            {cartCount > 0 && (
-              <div className="mt-4 p-3 bg-gradient-to-l from-blue-50 to-indigo-50 rounded-xl border border-blue-100 flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">إجمالي الطلب</p>
-                  <p className="text-xl font-bold text-blue-700">{cartTotal.toLocaleString()} <span className="text-sm font-normal">EGP</span></p>
-                </div>
-                <p className="text-xs text-gray-500">{cartCount} منتج{cartCount > 1 ? 'ات' : ''}</p>
-              </div>
-            )}
-          </div>
-        )}
+        <FormProductsSection
+          productGroups={productGroups}
+          cart={cart}
+          cartTotal={cartTotal}
+          cartCount={cartCount}
+          offerEndStr={offerEndStr}
+          offerCountdown={offerCountdown}
+          questions={questions}
+          submitted={submitted}
+          setCart={setCart}
+        />
 
-        {/* Offer Countdown (only if no countdown_timer question type) */}
-        {!questions?.some(q => q.type === 'countdown_timer') && offerEndStr && offerCountdown > 0 && !submitted && (
-          <div className="bg-gradient-to-l from-red-500 to-orange-500 rounded-2xl p-4 mb-6 shadow-lg text-center">
-            <p className="text-white/80 text-xs mb-1">العرض ينتهي خلال</p>
-            <p className="text-white text-3xl font-mono font-bold tracking-widest" dir="ltr">
-              {formatCountdown(offerCountdown)}
-            </p>
-          </div>
-        )}
+        <FormOfferCountdownBanner
+          offerEndStr={offerEndStr}
+          offerCountdown={offerCountdown}
+          questions={questions}
+          submitted={submitted}
+        />
 
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-sm flex items-center gap-2">
-            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <span>{error}</span>
-          </div>
-        )}
+        <FormFillerErrorAlert error={error} />
 
-        {/* Questions */}
-        <div className="space-y-4">
-          {(() => {
-            const qs = pageQuestions
-            const groups: { group: number | null; questions: Question[]; startIndex: number }[] = []
-            let currentGroup: number | null = null
-            let currentItems: Question[] = []
+        <FormFillerQuestionGroup
+          pageQuestions={pageQuestions}
+          answers={answers}
+          setAnswers={setAnswers}
+          setCurrentQuestionIndex={setCurrentQuestionIndex}
+          dropdownSearch={dropdownSearch}
+          setDropdownSearch={setDropdownSearch}
+          dropdownOpen={dropdownOpen}
+          setDropdownOpen={setDropdownOpen}
+          countdownNow={countdownNow}
+          cart={cart}
+          setCart={setCart}
+          cartTotal={cartTotal}
+          cartCount={cartCount}
+          form={form}
+          legacyProductGroups={legacyProductGroups}
+          legacyPaymentMethods={legacyPaymentMethods}
+          bookedSlots={bookedSlots}
+          apptMonth={apptMonth}
+          setApptMonth={setApptMonth}
+          allProducts={allProducts}
+          submitting={submitting}
+          submitted={submitted}
+          isPreview={isPreview}
+        />
 
-            qs.forEach((q) => {
-              const g = q.row_group ?? null
-              if (g !== currentGroup && currentItems.length > 0) {
-                groups.push({ group: currentGroup, questions: [...currentItems], startIndex: groups.reduce((acc, g) => acc + g.questions.length, 0) })
-                currentItems = []
-              }
-              currentGroup = g
-              currentItems.push(q)
-            })
-            if (currentItems.length > 0) {
-              groups.push({ group: currentGroup, questions: currentItems, startIndex: groups.reduce((acc, g) => acc + g.questions.length, 0) })
-            }
+        <FormPaymentInfo
+          isLastPage={isLastPage}
+          questions={questions}
+          paymentMethods={legacyPaymentMethods}
+        />
 
-            const renderCard = (question: Question, idx: number) => (
-              <div className="flex items-start gap-3 mb-4">
-                <span className="w-7 h-7 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg flex items-center justify-center font-bold text-xs shrink-0 form-themed-primary-bg">
-                  {idx + 1}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-semibold text-gray-900 form-themed-text">
-                    {question.text}
-                    {question.required && !DISPLAY_ONLY_QUESTION_TYPES.includes(question.type) && <span className="text-red-500 mr-1">*</span>}
-                  </h3>
-                  {question.type !== 'file_upload' && (
-                    <p className="text-blue-500 text-xs mt-1 font-medium form-themed-primary-text">
-                      {getQuestionMaxScore(question)} نقطة
-                    </p>
-                  )}
-                </div>
-              </div>
-            )
-
-            return groups.map((grp) => {
-              if (grp.group !== null && grp.questions.length > 1) {
-                return (
-                  <div key={`row_${grp.group}`} className="flex gap-4">
-                    {grp.questions.map((question, gi) => {
-                      const idx = grp.startIndex + gi
-                      return (
-                        <div key={question.id} className="flex-1 min-w-0 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 form-themed-card form-themed-spacing">
-                          {renderCard(question, idx)}
-                          <QuestionRenderer
-                            question={question}
-                            index={idx}
-                            answers={answers}
-                            setAnswers={setAnswers}
-                            setCurrentQuestionIndex={setCurrentQuestionIndex}
-                            dropdownSearch={dropdownSearch}
-                            setDropdownSearch={setDropdownSearch}
-                            dropdownOpen={dropdownOpen}
-                            setDropdownOpen={setDropdownOpen}
-                            countdownNow={countdownNow}
-                            cart={cart}
-                            setCart={setCart}
-                            cartTotal={cartTotal}
-                            cartCount={cartCount}
-                            form={form}
-                            legacyProductGroups={legacyProductGroups}
-                            legacyPaymentMethods={legacyPaymentMethods}
-                            bookedSlots={bookedSlots}
-                            apptMonth={apptMonth}
-                            setApptMonth={setApptMonth}
-                            allProducts={allProducts}
-                            errors={{}}
-                            submitting={submitting}
-                            submitted={submitted}
-                            isPreview={isPreview}
-                          />
-                        </div>
-                      )
-                    })}
-                  </div>
-                )
-              }
-              return grp.questions.map((question, gi) => {
-                const idx = grp.startIndex + gi
-                return (
-                  <div key={question.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 transition-all hover:shadow-md form-themed-card form-themed-spacing">
-                    {renderCard(question, idx)}
-                    <QuestionRenderer
-                      question={question}
-                      index={idx}
-                      answers={answers}
-                      setAnswers={setAnswers}
-                      setCurrentQuestionIndex={setCurrentQuestionIndex}
-                      dropdownSearch={dropdownSearch}
-                      setDropdownSearch={setDropdownSearch}
-                      dropdownOpen={dropdownOpen}
-                      setDropdownOpen={setDropdownOpen}
-                      countdownNow={countdownNow}
-                      cart={cart}
-                      setCart={setCart}
-                      cartTotal={cartTotal}
-                      cartCount={cartCount}
-                      form={form}
-                      legacyProductGroups={legacyProductGroups}
-                      legacyPaymentMethods={legacyPaymentMethods}
-                      bookedSlots={bookedSlots}
-                      apptMonth={apptMonth}
-                      setApptMonth={setApptMonth}
-                      allProducts={allProducts}
-                      errors={{}}
-                      submitting={submitting}
-                      submitted={submitted}
-                      isPreview={isPreview}
-                    />
-                  </div>
-                )
-              })
-            })
-          })()}
-        </div>
-
-        {/* Payment Info Display (only if no payment_info_block question type) */}
-        {isLastPage && !questions?.some(q => q.type === 'payment_info_block') && legacyPaymentMethods.length > 0 && (() => {
-          const paymentMethods = legacyPaymentMethods
-          if (!paymentMethods || paymentMethods.length === 0) return null
-          return (
-          <div className="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-4">
-            <h4 className="text-sm font-bold text-amber-800 mb-3 flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
-              طرق الدفع المتاحة
-            </h4>
-            <div className="space-y-2">
-              {paymentMethods.map((pm: any, pi: number) => {
-                const icons: Record<string, string> = { bank: '🏦', instapay: '📱', vodafone: '📞', wallet: '💳', payment_link: '🔗', custom: '💰' }
-                const methodNames: Record<string, string> = { bank: 'حساب بنكي', instapay: 'إنستاباي', vodafone: 'فودافون كاش', wallet: 'محفظة إلكترونية', payment_link: 'رابط دفع', custom: 'طريقة دفع' }
-                return (
-                  <div key={pi} className="bg-white rounded-xl px-4 py-3 border border-amber-100">
-                    <div className="flex items-start gap-3">
-                    <span className="text-xl">{icons[pm.method] || '💳'}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-800">{methodNames[pm.method] || pm.method}</p>
-                      {pm.label && <p className="text-xs text-gray-500">{pm.label}</p>}
-                      {pm.value && <p className="text-sm font-mono font-bold text-amber-700 mt-0.5 break-all" dir="ltr">{pm.value}</p>}
-                      {pm.details && <p className="text-xs text-gray-500 mt-1">{pm.details}</p>}
-                    </div>
-                    {pm.value && (
-                      <button
-                        onClick={() => copyPaymentValue(pm.value)}
-                        className="px-3 py-1.5 bg-amber-100 text-amber-800 rounded-lg text-xs font-bold hover:bg-amber-200 transition-colors shrink-0"
-                      >
-                        نسخ
-                      </button>
-                    )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-            <p className="text-xs text-amber-600 mt-2">يرجى تحويل المبلغ على أحد الطرق أعلاه بعد تقديم النموذج</p>
-          </div>
-          )
-        })()}
-
-        {/* Navigation & Submit */}
-        {pageQuestions.length > 0 && (
-          <div className="mt-6 space-y-3">
-            <div className="flex gap-3">
-              {!isFirstPage && (
-                <button
-                  onClick={goToPrevPage}
-                  className="flex-1 py-3.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-                >
-                  السابق
-                </button>
-              )}
-              {!isLastPage && (
-                <button
-                  onClick={goToNextPage}
-                  className="flex-1 py-3.5 bg-gradient-to-l from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/25 form-themed-primary-bg"
-                >
-                  التالي
-                </button>
-              )}
-              {isLastPage && (
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  className="flex-1 py-4 font-semibold rounded-2xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg form-themed-primary-bg"
-                  style={{
-                    background: (form.page_titles as any)?._submit_button?.color
-                      ? (form.page_titles as any)._submit_button.color
-                      : 'linear-gradient(to left, #059669, #16a34a)',
-                    color: (form.page_titles as any)?._submit_button?.textColor || '#ffffff',
-                  }}
-                >
-                  {submitting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      جاري الحفظ...
-                    </span>
-                  ) : (
-                    (form.page_titles as any)?._submit_button?.text || 'حفظ الإجابات'
-                  )}
-                </button>
-              )}
-            </div>
-            {/* "أكمل لاحقاً" button — saves draft and redirects to dashboard */}
-            {!isPreview && form.enable_auto_save !== false && Object.keys(answers).length > 0 && (
-              <button
-                onClick={() => {
-                  autoSave.saveDraft(answers)
-                  router.push(project ? `/projects/${project.id}` : '/dashboard')
-                }}
-                className="w-full py-2.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl font-medium hover:bg-amber-100 transition-colors text-sm flex items-center justify-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                </svg>
-                أكمل لاحقاً
-              </button>
-            )}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 pt-2">
-                {pages.map(p => (
-                  <button
-                    key={p}
-                    onClick={() => {
-                      setCurrentPage(p)
-                      scrollToTop()
-                    }}
-                    className={`w-2.5 h-2.5 rounded-full transition-all ${
-                      p === currentPage
-                        ? 'bg-blue-600 w-6 form-themed-primary-bg'
-                        : 'bg-gray-300 hover:bg-gray-400'
-                    }`}
-                    title={`صفحة ${p}`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        <FormNavigation
+          isFirstPage={isFirstPage}
+          isLastPage={isLastPage}
+          submitting={submitting}
+          pages={pages}
+          currentPage={currentPage}
+          form={form}
+          answersCount={Object.keys(answers).length}
+          project={project}
+          autoSave={autoSave}
+          onPrev={goToPrevPage}
+          onNext={goToNextPage}
+          onSubmit={handleSubmit}
+          onPageClick={(p) => { setCurrentPage(p); scrollToTop() }}
+        />
 
         {displayQuestions.length === 0 && (
           <div className="text-center py-12 bg-white rounded-2xl border border-gray-100 shadow-sm">

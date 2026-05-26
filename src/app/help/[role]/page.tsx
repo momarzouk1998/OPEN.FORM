@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAppSettings } from '@/hooks/useAppSettings'
 import Header from '@/components/Header'
+import { toast } from '@/lib/toast'
 
 // ====== ICONS ======
 const icons = {
@@ -567,6 +568,7 @@ export default function HelpPage({ params }: RolePageProps) {
       }
     } catch (e) {
       console.error(e)
+      toast('حدث خطأ أثناء التحقق من الصلاحية')
       router.push('/login')
     } finally {
       setLoading(false)
@@ -671,9 +673,9 @@ export default function HelpPage({ params }: RolePageProps) {
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/60 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
-      <aside className={`fixed inset-y-0 right-0 z-50 w-2/3 max-w-sm bg-white shadow-2xl transform transition-transform duration-300 lg:hidden ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 start-0 z-50 w-2/3 max-w-sm bg-white shadow-2xl transform transition-transform duration-300 lg:hidden ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="h-full flex flex-col p-6">
-          <button onClick={() => setSidebarOpen(false)} className="self-start p-2 text-gray-400 hover:text-gray-600 mb-6">
+          <button onClick={() => setSidebarOpen(false)} className="self-start p-2 text-gray-400 hover:text-gray-600 mb-6" aria-label="إغلاق القائمة">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
           <nav className="flex-1 space-y-3 overflow-y-auto">
@@ -700,6 +702,7 @@ export default function HelpPage({ params }: RolePageProps) {
             <button
               onClick={() => router.back()}
               className="p-2 bg-white/20 hover:bg-white/30 rounded-xl backdrop-blur-sm transition-all"
+              aria-label="رجوع"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -725,7 +728,7 @@ export default function HelpPage({ params }: RolePageProps) {
 
           {/* Search */}
           <div className="relative max-w-2xl">
-            <svg className="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5 absolute start-4 top-1/2 -translate-y-1/2 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input

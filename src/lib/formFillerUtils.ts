@@ -106,6 +106,12 @@ export async function copyPaymentValue(value: string) {
   }
 }
 
+export function formatTime(seconds: number) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 export function formatCountdown(seconds: number) {
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
@@ -235,4 +241,48 @@ export function getAvailableTimeSlots(dateStr: string, questionId: string, timeS
 
 export function isSameDay(d1: Date, d2: Date) {
   return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate()
+}
+
+export function getVisibilityRules(q: any): VisibilityRule[] | undefined {
+  if (q.visibility_rules && q.visibility_rules.length > 0) return q.visibility_rules
+  if (typeof q.options === 'string') {
+    try {
+      const opts = JSON.parse(q.options)
+      if (opts && opts._visibility_rules && opts._visibility_rules.length > 0) return opts._visibility_rules
+    } catch { return undefined }
+  } else if (q.options && q.options._visibility_rules && q.options._visibility_rules.length > 0) {
+    return q.options._visibility_rules
+  }
+  return undefined
+}
+
+export function getAvailabilityStatus(pageTitles: Record<string, any>, isPreview = false) {
+  const availability = pageTitles?._availability
+  if (!availability?.enabled || isPreview) return { closed: false, reason: '' }
+
+  const now = new Date()
+  if (availability.mode === 'range') {
+    const startsAt = availability.starts_at ? new Date(availability.starts_at) : null
+    const endsAt = availability.ends_at ? new Date(availability.ends_at) : null
+    if (startsAt && now < startsAt) return { closed: true, reason: 'النموذج لم يفتح بعد' }
+    if (endsAt && now > endsAt) return { closed: true, reason: 'تم إغلاق النموذج' }
+    return { closed: false, reason: '' }
+  }
+
+  const weekly = Array.isArray(availability.weekly) ? availability.weekly : []
+  const today = String(now.getDay())
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+  const isOpen = weekly.some((slot: any) => {
+    if (String(slot.day) !== today || !slot.start || !slot.end) return false
+    const [startHour, startMinute] = String(slot.start).split(':').map(Number)
+    const [endHour, endMinute] = String(slot.end).split(':').map(Number)
+    const startMinutes = (startHour || 0) * 60 + (startMinute || 0)
+    const endMinutes = (endHour || 0) * 60 + (endMinute || 0)
+    return currentMinutes >= startMinutes && currentMinutes <= endMinutes
+  })
+
+  return {
+    closed: !isOpen,
+    reason: 'النموذج مغلق الآن حسب جدول التشغيل'
+  }
 }

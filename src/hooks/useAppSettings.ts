@@ -26,13 +26,15 @@ export function useAppSettings() {
 
     app_logo: '',
 
-    app_name: 'أحلى شباب',
+    app_name: 'Forms.OpenappO',
 
-    app_description: 'منصة متكاملة لإدارة المتطوعين والمشاريع'
+    app_description: 'منصة متكاملة لإنشاء النماذج والاستبيانات'
 
   })
 
   const [loading, setLoading] = useState(true)
+
+  const [error, setError] = useState<string | null>(null)
 
   const supabase = createClient()
 
@@ -61,6 +63,8 @@ export function useAppSettings() {
       if (error) {
 
         console.error('Error fetching settings:', error)
+
+        setError('حدث خطأ أثناء تحميل إعدادات التطبيق')
 
         return
 
@@ -98,6 +102,8 @@ export function useAppSettings() {
 
       console.error('Error fetching settings:', error)
 
+      setError('حدث خطأ أثناء تحميل إعدادات التطبيق')
+
     } finally {
 
       setLoading(false)
@@ -106,8 +112,6 @@ export function useAppSettings() {
 
   }
 
-
-
-  return { settings, loading, refetch: fetchSettings }
+  return { settings, loading, error, refetch: fetchSettings }
 
 }

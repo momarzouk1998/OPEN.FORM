@@ -33,6 +33,15 @@ export default function AdminUsersPage() {
   const [formLimit, setFormLimit] = useState('')
   const [submissionLimit, setSubmissionLimit] = useState('')
 
+  // Pagination state
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
+  const pageSize = 20
+  const totalPages = Math.ceil(totalCount / pageSize)
+
+  // Stats state (separate from paginated data)
+  const [stats, setStats] = useState({ total: 0, pending: 0, supervisors: 0, admins: 0 })
+
   // Projects modal state
   const [showProjectsModal, setShowProjectsModal] = useState(false)
   const [allProjects, setAllProjects] = useState<Project[]>([])
@@ -44,10 +53,40 @@ export default function AdminUsersPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    fetchData()
+    fetchData(0)
   }, [])
 
-  const fetchData = async () => {
+  useEffect(() => {
+    setPage(0)
+  }, [search, filterStatus, filterRole, filterGender, filterBanned])
+
+  useEffect(() => {
+    fetchData(page)
+  }, [page])
+
+  const buildQuery = (selectStr: string, forCount: boolean) => {
+    let query = supabase.from('profiles').select(selectStr, forCount ? { count: 'exact', head: true } : undefined)
+
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`)
+    }
+    if (filterStatus !== 'all') {
+      query = query.eq('status', filterStatus)
+    }
+    if (filterRole !== 'all') {
+      query = query.eq('role', filterRole)
+    }
+    if (filterGender !== 'all') {
+      query = query.eq('gender', filterGender)
+    }
+    if (filterBanned !== 'all') {
+      query = query.eq('banned', filterBanned === 'banned')
+    }
+
+    return query
+  }
+
+  const fetchData = async (currentPage: number) => {
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser()
@@ -69,18 +108,41 @@ export default function AdminUsersPage() {
 
       setCurrentUser(profile)
 
-      // Fetch all users
-      let query = supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false })
+      // Get total count with filters
+      const countQuery = buildQuery('*', true)
+      const { count } = await countQuery
+      const total = count || 0
+      setTotalCount(total)
 
-      const { data: usersData, error } = await query
+      // Fetch current page with range
+      const from = currentPage * pageSize
+      const to = Math.min(from + pageSize - 1, total - 1)
+      if (from <= to && total > 0) {
+        let dataQuery = buildQuery('*', false)
+        dataQuery = dataQuery.order('created_at', { ascending: false }).range(from, to)
+        const { data: usersData, error } = await dataQuery
+        if (error) throw error
+        setUsers(usersData || [])
+      } else {
+        setUsers([])
+      }
 
-      if (error) throw error
-      setUsers(usersData || [])
+      // Fetch stats (unfiltered counts)
+      const [{ count: totalAll }, { count: pendingCount }, { count: supervisorCount }, { count: adminCount }] = await Promise.all([
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'supervisor'),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'admin')
+      ])
+      setStats({
+        total: totalAll || 0,
+        pending: pendingCount || 0,
+        supervisors: supervisorCount || 0,
+        admins: adminCount || 0
+      })
     } catch (error) {
       console.error('Error fetching data:', error)
+      toast('حدث خطأ أثناء تحميل البيانات', 'error')
     } finally {
       setLoading(false)
     }
@@ -101,28 +163,15 @@ export default function AdminUsersPage() {
           return
         }
         
-        // Delete from auth first
-        const { error: authError } = await supabase.auth.admin.deleteUser(userId)
-        if (authError) {
-          console.error('Auth delete error:', authError)
-          // Continue to delete profile even if auth delete fails
-        }
+        const res = await fetch('/api/admin/delete-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId })
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error)
         
-        // Delete profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .delete()
-          .eq('id', userId)
-        
-        if (profileError) throw profileError
-        
-        // Refresh users list
-        const { data: updatedUsers } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('created_at', { ascending: false })
-        
-        setUsers(updatedUsers || [])
+        fetchData(page)
         setShowModal(false)
         setSelectedUser(null)
         setActionLoading(false)
@@ -130,11 +179,13 @@ export default function AdminUsersPage() {
       }
       
       if (action === 'reset_password') {
-        const { error: resetError } = await supabase.auth.admin.updateUserById(userId, {
-          password: '123456'
+        const res = await fetch('/api/admin/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, password: '123456' })
         })
-        
-        if (resetError) throw resetError
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error)
         
         toast('تم إعادة تعيين الباسورد بنجاح. الباسورد الجديد: 123456', 'success')
         setActionLoading(false)
@@ -147,11 +198,7 @@ export default function AdminUsersPage() {
           .update({ banned: action === 'ban' })
           .eq('id', userId)
         if (error) throw error
-        const { data: updatedUsers } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('created_at', { ascending: false })
-        setUsers(updatedUsers || [])
+        fetchData(page)
         setSelectedUser(prev => prev ? { ...prev, banned: action === 'ban' } : null)
         setActionLoading(false)
         return
@@ -163,11 +210,7 @@ export default function AdminUsersPage() {
         if (submissionLimit !== '') updateFields.submission_limit = submissionLimit === '-1' ? -1 : parseInt(submissionLimit)
         const { error } = await supabase.from('profiles').update(updateFields).eq('id', userId)
         if (error) throw error
-        const { data: updatedUsers } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('created_at', { ascending: false })
-        setUsers(updatedUsers || [])
+        fetchData(page)
         setSelectedUser(prev => prev ? { ...prev, ...updateFields } : null)
         setActionLoading(false)
         return
@@ -192,18 +235,13 @@ export default function AdminUsersPage() {
 
       if (error) throw error
 
-      // Refresh users list
-      const { data: updatedUsers } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      setUsers(updatedUsers || [])
+      // Refresh users list on current page
+      fetchData(page)
       setShowModal(false)
       setSelectedUser(null)
     } catch (error) {
       console.error('Error updating user:', error)
-      alert('حدث خطأ أثناء تحديث المستخدم')
+      toast('حدث خطأ أثناء تحديث المستخدم')
     } finally {
       setActionLoading(false)
     }
@@ -219,6 +257,7 @@ export default function AdminUsersPage() {
       setSelectedProjects([])
     } catch (error) {
       console.error('Error loading projects:', error)
+      toast('حدث خطأ أثناء تحميل المشاريع')
     } finally {
       setProjectsLoading(false)
     }
@@ -296,33 +335,22 @@ export default function AdminUsersPage() {
       setShowProjectsModal(false)
     } catch (error) {
       console.error('Error saving projects:', error)
-      alert('حدث خطأ أثناء حفظ المشاريع')
+      toast('حدث خطأ أثناء حفظ المشاريع')
     } finally {
       setProjectsLoading(false)
     }
   }
 
-  const filteredUsers = users.filter(user => {
-    // Search filter
-    const matchesSearch = 
-      (user.name || '').toLowerCase().includes(search.toLowerCase()) ||
-      user.email.toLowerCase().includes(search.toLowerCase()) ||
-      (user.phone && user.phone.includes(search))
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      setPage(newPage)
+    }
+  }
 
-    // Status filter
-    const matchesStatus = filterStatus === 'all' || user.status === filterStatus
-
-    // Role filter
-    const matchesRole = filterRole === 'all' || user.role === filterRole
-
-    // Gender filter
-    const matchesGender = filterGender === 'all' || user.gender === filterGender
-
-    // Banned filter
-    const matchesBanned = filterBanned === 'all' || (filterBanned === 'banned' ? user.banned : !user.banned)
-
-    return matchesSearch && matchesStatus && matchesRole && matchesGender && matchesBanned
-  })
+  const handleFilterReset = () => {
+    setPage(0)
+    // Filter state changes are handled by the useEffect
+  }
 
   const getStatusBadge = (status: AccountStatus) => {
     const badges = {
@@ -396,7 +424,7 @@ export default function AdminUsersPage() {
             <h1 className="text-lg font-bold text-blue-700">إدارة المستخدمين</h1>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500">
-                {filteredUsers.length} مستخدم
+                {totalCount} مستخدم
               </span>
             </div>
           </div>
@@ -408,25 +436,19 @@ export default function AdminUsersPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <p className="text-gray-500 text-sm">إجمالي المستخدمين</p>
-            <p className="text-2xl font-bold text-gray-900">{users.length}</p>
+            <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
           </div>
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <p className="text-gray-500 text-sm">طلبات معلقة</p>
-            <p className="text-2xl font-bold text-amber-600">
-              {users.filter(u => u.status === 'pending').length}
-            </p>
+            <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
           </div>
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <p className="text-gray-500 text-sm">المشرفون</p>
-            <p className="text-2xl font-bold text-blue-600">
-              {users.filter(u => u.role === 'supervisor').length}
-            </p>
+            <p className="text-2xl font-bold text-blue-600">{stats.supervisors}</p>
           </div>
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <p className="text-gray-500 text-sm">الادارة</p>
-            <p className="text-2xl font-bold text-purple-600">
-              {users.filter(u => u.role === 'admin').length}
-            </p>
+            <p className="text-2xl font-bold text-purple-600">{stats.admins}</p>
           </div>
         </div>
 
@@ -442,7 +464,7 @@ export default function AdminUsersPage() {
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full px-4 py-2 pr-10 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <svg className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 absolute start-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
@@ -510,8 +532,8 @@ export default function AdminUsersPage() {
                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الإجراءات</th>
                  </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                 {filteredUsers.map((user) => (
+               <tbody className="divide-y divide-gray-100">
+                  {users.map((user) => (
                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                      <td className="px-6 py-4">
                        <div className="flex items-center gap-3">
@@ -584,7 +606,7 @@ export default function AdminUsersPage() {
                    </tr>
                  ))}
 
-                {filteredUsers.length === 0 && (
+                {users.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-6 py-12 text-center">
                       <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
@@ -600,6 +622,31 @@ export default function AdminUsersPage() {
             </table>
           </div>
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-6 py-4 mt-4 flex items-center justify-between">
+            <span className="text-sm text-gray-500">
+              الصفحة {page + 1} من {totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page === 0}
+                className="px-4 py-2 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                السابق
+              </button>
+              <button
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page >= totalPages - 1}
+                className="px-4 py-2 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                التالي
+              </button>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* User Action Modal */}

@@ -98,6 +98,7 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error('Error fetching profile:', error)
+      setError('حدث خطأ أثناء تحميل الملف الشخصي')
     } finally {
       setLoading(false)
     }
@@ -173,20 +174,6 @@ export default function ProfilePage() {
 
     setSaving(true)
     try {
-      // Verify current password first by re-signing in
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user?.email) throw new Error('لم يتم العثور على المستخدم')
-
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: passwordData.current_password
-      })
-      if (signInError) {
-        setError('كلمة المرور الحالية غير صحيحة')
-        setSaving(false)
-        return
-      }
-
       const { error: updateError } = await supabase.auth.updateUser({
         password: passwordData.new_password
       })
@@ -221,6 +208,7 @@ export default function ProfilePage() {
       if (error) throw error
     } catch (err) {
       console.error('Error saving notification preferences:', err)
+      toast('حدث خطأ أثناء حفظ الإشعارات')
     } finally {
       setSavingNotif(false)
     }
@@ -573,6 +561,32 @@ export default function ProfilePage() {
             )}
           </div>
         )}
+
+        {/* Earnings Summary */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <Link href="/earnings" className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow group block">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 bg-amber-100 rounded-xl flex items-center justify-center">
+                <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">نقاط القوالب</p>
+                <p className="text-xs text-gray-500 group-hover:text-blue-600 transition-colors">عرض التفاصيل ←</p>
+              </div>
+            </div>
+          </Link>
+          <Link href="/earnings" className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow group block">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center">
+                <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">عمولات الوكلاء</p>
+                <p className="text-xs text-gray-500 group-hover:text-blue-600 transition-colors">عرض التفاصيل ←</p>
+              </div>
+            </div>
+          </Link>
+        </div>
 
         {/* Change Password */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">

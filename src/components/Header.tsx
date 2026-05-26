@@ -41,6 +41,7 @@ export default function Header({ user, settings, onMenuClick, showMenuButton = t
               <button
                 onClick={handleMenuClick}
                 className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+                aria-label="القائمة الرئيسية"
               >
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
               </button>
@@ -64,6 +65,9 @@ export default function Header({ user, settings, onMenuClick, showMenuButton = t
             <Link href="/partners" className="px-3.5 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium">
               شركاء النجاح
             </Link>
+            <Link href="/earnings" className="px-3.5 py-2 text-sm text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors font-medium">
+              أرباحي
+            </Link>
             <Link href="/profile" className="px-3.5 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium">
               الملف الشخصي
             </Link>
@@ -86,6 +90,7 @@ export default function Header({ user, settings, onMenuClick, showMenuButton = t
           <Link href="/dashboard" className="px-3 py-2.5 text-gray-700 hover:bg-blue-50 rounded-lg text-sm font-medium">الرئيسية</Link>
           <Link href="/templates" className="px-3 py-2.5 text-gray-700 hover:bg-blue-50 rounded-lg text-sm font-medium">القوالب</Link>
           <Link href="/partners" className="px-3 py-2.5 text-gray-700 hover:bg-indigo-50 rounded-lg text-sm font-medium">شركاء النجاح</Link>
+          <Link href="/earnings" className="px-3 py-2.5 text-emerald-700 hover:bg-emerald-50 rounded-lg text-sm font-medium">أرباحي</Link>
           <Link href="/profile" className="px-3 py-2.5 text-gray-700 hover:bg-blue-50 rounded-lg text-sm font-medium">الملف الشخصي</Link>
           {user?.role === 'admin' && (
             <Link href="/admin" className="px-3 py-2.5 text-blue-600 hover:bg-blue-50 rounded-lg text-sm font-medium">لوحة التحكم</Link>

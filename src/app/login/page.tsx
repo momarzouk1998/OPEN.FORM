@@ -84,9 +84,9 @@ export default function LoginPage() {
     <div dir="rtl" className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] bg-gradient-to-br from-blue-200/30 to-indigo-200/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] bg-gradient-to-tr from-indigo-200/20 to-blue-200/30 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 -left-20 w-72 h-72 bg-blue-100/20 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -start-40 w-[500px] h-[500px] bg-gradient-to-br from-blue-200/30 to-indigo-200/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -end-40 w-[500px] h-[500px] bg-gradient-to-tr from-indigo-200/20 to-blue-200/30 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 -end-20 w-72 h-72 bg-blue-100/20 rounded-full blur-3xl" />
       </div>
 
       <div className="relative w-full max-w-md">
@@ -142,7 +142,7 @@ export default function LoginPage() {
                   placeholder="example@email.com"
                   required
                 />
-                <svg className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="absolute start-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
@@ -159,7 +159,7 @@ export default function LoginPage() {
                   placeholder="********"
                   required
                 />
-                <svg className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="absolute start-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               </div>

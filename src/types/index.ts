@@ -167,6 +167,8 @@ export interface Form {
   project_id: string
   name: string
   description: string
+  serial_number?: string
+  short_code?: string
   created_by: string
   created_at: string
   updated_at: string
@@ -296,6 +298,134 @@ export interface UserTemplate {
   created_at: string
   profiles?: { name: string; avatar_url: string }[]
   forms?: { id: string; name: string }[]
+}
+
+// Points & Referrals System
+export interface Subscription {
+  id: string
+  user_id: string
+  plan_id: string
+  plan_price_gross: number
+  plan_price_net: number
+  tax_amount: number
+  status: 'active' | 'cancelled' | 'expired'
+  started_at: string
+  expires_at: string
+  renewed_at?: string | null
+  referred_by?: string | null
+  renewal_count: number
+  created_at: string
+  profiles?: { name: string; email: string; avatar_url?: string }[]
+}
+
+export interface AgentCommission {
+  id: string
+  agent_id: string
+  client_id: string
+  subscription_id: string
+  renewal_number: number
+  gross_commission: number
+  tax_deducted: number
+  net_commission: number
+  status: 'pending' | 'available' | 'paid' | 'cancelled'
+  available_at?: string | null
+  type: 'commission' | 'refund_deduction'
+  created_at: string
+}
+
+export interface TemplatePoint {
+  id: string
+  template_owner_id: string
+  template_id: string
+  copied_by_id: string
+  subscription_id?: string | null
+  points: number
+  status: 'pending' | 'available' | 'paid' | 'cancelled'
+  available_at?: string | null
+  created_at: string
+}
+
+export interface WithdrawalRequest {
+  id: string
+  user_id: string
+  type: 'points' | 'commission'
+  amount_requested: number
+  amount_after_tax: number
+  tax_deducted: number
+  points_used?: number | null
+  payment_method: 'instapay' | 'vodafone_cash' | 'orange_cash' | 'etisalat_cash'
+  payment_account: string
+  status: 'pending' | 'approved' | 'paid' | 'rejected'
+  admin_id?: string | null
+  admin_note?: string | null
+  requested_at: string
+  processed_at?: string | null
+  profiles?: { name: string; email: string }[]
+}
+
+export interface AdminActionLog {
+  id: string
+  admin_id: string
+  action_type: string
+  target_id: string
+  target_type: string
+  old_value?: any
+  new_value?: any
+  note?: string | null
+  created_at: string
+  profiles?: { name: string }[]
+}
+
+export interface EarningsSummary {
+  points_balance: number
+  points_pending: number
+  commission_balance: number
+  commission_pending: number
+  total_referrals: number
+  active_referrals: number
+  total_points_earned: number
+  total_commission_earned: number
+  total_points_withdrawn: number
+  total_commission_withdrawn: number
+}
+
+export const PAYMENT_METHODS: Record<string, string> = {
+  instapay: 'انستاباي',
+  vodafone_cash: 'فودافون كاش',
+  orange_cash: 'أورنج كاش',
+  etisalat_cash: 'اتصالات كاش',
+}
+
+export const WITHDRAWAL_STATUS: Record<string, string> = {
+  pending: 'قيد الانتظار',
+  approved: 'تمت الموافقة',
+  paid: 'تم الدفع',
+  rejected: 'مرفوض',
+}
+
+export const COMMISSION_STATUS: Record<string, string> = {
+  pending: 'معلق',
+  available: 'متاح للسحب',
+  paid: 'تم السحب',
+  cancelled: 'ملغي',
+}
+
+export const SUBSCRIPTION_STATUS: Record<string, string> = {
+  active: 'نشط',
+  cancelled: 'ملغي',
+  expired: 'منتهي',
+}
+
+export const WITHDRAWAL_TYPE_LABELS: Record<string, string> = {
+  points: 'نقاط قوالب',
+  commission: 'عمولة وكيل',
+}
+
+export const CLIENT_STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  active: { label: 'نشط', color: 'text-green-600 bg-green-50' },
+  pending: { label: 'معلق', color: 'text-yellow-600 bg-yellow-50' },
+  expired: { label: 'منتهي', color: 'text-red-600 bg-red-50' },
+  cancelled: { label: 'ملغي', color: 'text-gray-600 bg-gray-50' },
 }
 
 export interface PartnerProfile extends User {

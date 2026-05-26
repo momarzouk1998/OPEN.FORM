@@ -31,61 +31,15 @@ Always check `git status` first — if working tree clean, tell user nothing to 
 - Availability filtering: `bookedSlots` fetches responses, fully-booked dates show red strikethrough
 - Arabic AM/PM time display (`formatArabicTime`)
 - Fix `enable_auto_save` DB error – removed from Supabase update payload
-- Save button + dark mode toggle added to edit page header (dark mode state toggles `dark` class on `<html>`)
-- `date_range` visual calendar: single grid, From/To selection, range highlighting, day count display, clear button
-- @dnd-kit/core, sortable, utilities installed; `SortableQuestionItem` component wraps each card with drag handle
-- Drag & drop reordering via `DndContext` + `SortableContext` per page (closestCenter, verticalListSortingStrategy)
-- Collaboration via Supabase Realtime channel: presence tracking, form-update broadcast, user avatars in header
-- Payment info system: stored in `page_titles._payment` (JSONB), settings UI in modal, displayed to filler before submit
-- Floating action menu (`settings gear icon`) under each question with click-away close, إخفاء, نقل إلى البداية/النهاية, الصفحة, عرض بجوار السؤال السابق, المنطق الشرطي
-- Old inline sections (Conditional Logic, Page/Row Group) removed – build syntax error fixed
-- `SortableQuestionItem` export changed to non-exported function (Next.js page export restriction)
-- Domain `openappo.com` purchased, verified in Resend for email sending
-- `forms.openappo.com` configured as custom domain on Vercel (CNAME → cname.vercel-dns.com)
-- `RESEND_FROM_EMAIL` set to `noreply@openappo.com` (Vercel env var)
-- Rebranded name to "Forms.OpenappO" – updated all code references including styled headers
-- SQL migration `sql/007_user_limits.sql`: added `banned`, `form_limit`, `submission_limit` columns to `profiles`
-- Admin users page (`src/app/admin/users/page.tsx`): ban/unban toggle, form_limit/submission_limit inputs, banned badge + filter
-- Limit enforcement in form creation (banned + form_limit check) and form submission (banned + submission_limit check in `FormFiller.tsx`)
-- Dashboard and login pages: banned users signed out and rejected login with error message
-- RichTextEditor component (`src/components/RichTextEditor.tsx`): WYSIWYG for static_text with Bold/Italic/Underline, font family & size, text/background color, alignment, lists, offer templates (خصم, كشف مجاني, عرض رمضان)
-- RichTextEditor used in both edit page and create page for static_text questions
-- Static_text rendered as HTML via `dangerouslySetInnerHTML` in FormFiller
-- Submit button customization (text + color + textColor) stored in `page_titles._submit_button`
-- Submit button settings moved to Theme Designer as new "الزر" tab with color presets, text input, text color picker, and live preview button
-- Old submit button section removed from settings modal
-- Offer countdown stored in `page_titles._offer_countdown` (ISO datetime), settings UI in edit modal
-- Live countdown banner with HH:MM:SS in FormFiller (red gradient, auto-hides when expired or submitted)
-- Success screen redesigned: checkmark + "تم إرسال طلبك بنجاح ✅", total response count from `form_responses`, "أنشئ نموذجك مجانًا 🚀" CTA linking to `https://forms.openappo.com`, score display hidden when not test mode
-- Products system stored in `page_titles._products` array of `{ id, name, description, price, image_url, available }`
-- Product management UI in settings modal with Supabase Storage image upload to `products` bucket
-- Product catalog display in FormFiller with grid, add-to-cart with +/- quantity, cart total summary
-- Cart data (`__cart`) injected into `answers` on form submission
-- `_is_test` flag in `page_titles`, toggle in create + edit pages, hides all points fields when disabled, hides score on success screen
-- Fixed `page_titles` type from `Record<string, string>` to `Record<string, any>` across types, edit, and FormFiller
-- Fixed `addOption` null spread error with `|| []` fallback
-- Added three new question types: `countdown_timer`, `products_block`, `payment_info_block` under "إضافات" category in both edit and create pages
-- Vercel repo made public to resolve Hobby Plan deployment block
-- Removed "متصل" text from collaboration indicator in button bar
-- Changed save button icon from download (arrow to tray) to floppy disk
-- Fixed "not iterable" error for old-format options (object with numeric keys) – converts to array on load, uses `Array.isArray` checks in `addOption` and scale points input
-- Added `parseOptions` stripping of `_visibility_rules` from array format in edit, create, and FormFiller
-- Fixed save/load path: array options now appended with `_visibility_rules` as last element instead of spreading into object
-- Partners SQL migration (`sql/008_partners.sql`): added columns to `profiles` (company, facebook_url, linkedin_url, youtube_url, other_links, bio, is_partner, referral_code, referral_count) and new tables (partner_ideas, partner_likes, referrals, user_templates with approved flag)
-- Partners public page (`src/app/partners/page.tsx`): cards with avatar, stats (forms/templates/submissions/referrals), ideas list with implemented status, like button, referral link copy
-- Added "شركاء النجاح" link to Header.tsx (desktop + mobile nav)
-- Forgot password page (`src/app/forgot-password/page.tsx`): email input, sends reset link via Supabase
-- Reset password page (`src/app/reset-password/page.tsx`): new password form, calls `supabase.auth.updateUser`
-- Added "نسيت كلمة المرور؟" link to login page
-- Profile page (`src/app/profile/page.tsx`): added company, bio, social links (Facebook/LinkedIn/YouTube), other links manager, referral code display with copy button
-- Profile update handler now saves all new partner fields (company, bio, social links, other_links)
-- Points display ("النقاط") hidden when test mode is disabled
-- Admin approval required for user templates before public display
-- Avatar upload added to profile page (uploads to `project-images` bucket)
-- Admin partner management card added to admin dashboard
-- Admin partner management page (`src/app/admin/partners/page.tsx`): manage partner status, approve ideas, approve user templates
-- Referral code registration on signup: handles `ref` parameter and increments referrer's count
-- User template creation flow: "تحويل إلى قالب" button in form edit page
+- Save button + dark mode toggle added to edit page header
+- `date_range` visual calendar: single grid, From/To selection, range highlighting
+- @dnd-kit/core, sortable, utilities installed; `SortableQuestionItem` component
+- Drag & drop reordering via `DndContext` + `SortableContext` per page
+- Collaboration via Supabase Realtime channel: presence tracking, broadcast, avatars
+- Payment info system, floating action menu, RichTextEditor, Theme Designer
+- Products system with Supabase Storage, cart, إضافات question types
+- Partners page, profile page, admin pages, forgot/reset password
+- **Bug fixes batch (#1–55):** 50/54 bugs fixed (only #9 monolithic components باقي)
 
 ### In Progress
 - (none)
@@ -112,12 +66,8 @@ Always check `git status` first — if working tree clean, tell user nothing to 
 - Partner templates require admin approval (`approved` boolean) before appearing in public listings
 
 ## Next Steps
-1. Deploy SQL migration `sql/008_partners.sql` to Supabase via SQL Editor
-2. Build Admin partner management UI (`/admin/partners`): mark users as partners, add/approve ideas, approve user templates
-3. Build user template creation flow: "تحويل إلى قالب" button in form edit page
-4. Register referral code on user signup if `ref` param present
-5. Add partner badge/indicator in admin users page
-6. Test build on Vercel
+1. Fix remaining bug #9: Split monolithic components (FormFiller.tsx ~1600 lines, edit/page.tsx ~3800 lines, create/page.tsx ~2200 lines) into smaller files
+2. Build and test deployment on Vercel
 
 ## Critical Context
 - Build passes with latest commits on Vercel (Next.js 15.5.18) – remote builds only (no Node.js locally)

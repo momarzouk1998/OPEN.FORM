@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import {
   parseOptions,
@@ -138,11 +138,11 @@ export default function QuestionRenderer({
     return (
       <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-l from-gray-50 to-white border-b border-gray-100">
-          <button onClick={prevMonth} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" type="button">
+          <button onClick={prevMonth} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" type="button" aria-label="الشهر السابق">
             <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
           </button>
           <span className="text-sm font-bold text-gray-800">{monthName} {year}</span>
-          <button onClick={nextMonth} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" type="button">
+          <button onClick={nextMonth} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" type="button" aria-label="الشهر التالي">
             <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           </button>
         </div>
@@ -370,6 +370,7 @@ export default function QuestionRenderer({
                   <button
                     onClick={() => setAnswers({ ...answers, [question.id]: rankedItems.filter((_, i) => i !== ri) })}
                     className="text-red-400 hover:text-red-600"
+                    aria-label="إزالة العنصر من الترتيب"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
@@ -467,7 +468,7 @@ export default function QuestionRenderer({
             </svg>
           </div>
           {isOpen && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
+            <div className="absolute top-full end-0 start-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
               <div className="sticky top-0 bg-white p-2 border-b border-gray-100">
                 <input
                   type="text"
@@ -681,12 +682,101 @@ export default function QuestionRenderer({
       return <div className="border-t border-gray-200 my-2" />
 
     case 'signature': {
+      const signatureKey = `sig_${question.id}`
+      const savedSignature = (answers as any)[question.id] || ''
+      const [sigData, setSigData] = useState(savedSignature)
+      const canvasRef = useRef<HTMLCanvasElement>(null)
+      const [isDrawing, setIsDrawing] = useState(false)
+
+      useEffect(() => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        if (sigData) {
+          const img = new Image()
+          img.onload = () => {
+            const ctx = canvas.getContext('2d')
+            if (ctx) ctx.drawImage(img, 0, 0)
+          }
+          img.src = sigData
+        }
+      }, [sigData])
+
+      const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+        setIsDrawing(true)
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+        const rect = canvas.getBoundingClientRect()
+        const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left
+        const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top
+        ctx.beginPath()
+        ctx.moveTo(x, y)
+      }
+
+      const draw = (e: React.MouseEvent | React.TouchEvent) => {
+        if (!isDrawing) return
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+        const rect = canvas.getBoundingClientRect()
+        const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left
+        const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top
+        ctx.lineWidth = 3
+        ctx.lineCap = 'round'
+        ctx.strokeStyle = '#1f2937'
+        ctx.lineTo(x, y)
+        ctx.stroke()
+      }
+
+      const endDrawing = () => {
+        setIsDrawing(false)
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const dataUrl = canvas.toDataURL()
+        setSigData(dataUrl)
+        setAnswers({ ...answers, [question.id]: dataUrl })
+      }
+
+      const clearSig = () => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        setSigData('')
+        setAnswers({ ...answers, [question.id]: '' })
+      }
+
       return (
-        <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center">
-          <svg className="w-10 h-10 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-          </svg>
-          <p className="text-sm text-gray-600">{question.text}</p>
+        <div>
+          <div
+            className="border-2 border-dashed border-gray-300 rounded-2xl overflow-hidden touch-none"
+            onMouseDown={startDrawing}
+            onMouseMove={draw}
+            onMouseUp={endDrawing}
+            onMouseLeave={endDrawing}
+            onTouchStart={startDrawing}
+            onTouchMove={draw}
+            onTouchEnd={endDrawing}
+          >
+            <canvas
+              ref={canvasRef}
+              width={600}
+              height={200}
+              className="w-full h-48 bg-white cursor-crosshair"
+            />
+          </div>
+          {sigData && (
+            <button
+              type="button"
+              onClick={clearSig}
+              className="mt-2 text-sm text-red-500 hover:text-red-700"
+            >
+              مسح التوقيع
+            </button>
+          )}
         </div>
       )
     }

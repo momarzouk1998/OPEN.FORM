@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { PartnerIdea, PartnerLike, Referral, UserTemplate, PartnerProfile } from '@/types'
+import { toast } from '@/lib/toast'
 
 export default function AdminPartnersPage() {
   const [user, setUser] = useState<any>(null)
@@ -76,14 +77,14 @@ export default function AdminPartnersPage() {
   async function togglePartner(userId: string, currentStatus: boolean) {
     const supabase = createClient()
     const { error } = await supabase.from('profiles').update({ is_partner: !currentStatus }).eq('id', userId)
-    if (!error) await fetchData(); else alert('حدث خطأ أثناء تحديث الحالة')
+    if (!error) await fetchData(); else { toast('حدث خطأ أثناء تحديث الحالة'); console.error(error) }
   }
 
   async function addIdeaForPartner() {
-    if (!newIdeaText.trim() || !newIdeaPartner) { alert('اختر الشريك واكتب الفكرة'); return }
+    if (!newIdeaText.trim() || !newIdeaPartner) { toast('اختر الشريك واكتب الفكرة'); return }
     const supabase = createClient()
     const { error } = await supabase.from('partner_ideas').insert({ partner_id: newIdeaPartner, text: newIdeaText })
-    if (error) { alert('حدث خطأ أثناء إضافة الفكرة'); console.error(error) } else {
+    if (error) { toast('حدث خطأ أثناء إضافة الفكرة'); console.error(error) } else {
       setNewIdeaText('')
       setNewIdeaPartner(null)
       await fetchData()
@@ -93,13 +94,13 @@ export default function AdminPartnersPage() {
   async function approveIdea(ideaId: string) {
     const supabase = createClient()
     const { error } = await supabase.from('partner_ideas').update({ implemented: true }).eq('id', ideaId)
-    if (!error) await fetchData(); else alert('حدث خطأ أثناء الموافقة على الفكرة')
+    if (!error) await fetchData(); else { toast('حدث خطأ أثناء الموافقة على الفكرة'); console.error(error) }
   }
 
   async function approveTemplate(templateId: string) {
     const supabase = createClient()
     const { error } = await supabase.from('user_templates').update({ approved: true }).eq('id', templateId)
-    if (!error) await fetchData(); else alert('حدث خطأ أثناء الموافقة على القالب')
+    if (!error) await fetchData(); else { toast('حدث خطأ أثناء الموافقة على القالب'); console.error(error) }
   }
 
   if (loading) {

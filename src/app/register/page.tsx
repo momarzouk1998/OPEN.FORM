@@ -129,8 +129,8 @@ function RegisterForm() {
     <div dir="rtl" className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-gradient-to-br from-blue-200/30 to-indigo-200/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-gradient-to-tr from-indigo-200/20 to-blue-200/30 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -end-40 w-[500px] h-[500px] bg-gradient-to-br from-blue-200/30 to-indigo-200/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -start-40 w-[500px] h-[500px] bg-gradient-to-tr from-indigo-200/20 to-blue-200/30 rounded-full blur-3xl" />
       </div>
 
       <div className="relative w-full max-w-md">

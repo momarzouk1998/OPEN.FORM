@@ -138,6 +138,8 @@ export default function AdminSettingsPage() {
 
       console.error('Error fetching settings:', error)
 
+      setError('حدث خطأ أثناء تحميل الإعدادات')
+
     } finally {
 
       setLoading(false)

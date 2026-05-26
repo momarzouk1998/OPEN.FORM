@@ -238,7 +238,7 @@ export default function TemplatesPage() {
                         whileHover={{ y: -6, scale: 1.02 }}
                         className="glass-panel p-6 rounded-3xl relative overflow-hidden group cursor-pointer flex flex-col h-full border border-slate-100 dark:border-slate-800/50"
                       >
-                        <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${colors.gradient} rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-150`}></div>
+                        <div className={`absolute top-0 start-0 w-32 h-32 bg-gradient-to-br ${colors.gradient} rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-150`}></div>
 
                         <div className="relative z-10 flex flex-col h-full">
                           <h3 className="text-xl font-bold mb-3">{template.name}</h3>

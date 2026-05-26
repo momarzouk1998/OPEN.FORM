@@ -7,6 +7,7 @@ import Link from 'next/link'
 import PublicHeader from '@/components/PublicHeader'
 import Image from 'next/image'
 import { Globe, ExternalLink } from 'lucide-react'
+import { toast } from '@/lib/toast'
 
 const FacebookIcon = (props: any) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -58,19 +59,14 @@ export default function PartnersPage() {
     if (!profiles) { setLoading(false); return }
 
     const enriched = await Promise.all(profiles.map(async (p: any) => {
-      const [ideasResult, likesCountResult, formsCountResult, templatesResult, formIdsResult] = await Promise.all([
+      const [ideasResult, likesCountResult, formsCountResult, templatesResult, formIdsResult, likedByMeResult] = await Promise.all([
         supabase.from('partner_ideas').select('*').eq('partner_id', p.id).order('created_at', { ascending: false }),
         supabase.from('partner_likes').select('*', { count: 'exact', head: true }).eq('partner_id', p.id),
         supabase.from('forms').select('*', { count: 'exact', head: true }).eq('created_by', p.id),
         supabase.from('user_templates').select('*').eq('created_by', p.id).eq('approved', true).order('created_at', { ascending: false }).limit(6),
         supabase.from('forms').select('id').eq('created_by', p.id),
+        u ? supabase.from('partner_likes').select('id').eq('partner_id', p.id).eq('user_id', u.id).maybeSingle() : Promise.resolve({ data: null }),
       ])
-
-      let likedByMe = false
-      if (u) {
-        const { data: like } = await supabase.from('partner_likes').select('id').eq('partner_id', p.id).eq('user_id', u.id).maybeSingle()
-        likedByMe = !!like
-      }
 
       let submissionsCount = 0
       const formIds = formIdsResult.data
@@ -86,7 +82,7 @@ export default function PartnersPage() {
         ...p,
         ideas: ideasResult.data || [],
         likes_count: likesCountResult.count || 0,
-        liked_by_me: likedByMe,
+        liked_by_me: !!likedByMeResult?.data,
         forms_count: formsCountResult.count || 0,
         templates_count: (templatesResult.data || []).length || 0,
         templates_preview: templatesResult.data || [],
@@ -216,7 +212,7 @@ function PartnerCard({
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg hover:border-indigo-200 transition-all duration-300 flex flex-col h-full">
       {/* Card Header */}
       <div className="bg-gradient-to-l from-indigo-500 to-purple-600 p-5 text-center relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
+        <div className="absolute top-0 start-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
         <div className="relative w-24 h-24 mx-auto mb-3">
           <div className="w-full h-full rounded-full border-4 border-white/50 overflow-hidden bg-white/20 shadow-inner">
             {partner.avatar_url ? (
@@ -338,7 +334,7 @@ function PartnerCard({
               navigator.clipboard.writeText(
                 `${window.location.origin}/register?ref=${partner.referral_code}`
               )
-              alert('تم نسخ رابط الإحالة!')
+              toast('تم نسخ رابط الإحالة!', 'success')
             }}
             className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-indigo-600 transition-colors"
           >

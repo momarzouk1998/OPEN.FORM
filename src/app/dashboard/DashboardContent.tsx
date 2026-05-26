@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from '@/lib/toast'
 import { useAppSettings } from '@/hooks/useAppSettings'
 import type { User } from '@/types'
 import Header from '@/components/Header'
@@ -51,6 +52,7 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
         }
       } catch (e) {
         console.error('Error fetching dashboard data:', e)
+        toast('حدث خطأ أثناء تحميل البيانات')
       } finally {
         setLoading(false)
       }
@@ -82,7 +84,7 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
       )}
 
       <aside className={`
-        fixed inset-y-0 right-0 z-50 w-2/3 max-w-sm bg-white shadow-2xl transform transition-transform duration-300 lg:hidden
+        fixed inset-y-0 start-0 z-50 w-2/3 max-w-sm bg-white shadow-2xl transform transition-transform duration-300 lg:hidden
         ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'}
       `}>
         <div className="h-full flex flex-col">
@@ -94,7 +96,7 @@ export default function DashboardContent({ profile, stats }: DashboardContentPro
                 </div>
                 <span className="font-bold text-lg text-gray-800">Forms<span className="text-blue-600">.OpenappO</span></span>
               </div>
-              <button onClick={() => setSidebarOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+              <button onClick={() => setSidebarOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" aria-label="إغلاق القائمة">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>

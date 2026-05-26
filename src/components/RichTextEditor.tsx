@@ -109,23 +109,23 @@ export default function RichTextEditor({ value, onChange, placeholder, minHeight
         <div className="w-px h-5 bg-gray-300 mx-1" />
 
         {/* Alignment */}
-        <button type="button" onClick={() => exec('justifyRight')} title="محاذاة لليمين" className="p-1.5 hover:bg-gray-200 rounded text-xs min-w-[30px]">
+        <button type="button" onClick={() => exec('justifyRight')} title="محاذاة لليمين" aria-label="محاذاة لليمين" className="p-1.5 hover:bg-gray-200 rounded text-xs min-w-[30px]">
           <svg className="w-4 h-4 mx-auto" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2h14v2H1zm0 4h10v2H1zm0 4h14v2H1zm0 4h10v2H1z"/></svg>
         </button>
-        <button type="button" onClick={() => exec('justifyCenter')} title="محاذاة للوسط" className="p-1.5 hover:bg-gray-200 rounded text-xs min-w-[30px]">
+        <button type="button" onClick={() => exec('justifyCenter')} title="محاذاة للوسط" aria-label="محاذاة للوسط" className="p-1.5 hover:bg-gray-200 rounded text-xs min-w-[30px]">
           <svg className="w-4 h-4 mx-auto" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2h14v2H1zm2 4h10v2H3zm0 4h10v2H3zm2 4h10v2H5z"/></svg>
         </button>
-        <button type="button" onClick={() => exec('justifyLeft')} title="محاذاة لليسار" className="p-1.5 hover:bg-gray-200 rounded text-xs min-w-[30px]">
+        <button type="button" onClick={() => exec('justifyLeft')} title="محاذاة لليسار" aria-label="محاذاة لليسار" className="p-1.5 hover:bg-gray-200 rounded text-xs min-w-[30px]">
           <svg className="w-4 h-4 mx-auto" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2h14v2H1zm0 4h10v2H1zm0 4h14v2H1zm0 4h10v2H1z"/></svg>
         </button>
 
         <div className="w-px h-5 bg-gray-300 mx-1" />
 
         {/* Lists */}
-        <button type="button" onClick={() => exec('insertUnorderedList')} title="قائمة نقطية" className="p-1.5 hover:bg-gray-200 rounded text-xs min-w-[30px]">
+        <button type="button" onClick={() => exec('insertUnorderedList')} title="قائمة نقطية" aria-label="قائمة نقطية" className="p-1.5 hover:bg-gray-200 rounded text-xs min-w-[30px]">
           <svg className="w-4 h-4 mx-auto" viewBox="0 0 16 16" fill="currentColor"><path d="M2 4h1v1H2zm3 0h10v1H5zm0 4h10v1H5zm0 4h10v1H5zM2 8h1v1H2zm0 4h1v1H2z"/></svg>
         </button>
-        <button type="button" onClick={() => exec('insertOrderedList')} title="قائمة مرقمة" className="p-1.5 hover:bg-gray-200 rounded text-xs min-w-[30px]">
+        <button type="button" onClick={() => exec('insertOrderedList')} title="قائمة مرقمة" aria-label="قائمة مرقمة" className="p-1.5 hover:bg-gray-200 rounded text-xs min-w-[30px]">
           <svg className="w-4 h-4 mx-auto" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 3.5V2h.5v3h-.5V4H1v-.5zm0 5V7h.5v3h-.5V9H1v-.5zm0 5V12h.5v3h-.5v-1H1v-.5zM5 4h10v1H5zm0 4h10v1H5zm0 4h10v1H5z"/></svg>
         </button>
       </div>

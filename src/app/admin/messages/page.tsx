@@ -34,6 +34,7 @@ export default function AdminMessagesPage() {
       setMessages(data || [])
     } catch (err) {
       console.error(err)
+      toast('حدث خطأ أثناء تحميل الرسائل')
     } finally {
       setLoading(false)
     }

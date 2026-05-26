@@ -2,6 +2,13 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
+  // HTTPS enforcement
+  if (process.env.NODE_ENV === 'production' && request.nextUrl.protocol === 'http:') {
+    const httpsUrl = new URL(request.url)
+    httpsUrl.protocol = 'https:'
+    return NextResponse.redirect(httpsUrl, 301)
+  }
+
   const { supabase, response } = await createClient(request)
 
   // Admin route protection - server-side check

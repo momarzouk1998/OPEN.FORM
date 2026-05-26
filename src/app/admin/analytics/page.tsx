@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from '@/lib/toast'
 
 export default function AdminAnalyticsPage() {
   const [stats, setStats] = useState<any>(null)
@@ -42,6 +43,7 @@ export default function AdminAnalyticsPage() {
       setStats({ totalUsers, approvedUsers, pendingUsers, totalForms, totalResponses })
     } catch (e) {
       console.error(e)
+      toast('حدث خطأ أثناء تحميل الإحصائيات')
     } finally {
       setLoading(false)
     }

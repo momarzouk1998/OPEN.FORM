@@ -22,6 +22,9 @@ export async function POST(req: Request) {
       const { error: updateErr } = await svc.from('profiles').update({ referral_count: (referrer.referral_count || 0) + 1 }).eq('id', referrer.id)
       if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 })
 
+      // Set referred_by on the referred user's profile for agent commission tracking
+      await svc.from('profiles').update({ referred_by: referrer.id }).eq('id', referredId)
+
       return NextResponse.json({ ok: true })
     }
 

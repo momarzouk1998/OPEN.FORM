@@ -1,8 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Cairo, Reem_Kufi } from "next/font/google";
 import "./globals.css";
-
-export const dynamic = 'force-dynamic'
+import dynamic from 'next/dynamic'
 
 const cairo = Cairo({
   subsets: ["arabic", "latin"],
@@ -17,9 +16,10 @@ const reemKufi = Reem_Kufi({
 });
 
 import { createClient } from '@/utils/supabase/server';
-import ServiceWorker from '@/components/ServiceWorker';
-import FooterBar from '@/components/FooterBar';
-import ToastContainer from '@/components/ToastContainer';
+
+const ServiceWorker = dynamic(() => import('@/components/ServiceWorker'), { ssr: false })
+const FooterBar = dynamic(() => import('@/components/FooterBar'), { ssr: false })
+const ToastContainer = dynamic(() => import('@/components/ToastContainer'), { ssr: false })
 
 export async function generateMetadata(): Promise<Metadata> {
   let appName = "Forms.OpenappO";

@@ -16,6 +16,7 @@ const NAV_LINKS = [
 ]
 
 export default function PublicProjectsView() {
+  const supabase = createClient()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [partners, setPartners] = useState<any[]>([])
   const [ideasMap, setIdeasMap] = useState<Record<string, any[]>>({})
@@ -27,7 +28,6 @@ export default function PublicProjectsView() {
   const [contactSubmitting, setContactSubmitting] = useState(false)
 
   useEffect(() => {
-    const supabase = createClient()
     ;(async () => {
       const { data: profiles } = await supabase
         .from('profiles')
@@ -59,7 +59,7 @@ export default function PublicProjectsView() {
   return (
     <div dir="rtl" className="min-h-screen bg-white font-sans">
       {/* ===== HEADER ===== */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100/80 shadow-sm">
+      <header className="fixed top-0 end-0 start-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100/80 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200/50">
@@ -83,7 +83,7 @@ export default function PublicProjectsView() {
             <Link href="/register"
               className="px-5 py-2 bg-gradient-to-l from-blue-600 to-indigo-600 text-white text-sm rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/25 font-medium"
             >ابدأ مجاناً</Link>
-            <button onClick={() => setMobileOpen(!mobileOpen)} className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+            <button onClick={() => setMobileOpen(!mobileOpen)} className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg" aria-label="القائمة الرئيسية">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
           </div>
@@ -103,8 +103,8 @@ export default function PublicProjectsView() {
 
       {/* ===== HERO ===== */}
       <section id="hero" className="relative min-h-[85vh] flex items-center bg-gradient-to-b from-blue-50 via-white to-white pt-20 overflow-hidden">
-        <div className="absolute -top-32 -right-32 w-96 h-96 bg-blue-100/40 rounded-full blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-indigo-100/30 rounded-full blur-3xl" />
+        <div className="absolute -top-32 -start-32 w-96 h-96 bg-blue-100/40 rounded-full blur-3xl" />
+        <div className="absolute -bottom-32 -end-32 w-96 h-96 bg-indigo-100/30 rounded-full blur-3xl" />
 
         <div className="relative max-w-6xl mx-auto px-4 w-full">
           <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
@@ -144,7 +144,7 @@ export default function PublicProjectsView() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-                <div className="absolute -bottom-4 -left-4 bg-white rounded-2xl shadow-lg px-5 py-3 border border-gray-100">
+                <div className="absolute -bottom-4 -end-4 bg-white rounded-2xl shadow-lg px-5 py-3 border border-gray-100">
                   <p className="text-sm font-bold text-gray-800">بدون علامة مائية</p>
                   <p className="text-xs text-gray-500">في جميع الخطط</p>
                 </div>
@@ -153,7 +153,7 @@ export default function PublicProjectsView() {
           </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0">
+        <div className="absolute bottom-0 end-0 start-0">
           <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
             <path d="M0 60V30C240 0 480 0 720 30C960 60 1200 60 1440 30V60H0Z" fill="white" />
           </svg>
@@ -359,7 +359,7 @@ export default function PublicProjectsView() {
             </div>
 
             <div className="bg-white rounded-2xl p-6 border-2 border-blue-500 shadow-xl shadow-blue-500/20 relative scale-105">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs font-bold px-4 py-1 rounded-full">الأكثر شهرة</div>
+              <div className="absolute -top-3 start-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs font-bold px-4 py-1 rounded-full">الأكثر شهرة</div>
               <h3 className="text-xl font-bold text-gray-900 mb-1">احترافية</h3>
               <p className="text-3xl font-bold text-gray-900 mb-4">99 <span className="text-lg text-gray-500">ريال/شهر</span></p>
               <ul className="space-y-2.5 mb-6">
@@ -370,7 +370,8 @@ export default function PublicProjectsView() {
                   </li>
                 ))}
               </ul>
-              <Link href="/register" className="block w-full py-3 text-center bg-gradient-to-l from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-colors font-medium shadow-lg shadow-blue-500/25">اشتري الآن</Link>
+              <Link href="/register" className="block w-full py-3 text-center bg-gradient-to-l from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-colors font-medium shadow-lg shadow-blue-500/25 opacity-60 cursor-not-allowed pointer-events-none">قريباً</Link>
+              <p className="text-xs text-gray-400 text-center mt-2">الدفع الإلكتروني قيد التفعيل</p>
             </div>
 
             <div className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-lg transition-shadow">
@@ -390,11 +391,95 @@ export default function PublicProjectsView() {
         </div>
       </section>
 
+      {/* ===== EARN WITH US ===== */}
+      <section id="earn" className="py-20 px-4 bg-white">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-4">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">💰 اكسب معنا بطريقتين</h2>
+            <div className="w-20 h-1 bg-blue-600 rounded-full mx-auto mt-3 mb-6" />
+            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+              حقّق أرباحاً من قوالبك أو من خلال دعوة الآخرين للانضمام
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-10">
+            <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-2xl p-8 border border-amber-200 hover:shadow-xl transition-shadow">
+              <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center mb-4">
+                <svg className="w-7 h-7 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">📦 نقاط القوالب</h3>
+              <p className="text-gray-600 mb-4">انشئ قالباً جميلاً وانشره للعموم. كل مشترك ينسخ قالبك = 10 نقاط لك</p>
+              <ul className="space-y-2 mb-6">
+                <li className="flex items-center gap-2 text-sm text-gray-700"><svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg> 10 نقاط عن كل نسخة لقالبك</li>
+                <li className="flex items-center gap-2 text-sm text-gray-700"><svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg> الحد الأدنى للسحب: 100 نقطة = 100 جنيه</li>
+                <li className="flex items-center gap-2 text-sm text-gray-700"><svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg> تحتاج مشتركين بباقة مدفوعة ليُحتسبوا</li>
+              </ul>
+              <p className="text-amber-700 font-bold text-lg">النقطة = 1 جنيه</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-2xl p-8 border border-emerald-200 hover:shadow-xl transition-shadow">
+              <div className="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center mb-4">
+                <svg className="w-7 h-7 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">🤝 نظام الوكلاء</h3>
+              <p className="text-gray-600 mb-4">شارك رابطك الخاص مع أصحابك وعملاءك. كل مشترك يدفع من رابطك = عمولة لك</p>
+              <ul className="space-y-2 mb-6">
+                <li className="flex items-center gap-2 text-sm text-gray-700"><svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg> أول شهر: 20% من صافي السعر</li>
+                <li className="flex items-center gap-2 text-sm text-gray-700"><svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg> كل شهر بعد كده: 10% من صافي السعر</li>
+                <li className="flex items-center gap-2 text-sm text-gray-700"><svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg> الحد الأدنى للسحب: 500 جنيه</li>
+              </ul>
+              <p className="text-emerald-700 font-bold text-lg">عمولة مستمرة طول ما العميل مجدد</p>
+            </div>
+          </div>
+
+          <div className="bg-gray-50 rounded-2xl p-8 mt-8 border border-gray-200">
+            <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">أسئلة شائعة</h3>
+            <div className="space-y-4 max-w-2xl mx-auto">
+              <details className="group">
+                <summary className="flex items-center justify-between cursor-pointer text-gray-800 font-medium py-2">
+                  هل أحتاج اشتراك مدفوع عشان أكسب؟
+                  <svg className="w-4 h-4 text-gray-500 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </summary>
+                <p className="text-gray-600 text-sm mt-1 pr-4">لا — أي مستخدم يقدر يكون وكيلاً أو ينشر قوالب. لكن النقاط تُحتسب فقط لما الناسخ يكون مشترك مدفوع.</p>
+              </details>
+              <details className="group">
+                <summary className="flex items-center justify-between cursor-pointer text-gray-800 font-medium py-2">
+                  متى أقدر أسحب أرباحي؟
+                  <svg className="w-4 h-4 text-gray-500 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </summary>
+                <p className="text-gray-600 text-sm mt-1 pr-4">بعد مرور 35 يوماً على الاكتساب وبلوغ الحد الأدنى (100 نقطة أو 500 جنيه).</p>
+              </details>
+              <details className="group">
+                <summary className="flex items-center justify-between cursor-pointer text-gray-800 font-medium py-2">
+                  هل العمولة تستمر للأبد؟
+                  <svg className="w-4 h-4 text-gray-500 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </summary>
+                <p className="text-gray-600 text-sm mt-1 pr-4">نعم، طالما العميل مجدد اشتراكه كل شهر تستمر عمولتك 10% شهرياً.</p>
+              </details>
+              <details className="group">
+                <summary className="flex items-center justify-between cursor-pointer text-gray-800 font-medium py-2">
+                  ماذا لو طلب العميل استرجاع؟
+                  <svg className="w-4 h-4 text-gray-500 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </summary>
+                <p className="text-gray-600 text-sm mt-1 pr-4">لو الاسترجاع خلال 35 يوم من الدفع، العمولة المعلقة تُلغى. بعد 35 يوم لا يوجد خصم.</p>
+              </details>
+            </div>
+          </div>
+
+          <div className="text-center mt-10">
+            <Link href="/register" className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-l from-blue-600 to-indigo-600 text-white rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all font-bold text-lg shadow-xl shadow-blue-500/25">
+              ابدأ الآن مجاناً
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ===== CTA BANNER ===== */}
       <section className="py-16 px-4 bg-gradient-to-l from-blue-700 via-blue-600 to-indigo-600 relative overflow-hidden">
         <div className="absolute inset-0">
-          <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-indigo-400/20 rounded-full blur-3xl" />
+          <div className="absolute -top-20 -start-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-20 -end-20 w-64 h-64 bg-indigo-400/20 rounded-full blur-3xl" />
         </div>
         <div className="relative max-w-3xl mx-auto text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">ابدأ في إنشاء نماذجك اليوم</h2>
