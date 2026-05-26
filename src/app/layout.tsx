@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Cairo, Reem_Kufi } from "next/font/google";
 import "./globals.css";
-import dynamic from 'next/dynamic'
-
 const cairo = Cairo({
   subsets: ["arabic", "latin"],
   weight: ["300", "400", "500", "600", "700", "800"],
@@ -16,10 +14,7 @@ const reemKufi = Reem_Kufi({
 });
 
 import { createClient } from '@/utils/supabase/server';
-
-const ServiceWorker = dynamic(() => import('@/components/ServiceWorker'), { ssr: false })
-const FooterBar = dynamic(() => import('@/components/FooterBar'), { ssr: false })
-const ToastContainer = dynamic(() => import('@/components/ToastContainer'), { ssr: false })
+import DynamicLayoutComponents from '@/components/DynamicLayoutComponents'
 
 export async function generateMetadata(): Promise<Metadata> {
   let appName = "Forms.OpenappO";
@@ -82,10 +77,8 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body className="min-h-full flex flex-col font-sans antialiased pb-16 overflow-x-hidden">
-        <ServiceWorker />
         {children}
-        <ToastContainer />
-        <FooterBar />
+        <DynamicLayoutComponents />
       </body>
     </html>
   );
