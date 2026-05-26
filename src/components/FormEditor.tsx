@@ -687,8 +687,12 @@ export default function FormEditor({ mode, formId }: FormEditorProps) {
         onClose={() => setShowQuestionPicker(false)} onImport={importQuestion} />
 
       {mode === 'edit' && isDesignerOpen && (
-        <ThemeDesigner form={formData as any} onClose={() => setIsDesignerOpen(false)}
-          onUpdate={(theme: any) => setFormData((prev: any) => ({ ...prev, page_titles: { ...prev.page_titles, theme_settings: theme } }))} />
+        <ThemeDesigner isOpen={isDesignerOpen}
+          theme={formData?.page_titles?.theme_settings || null}
+          submitButton={formData?.page_titles?._submit_button || {}}
+          onClose={() => setIsDesignerOpen(false)}
+          onUpdate={(theme: any) => setFormData((prev: any) => ({ ...prev, page_titles: { ...prev.page_titles, theme_settings: theme } }))}
+          onSubmitButtonChange={(btn: any) => setFormData((prev: any) => ({ ...prev, page_titles: { ...prev.page_titles, _submit_button: btn } }))} />
       )}
 
       {/* Preview (edit) */}
