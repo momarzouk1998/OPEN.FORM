@@ -237,7 +237,7 @@ export default function FormEditor({ mode, formId }: FormEditorProps) {
         allow_multiple: form.allow_multiple || false, time_limit: form.time_limit || null,
         allow_delete_responses: form.allow_delete_responses || false, randomize_questions: form.randomize_questions || false,
         questions: formattedQuestions, is_active: form.is_active, image_url: form.image_url || '',
-        short_code: form.short_code || '', serial_number: form.serial_number, page_titles,
+        short_code: form.short_code || '', serial_number: form.serial_number, page_titles: pageTitles,
         enable_auto_save: form.enable_auto_save,
         _is_test: !!pageTitles._is_test, _availability: pageTitles._availability || null,
         _payment: pageTitles._payment || [], _products: pageTitles._products || [],
