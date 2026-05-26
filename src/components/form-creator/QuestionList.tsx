@@ -230,7 +230,6 @@ export default function QuestionList({
               }
               return <span className="p-2 px-3 bg-emerald-50 text-emerald-700 text-sm font-bold rounded-xl border border-emerald-100">إجمالي النقاط: {total}</span>
             })()}
-          </div>
           {/* Text validation */}
           {question.type === 'text' && (() => {
             const opts: any[] = parseOptions(question.options)
