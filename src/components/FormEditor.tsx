@@ -142,7 +142,7 @@ export default function FormEditor({ mode, formId }: FormEditorProps) {
         const users = Object.values(state).flat() as any[]
         setCollaborators(users.map((u: any) => ({ id: u.id, name: u.name || u.email, email: u.email })))
       })
-      .subscribe(async (status) => {
+      .subscribe(async (status: string) => {
         setCollabStatus(status === 'SUBSCRIBED' ? 'connected' : 'disconnected')
         if (status === 'SUBSCRIBED') {
           await channel.track({ id: profile.id, name: profile.name, email: profile.email })
