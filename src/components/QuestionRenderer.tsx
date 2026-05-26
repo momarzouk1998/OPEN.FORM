@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import Image from 'next/image'
+import NextImage from 'next/image'
 import {
   parseOptions,
   parseMatrixData,
@@ -588,7 +588,7 @@ export default function QuestionRenderer({
                     <div key={prod.id} className="border border-gray-200 rounded-xl overflow-hidden hover:border-blue-300 hover:shadow-md transition-all">
                       {prod.image_url && (
                         <div className="h-36 bg-gray-50 overflow-hidden relative">
-                          <Image src={prod.image_url} alt={prod.name} fill className="object-cover" loading="lazy" />
+                          <NextImage src={prod.image_url} alt={prod.name} fill className="object-cover" loading="lazy" />
                         </div>
                       )}
                       <div className="p-3">
@@ -671,7 +671,7 @@ export default function QuestionRenderer({
       const alt = imgOpts.validation_value || question.text || 'صورة'
       return src ? (
         <div className="rounded-2xl overflow-hidden">
-          <Image src={src} alt={alt} width={800} height={400} className="w-full object-cover" loading="lazy" />
+          <NextImage src={src} alt={alt} width={800} height={400} className="w-full object-cover" loading="lazy" />
         </div>
       ) : (
         <div className="bg-gray-100 rounded-2xl h-48 flex items-center justify-center text-gray-400 text-sm">لا توجد صورة</div>
