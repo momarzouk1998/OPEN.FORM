@@ -9,7 +9,7 @@ interface Props {
   pageQuestions: Question[]
   answers: Record<string, any>
   setAnswers: (v: any) => void
-  setCurrentQuestionIndex: (v: number) => void
+  setCurrentQuestionIndex: (fn: (prev: number) => number) => void
   dropdownSearch: Record<string, string>
   setDropdownSearch: (v: any) => void
   dropdownOpen: Record<string, boolean>
