@@ -4,7 +4,7 @@ interface Props {
   draftRestored: boolean
   draftDismissed: boolean
   onStartFresh: () => void
-  autoSave: { getDraftAge: () => string; clearDraft: () => void }
+  autoSave: { getDraftAge: () => string | null; clearDraft: () => void }
 }
 
 export default function FormFillerDraftBanner({ draftRestored, draftDismissed, onStartFresh, autoSave }: Props) {
@@ -16,7 +16,7 @@ export default function FormFillerDraftBanner({ draftRestored, draftDismissed, o
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <span>
-          تم استعادة مسودتك المحفوظة ({autoSave.getDraftAge()}) — يمكنك المتابعة من حيث توقفت.
+          تم استعادة مسودتك المحفوظة ({autoSave.getDraftAge() ?? 'منذ قليل'}) — يمكنك المتابعة من حيث توقفت.
         </span>
       </div>
       <button
