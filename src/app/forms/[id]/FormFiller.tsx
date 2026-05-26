@@ -243,7 +243,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
   const isLastPage = pageIndex >= totalPages - 1
 
   useEffect(() => {
-    const availabilityStatus = getAvailabilityStatus(form.page_titles, isPreview)
+    const availabilityStatus = getAvailabilityStatus(form.page_titles || {}, isPreview)
     if (availabilityStatus.closed) {
       setClosedReason(availabilityStatus.reason)
       setIsExpired(true)
