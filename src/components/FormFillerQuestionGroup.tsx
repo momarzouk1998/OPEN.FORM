@@ -115,11 +115,11 @@ export default function FormFillerQuestionGroup({
       {groups.map((grp) => {
         if (grp.group !== null && grp.questions.length > 1) {
           return (
-            <div key={`row_${grp.group}`} className="flex gap-4">
+            <div key={`row_${grp.group}`} className="flex flex-col sm:flex-row gap-4">
               {grp.questions.map((question, gi) => {
                 const idx = grp.startIndex + gi
                 return (
-                  <div key={question.id} className="flex-1 min-w-0 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 form-themed-card form-themed-spacing">
+                  <div key={question.id} className="flex-1 min-w-0 bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 transition-all hover:shadow-md form-themed-card form-themed-spacing">
                     {renderQuestionWithCard(question, idx)}
                   </div>
                 )
@@ -130,7 +130,7 @@ export default function FormFillerQuestionGroup({
         return grp.questions.map((question, gi) => {
           const idx = grp.startIndex + gi
           return (
-            <div key={question.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 transition-all hover:shadow-md form-themed-card form-themed-spacing">
+            <div key={question.id} className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 transition-all hover:shadow-md form-themed-card form-themed-spacing">
               {renderQuestionWithCard(question, idx)}
             </div>
           )

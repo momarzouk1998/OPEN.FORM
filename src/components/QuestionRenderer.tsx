@@ -258,7 +258,11 @@ export default function QuestionRenderer({
             if (currentAnswerStr && vcat === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentAnswerStr)) return
             setCurrentQuestionIndex((prev) => prev + 1)
           }}
-          className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right"
+          className={`w-full px-4 py-3.5 bg-white border rounded-xl focus:ring-4 transition-all outline-none placeholder:text-gray-400 font-medium shadow-sm text-right ${
+            errors[question.id] 
+              ? 'border-red-500 focus:ring-red-500/10 focus:border-red-500' 
+              : 'border-gray-200 focus:ring-blue-500/10 focus:border-blue-500 hover:border-gray-300'
+          }`}
           disabled={submitting}
         />
       )
@@ -271,7 +275,11 @@ export default function QuestionRenderer({
           value={currentAnswerStr}
           onChange={(e) => setAnswers({ ...answers, [question.id]: e.target.value })}
           onBlur={() => setCurrentQuestionIndex((prev) => prev + 1)}
-          className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right resize-none"
+          className={`w-full px-4 py-3.5 bg-white border rounded-xl focus:ring-4 transition-all outline-none placeholder:text-gray-400 font-medium shadow-sm text-right resize-none ${
+            errors[question.id] 
+              ? 'border-red-500 focus:ring-red-500/10 focus:border-red-500' 
+              : 'border-gray-200 focus:ring-blue-500/10 focus:border-blue-500 hover:border-gray-300'
+          }`}
           rows={4}
           disabled={submitting}
         />
@@ -280,20 +288,27 @@ export default function QuestionRenderer({
 
     case 'single_choice': {
       return (
-        <div className="space-y-2">
-          {options.map((opt: QuestionOption, optIdx: number) => (
-            <button
-              key={opt.id || optIdx}
-              onClick={() => {
-                setAnswers({ ...answers, [question.id]: opt.text })
-                setCurrentQuestionIndex((prev) => prev + 1)
-              }}
-              className={`w-full text-right px-4 py-3 rounded-xl border-2 transition-all text-sm font-medium ${currentAnswer === opt.text ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50/50'}`}
-              disabled={submitting}
-            >
-              {opt.text}
-            </button>
-          ))}
+        <div className="space-y-2.5">
+          {options.map((opt: QuestionOption, optIdx: number) => {
+            const isSelected = currentAnswer === opt.text
+            return (
+              <button
+                key={opt.id || optIdx}
+                onClick={() => {
+                  setAnswers({ ...answers, [question.id]: opt.text })
+                  // Small delay to let user see selection before auto-moving (optional UX choice)
+                  setTimeout(() => setCurrentQuestionIndex((prev) => prev + 1), 200)
+                }}
+                className={`w-full text-right px-4 py-3.5 rounded-xl border-2 transition-all duration-200 text-sm font-medium flex items-center justify-between gap-3 group ${isSelected ? 'border-blue-500 bg-blue-50/50 text-blue-700 shadow-sm shadow-blue-500/10' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50/10 active:scale-[0.99]'}`}
+                disabled={submitting}
+              >
+                <span className="flex-1 truncate">{opt.text}</span>
+                <div className={`w-5 h-5 rounded-full border-2 shrink-0 transition-all flex items-center justify-center ${isSelected ? 'border-blue-600 bg-blue-600' : 'border-gray-300 group-hover:border-blue-400'}`}>
+                  {isSelected && <div className="w-2 h-2 rounded-full bg-white shadow-sm" />}
+                </div>
+              </button>
+            )
+          })}
         </div>
       )
     }
@@ -301,7 +316,7 @@ export default function QuestionRenderer({
     case 'multiple_choice': {
       const selected = Array.isArray(currentAnswer) ? currentAnswer : []
       return (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {options.map((opt: QuestionOption, optIdx: number) => {
             const isSelected = selected.includes(opt.text)
             return (
@@ -310,12 +325,14 @@ export default function QuestionRenderer({
                 onClick={() => {
                   const updated = isSelected ? selected.filter((s: string) => s !== opt.text) : [...selected, opt.text]
                   setAnswers({ ...answers, [question.id]: updated })
-                  if (updated.length > selected.length) setCurrentQuestionIndex((prev) => prev + 1)
                 }}
-                className={`w-full text-right px-4 py-3 rounded-xl border-2 transition-all text-sm font-medium ${isSelected ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50/50'}`}
+                className={`w-full text-right px-4 py-3.5 rounded-xl border-2 transition-all duration-200 text-sm font-medium flex items-center justify-between gap-3 group ${isSelected ? 'border-blue-500 bg-blue-50/50 text-blue-700 shadow-sm shadow-blue-500/10' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50/10 active:scale-[0.99]'}`}
                 disabled={submitting}
               >
-                {opt.text}
+                <span className="flex-1 truncate">{opt.text}</span>
+                <div className={`w-5 h-5 rounded-lg border-2 shrink-0 transition-all flex items-center justify-center ${isSelected ? 'border-blue-600 bg-blue-600' : 'border-gray-300 group-hover:border-blue-400'}`}>
+                  {isSelected && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                </div>
               </button>
             )
           })}

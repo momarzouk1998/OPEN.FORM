@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import RichTextEditor from '@/components/RichTextEditor'
 import ProductGroupsEditor from '@/components/ProductGroupsEditor'
 import PaymentMethodsEditor from '@/components/PaymentMethodsEditor'
@@ -33,28 +34,65 @@ export default function QuestionList({
   onAddMatrixColumn, onRemoveMatrixColumn, onUpdateMatrixColumn,
   onParseBulkText, formData
 }: QuestionListProps) {
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set(questions.map(q => q.id)))
+  const [activeTab, setActiveTab] = useState<Record<string, 'content' | 'logic' | 'settings'>>({})
+
+  const toggleExpand = (id: string) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   return (
     <div className="space-y-4">
-      {questions.map((question: any, qIndex: number) => (
-        <div key={question.id} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-          <div className="flex items-start gap-3 mb-4">
-            <span className="w-8 h-8 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center font-bold text-sm">
-              {qIndex + 1}
-            </span>
-            <div className="flex-1">
+      {questions.map((question: any, qIndex: number) => {
+        const isExpanded = expandedIds.has(question.id)
+        const tab = activeTab[question.id] || 'content'
+        
+        return (
+        <div key={question.id} className={`bg-white rounded-2xl border transition-all duration-300 ${isExpanded ? 'shadow-lg border-blue-200 ring-1 ring-blue-50' : 'hover:border-gray-300 border-gray-100 shadow-sm'}`}>
+          {/* Question Header */}
+          <div className={`p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 ${isExpanded ? 'border-b border-gray-50 bg-gray-50/30' : ''}`}>
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <span className="w-8 h-8 flex-shrink-0 bg-blue-600 text-white rounded-xl flex items-center justify-center font-black text-sm shadow-sm shadow-blue-500/20">
+                {qIndex + 1}
+              </span>
+              <div className="flex-1 min-w-0">
+                 <div className="flex items-center gap-2">
+                   <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-black rounded-lg border border-blue-100 uppercase tracking-tighter sm:tracking-wider">
+                    {QUESTION_TYPES[question.type as QuestionType]?.label}
+                  </span>
+                  {question.required && (
+                    <span className="text-red-500 font-bold" title="مطلوب">*</span>
+                  )}
+                 </div>
+              </div>
+              <button onClick={() => toggleExpand(question.id)} className="sm:hidden p-2 text-gray-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all">
+                <svg className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex-1 w-full min-w-0 px-1 sm:px-0">
               {question.type === 'static_text' ? (
-                <RichTextEditor
-                  value={question.text}
-                  onChange={(html) => onUpdateQuestion(qIndex, { text: html })}
-                  placeholder="اكتب النص هنا..."
-                />
+                <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+                  <RichTextEditor
+                    value={question.text}
+                    onChange={(html) => onUpdateQuestion(qIndex, { text: html })}
+                    placeholder="اكتب النص هنا..."
+                  />
+                </div>
               ) : ['terms'].includes(question.type) ? (
                 <textarea
                   value={question.text}
                   onChange={(e) => onUpdateQuestion(qIndex, { text: e.target.value })}
                   placeholder="اكتب النص هنا..."
-                  rows={4}
-                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows={1}
+                  className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-sm transition-all outline-none"
                 />
               ) : (
                 <input
@@ -62,72 +100,106 @@ export default function QuestionList({
                   value={question.text}
                   onChange={(e) => onUpdateQuestion(qIndex, { text: e.target.value })}
                   placeholder="اكتب السؤال هنا..."
-                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-sm font-bold transition-all outline-none"
                 />
               )}
             </div>
-            <div className="flex items-center gap-1">
+
+            <div className="flex items-center gap-1 w-full sm:w-auto justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-gray-50">
               <button
                 onClick={() => onMoveQuestion(qIndex, 'up')}
                 disabled={qIndex === 0}
-                className="p-2 text-gray-500 hover:bg-gray-200 rounded-lg disabled:opacity-30"
-                aria-label="نقل السؤال لأعلى"
+                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl disabled:opacity-20 transition-all active:scale-90"
+                title="نقل للأعلى"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
                 </svg>
               </button>
               <button
                 onClick={() => onMoveQuestion(qIndex, 'down')}
                 disabled={qIndex === questions.length - 1}
-                className="p-2 text-gray-500 hover:bg-gray-200 rounded-lg disabled:opacity-30"
-                aria-label="نقل السؤال لأسفل"
+                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl disabled:opacity-20 transition-all active:scale-90"
+                title="نقل للأسفل"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
               <button
-                onClick={() => onRemoveQuestion(qIndex)}
-                className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
-                aria-label="حذف"
+                onClick={() => { if(confirm('حذف السؤال؟')) onRemoveQuestion(qIndex) }}
+                className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all active:scale-90"
+                title="حذف"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+              <button onClick={() => toggleExpand(question.id)} className="hidden sm:block p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
+                <svg className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-4 mb-4 ms-2 sm:ms-11">
-            {!DISPLAY_ONLY_QUESTION_TYPES.includes(question.type) && (
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={question.required}
-                  onChange={(e) => onUpdateQuestion(qIndex, { required: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 rounded"
-                />
-                <span className="text-sm text-gray-700">مطلوب</span>
-              </label>
-            )}
-            
-            {!!((formData as any)._is_test) && !['single_choice', 'multiple_choice', 'dropdown', 'ranking', 'matrix', 'button_choice', 'match_items', 'static_text', 'static_image', 'divider', 'terms', 'youtube'].includes(question.type) && (
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-700">النقاط:</label>
-              <input
-                type="number"
-                min="0"
-                value={question.points}
-                onChange={(e) => onUpdateQuestion(qIndex, { points: Number(e.target.value) })}
-                className="w-20 px-2 py-1 bg-white border border-gray-200 rounded-lg text-center"
-              />
-            </div>
-            )}
+          {/* Question Body */}
+          {isExpanded && (
+            <div className="p-4 sm:p-6 space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+              {/* Question Tabs - Scrollable on mobile */}
+              <div className="flex border-b border-gray-100 -mx-4 sm:-mx-6 px-4 sm:px-6 mb-6 overflow-x-auto no-scrollbar scroll-smooth">
+                <button 
+                  onClick={() => setActiveTab(prev => ({...prev, [question.id]: 'content'}))} 
+                  className={`px-5 py-3 text-xs sm:text-sm font-black whitespace-nowrap transition-all relative ${tab === 'content' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
+                >
+                  المحتوى والخيارات
+                  {tab === 'content' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t-full shadow-[0_-2px_6px_rgba(37,99,235,0.3)]" />}
+                </button>
+                <button 
+                  onClick={() => setActiveTab(prev => ({...prev, [question.id]: 'logic'}))} 
+                  className={`px-5 py-3 text-xs sm:text-sm font-black whitespace-nowrap transition-all relative ${tab === 'logic' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
+                >
+                  المنطق (Visibility)
+                  {tab === 'logic' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t-full shadow-[0_-2px_6px_rgba(37,99,235,0.3)]" />}
+                </button>
+                <button 
+                  onClick={() => setActiveTab(prev => ({...prev, [question.id]: 'settings'}))} 
+                  className={`px-5 py-3 text-xs sm:text-sm font-black whitespace-nowrap transition-all relative ${tab === 'settings' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
+                >
+                  إعدادات متقدمة
+                  {tab === 'settings' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t-full shadow-[0_-2px_6px_rgba(37,99,235,0.3)]" />}
+                </button>
+              </div>
 
-            <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full">
-              {QUESTION_TYPES[question.type as QuestionType]?.label}
-            </span>
+              {tab === 'content' && (
+                <div className="space-y-6">
+                  <div className="flex flex-wrap gap-3">
+                    {!DISPLAY_ONLY_QUESTION_TYPES.includes(question.type) && (
+                      <label className="flex items-center gap-2 p-2 px-3 bg-blue-50/50 border border-blue-100 rounded-xl cursor-pointer hover:bg-blue-100/50 transition-colors group">
+                        <input
+                          type="checkbox"
+                          checked={question.required}
+                          onChange={(e) => onUpdateQuestion(qIndex, { required: e.target.checked })}
+                          className="w-4 h-4 text-blue-600 rounded border-blue-300 focus:ring-blue-500"
+                        />
+                        <span className="text-xs font-black text-blue-700 uppercase tracking-wider">سؤال إلزامي</span>
+                      </label>
+                    )}
+                    
+                    {!!((formData as any)._is_test) && !['single_choice', 'multiple_choice', 'dropdown', 'ranking', 'matrix', 'button_choice', 'match_items', 'static_text', 'static_image', 'divider', 'terms', 'youtube'].includes(question.type) && (
+                    <div className="flex items-center gap-2 p-1.5 px-3 bg-amber-50 border border-amber-100 rounded-xl">
+                      <label className="text-xs font-black text-amber-700 uppercase">النقاط:</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={question.points}
+                        onChange={(e) => onUpdateQuestion(qIndex, { points: Number(e.target.value) })}
+                        className="w-14 px-2 py-1 bg-white border border-amber-200 rounded-lg text-center font-black text-amber-900 text-sm outline-none focus:border-amber-400"
+                      />
+                    </div>
+                    )}
+                  </div>
+            
             {!!((formData as any)._is_test) && (() => {
               if (question.type === 'file_upload') return null
               let total = 0
@@ -156,10 +228,9 @@ export default function QuestionList({
               } else {
                 total = question.points || 0
               }
-              return <span className="text-xs text-blue-600 font-medium me-2">({total} نقطة)</span>
+              return <span className="p-2 px-3 bg-emerald-50 text-emerald-700 text-sm font-bold rounded-xl border border-emerald-100">إجمالي النقاط: {total}</span>
             })()}
           </div>
-
           {/* Text validation */}
           {question.type === 'text' && (() => {
             const opts: any[] = parseOptions(question.options)
@@ -235,7 +306,7 @@ export default function QuestionList({
             })()
 
             return (
-              <div className="ms-2 sm:ms-11 mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+              <div className="space-y-4 mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
                 <p className="text-sm font-medium text-purple-700 mb-2">نوع التحقق من الإجابة:</p>
                 <div className="flex flex-wrap gap-2">
                   <select
@@ -305,7 +376,7 @@ export default function QuestionList({
 
           {/* Matrix */}
           {question.type === 'matrix' && (
-            <div className="ms-2 sm:ms-11 space-y-6">
+            <div className="space-y-6">
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-3">الصفوف:</p>
                 <div className="space-y-2">
@@ -400,7 +471,7 @@ export default function QuestionList({
 
           {/* Dropdown */}
           {question.type === 'dropdown' && (
-            <div className="ms-2 sm:ms-11 space-y-3">
+            <div className="space-y-3">
               <div className="flex gap-3 bg-gray-50 rounded-lg p-2 border border-gray-200">
                 <button
                   type="button"
@@ -506,7 +577,7 @@ export default function QuestionList({
 
           {/* Single/Multiple Choice, Ranking, Button Choice */}
           {(question.type === 'single_choice' || question.type === 'multiple_choice' || question.type === 'ranking' || question.type === 'button_choice') && (
-            <div className="ms-2 sm:ms-11 space-y-3">
+            <div className="space-y-3">
               {question.type === 'single_choice' && (
                 <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                   <input
@@ -578,7 +649,7 @@ export default function QuestionList({
 
           {/* Match Items */}
           {question.type === 'match_items' && (
-            <div className="ms-2 sm:ms-11 space-y-3">
+            <div className="space-y-3">
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-3">العمود الأيمن (الخيارات):</p>
                 <div className="space-y-2">
@@ -609,7 +680,7 @@ export default function QuestionList({
 
           {/* Slider */}
           {question.type === 'slider' && (
-            <div className="ms-2 sm:ms-11">
+            <div className="space-y-4">
               <p className="text-sm font-medium text-gray-700 mb-3">إعدادات الشريط الرقمي (Min|Max|Step):</p>
               <input type="text" value={(parseOptions(question.options)[0] || {}).text || '0|100|1'} onChange={(e) => { if(parseOptions(question.options).length===0) onAddOption(qIndex); onUpdateOption(qIndex, 0, { text: e.target.value }) }} className="w-full px-3 py-2 border border-gray-200 rounded-lg" dir="ltr" placeholder="0|100|1" />
               <p className="text-xs text-gray-500 mt-1">أدخل الحد الأدنى | الحد الأقصى | مقدار الزيادة</p>
@@ -618,7 +689,7 @@ export default function QuestionList({
 
           {/* YouTube */}
           {question.type === 'youtube' && (
-            <div className="ms-2 sm:ms-11">
+            <div className="space-y-4">
               <p className="text-sm font-medium text-gray-700 mb-3">رابط يوتيوب:</p>
               <input type="text" value={(parseOptions(question.options)[0] || {}).text || ''} onChange={(e) => { if(parseOptions(question.options).length===0) onAddOption(qIndex); onUpdateOption(qIndex, 0, { text: e.target.value }) }} className="w-full px-3 py-2 border border-gray-200 rounded-lg" dir="ltr" placeholder="https://youtube.com/watch?v=..." />
             </div>
@@ -629,7 +700,7 @@ export default function QuestionList({
             const appointmentConfig = getAppointmentConfig(question.options)
             const appointmentSlots = getAppointmentSlots(question.options)
             return (
-              <div className="ms-2 sm:ms-11 space-y-4">
+              <div className="space-y-4">
                 <div>
                   <p className="text-sm font-medium text-gray-700 mb-2">نوع المواعيد</p>
                   <div className="grid gap-2 sm:grid-cols-2">
@@ -733,7 +804,7 @@ export default function QuestionList({
 
           {/* Date Range */}
           {question.type === 'date_range' && (
-            <div className="ms-2 sm:ms-11">
+            <div className="space-y-4">
               <p className="text-sm font-medium text-gray-700 mb-3">نوع النطاق:</p>
               <div className="grid gap-2 sm:grid-cols-3">
                 {DATE_RANGE_MODE_OPTIONS.map((mode) => {
@@ -759,7 +830,7 @@ export default function QuestionList({
 
           {/* Countdown Timer */}
           {question.type === 'countdown_timer' && (
-            <div className="ms-2 sm:ms-11 space-y-3">
+            <div className="space-y-3">
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-1">العد التنازلي للعرض</p>
                 <p className="text-xs text-gray-500">حدد وقت انتهاء العرض والنص الذي سيظهر للمستخدم.</p>
@@ -798,7 +869,7 @@ export default function QuestionList({
 
           {/* Products Block */}
           {question.type === 'products_block' && (
-            <div className="ms-2 sm:ms-11 space-y-3">
+            <div className="space-y-3">
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-1">المنتجات</p>
                 <p className="text-xs text-gray-500">أضف مجموعات، وداخل كل مجموعة الأصناف والسعر والتفاصيل والصورة.</p>
@@ -812,7 +883,7 @@ export default function QuestionList({
 
           {/* Payment Info Block */}
           {question.type === 'payment_info_block' && (
-            <div className="ms-2 sm:ms-11 space-y-3">
+            <div className="space-y-3">
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-1">بيانات الدفع</p>
                 <p className="text-xs text-gray-500">اكتب بياناتك التي ستظهر للمستخدم مع زر نسخ لكل رقم أو رابط.</p>
@@ -826,7 +897,7 @@ export default function QuestionList({
 
           {/* Star Rating */}
           {question.type === 'star_rating' && (
-            <div className="ms-2 sm:ms-11">
+            <div className="space-y-4">
               <p className="text-sm font-medium text-gray-700 mb-3">عدد النجوم:</p>
               <input type="number" min="1" max="10" value={parseOptions(question.options).length} onChange={(e) => {
                 const count = parseInt(e.target.value) || 5;
@@ -837,7 +908,7 @@ export default function QuestionList({
 
           {/* Static Image */}
           {question.type === 'static_image' && (
-            <div className="ms-2 sm:ms-11">
+            <div className="space-y-4">
               <p className="text-sm font-medium text-gray-700 mb-3">رابط الصورة (URL):</p>
               <input type="text" value={(parseOptions(question.options)[0] || {}).validation_value || ''} onChange={(e) => { if(parseOptions(question.options).length===0) onAddOption(qIndex); onUpdateOption(qIndex, 0, { validation_value: e.target.value }) }} className="w-full px-3 py-2 border border-gray-200 rounded-lg" dir="ltr" placeholder="https://..." />
               <p className="text-xs text-gray-500 mt-1">انسخ رابط الصورة وضعه هنا</p>
@@ -846,7 +917,7 @@ export default function QuestionList({
 
           {/* Scale */}
           {question.type === 'scale' && (
-            <div className="ms-2 sm:ms-11 bg-blue-50 rounded-lg p-4 overflow-x-auto">
+            <div className="space-y-4 bg-blue-50 rounded-lg p-4 overflow-x-auto">
               <p className="text-sm font-medium text-blue-700 mb-3">مقياس التقييم (1-10)</p>
               <div className="flex justify-between items-center min-w-[200px]">
                 {parseOptions(question.options).map((opt: any) => (
@@ -868,8 +939,127 @@ export default function QuestionList({
               </div>
             </div>
           )}
+          </div>
+              )}
+
+              {tab === 'logic' && (
+                <div className="animate-in fade-in slide-in-from-top-1 duration-200 space-y-4">
+                  <div className="p-4 bg-purple-50 rounded-2xl border border-purple-100">
+                    <h4 className="text-sm font-bold text-purple-800 mb-3 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      قواعد العرض المشروط
+                    </h4>
+                    <p className="text-xs text-purple-600 mb-4">يمكنك تحديد متى يظهر هذا السؤال بناءً على إجابات الأسئلة السابقة.</p>
+                    
+                    <div className="space-y-3">
+                      {(question.visibility_rules || []).map((rule: any, rIdx: number) => (
+                        <div key={rIdx} className="flex flex-wrap items-center gap-2 bg-white p-3 rounded-xl border border-purple-100 shadow-sm">
+                          <select 
+                            value={rule.question_id} 
+                            onChange={(e) => {
+                              const rules = [...(question.visibility_rules || [])]
+                              rules[rIdx] = { ...rules[rIdx], question_id: e.target.value }
+                              onUpdateQuestion(qIndex, { visibility_rules: rules })
+                            }}
+                            className="flex-1 min-w-[150px] px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                          >
+                            <option value="">اختر السؤال...</option>
+                            {questions.slice(0, qIndex).filter(q => !DISPLAY_ONLY_QUESTION_TYPES.includes(q.type)).map(q => (
+                              <option key={q.id} value={q.id}>{q.text || `سؤال ${questions.indexOf(q) + 1}`}</option>
+                            ))}
+                          </select>
+                          
+                          <select 
+                            value={rule.operator}
+                            onChange={(e) => {
+                              const rules = [...(question.visibility_rules || [])]
+                              rules[rIdx] = { ...rules[rIdx], operator: e.target.value }
+                              onUpdateQuestion(qIndex, { visibility_rules: rules })
+                            }}
+                            className="w-32 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                          >
+                            <option value="equals">يساوي</option>
+                            <option value="not_equals">لا يساوي</option>
+                            <option value="contains">يحتوي على</option>
+                          </select>
+
+                          <input 
+                            type="text" 
+                            value={rule.value}
+                            onChange={(e) => {
+                              const rules = [...(question.visibility_rules || [])]
+                              rules[rIdx] = { ...rules[rIdx], value: e.target.value }
+                              onUpdateQuestion(qIndex, { visibility_rules: rules })
+                            }}
+                            placeholder="القيمة..."
+                            className="flex-1 min-w-[100px] px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                          />
+
+                          <button 
+                            onClick={() => {
+                              const rules = (question.visibility_rules || []).filter((_: any, i: number) => i !== rIdx)
+                              onUpdateQuestion(qIndex, { visibility_rules: rules })
+                            }}
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+
+                      <button 
+                        onClick={() => {
+                          const rules = [...(question.visibility_rules || []), { question_id: '', operator: 'equals', value: '' }]
+                          onUpdateQuestion(qIndex, { visibility_rules: rules })
+                        }}
+                        className="w-full py-2 border-2 border-dashed border-purple-200 text-purple-600 rounded-xl hover:bg-purple-100/50 transition-colors text-sm font-bold flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        إضافة قاعدة عرض
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {tab === 'settings' && (
+                <div className="animate-in fade-in slide-in-from-top-1 duration-200 space-y-6">
+                  <div className="grid gap-6 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-gray-700 block">الصفحة (Page)</label>
+                      <p className="text-xs text-gray-500 mb-2">تحديد الصفحة التي يظهر فيها هذا السؤال في النماذج متعددة الصفحات.</p>
+                      <input 
+                        type="number" 
+                        min="1" 
+                        value={question.page || 1} 
+                        onChange={(e) => onUpdateQuestion(qIndex, { page: parseInt(e.target.value) || 1 })}
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-gray-700 block">معرف المجموعة (Row Group)</label>
+                      <p className="text-xs text-gray-500 mb-2">يستخدم لربط الأسئلة ببعضها برمجياً (اختياري).</p>
+                      <input 
+                        type="number" 
+                        value={question.row_group || ''} 
+                        onChange={(e) => onUpdateQuestion(qIndex, { row_group: e.target.value ? parseInt(e.target.value) : null })}
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      ))}
+      )})}
 
       {questions.length === 0 && (
         <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl">

@@ -21,7 +21,7 @@ import { CSS } from '@dnd-kit/utilities'
 
 import ThemeDesigner from '@/components/edit/ThemeDesigner'
 import { generateShortCode } from '@/lib/shortCode'
-import { WEEKDAY_OPTIONS } from '@/constants/questionTypes'
+import { WEEKDAY_OPTIONS, DISPLAY_ONLY_QUESTION_TYPES } from '@/constants/questionTypes'
 import { toast } from '@/lib/toast'
 import FormBasicInfo from '@/components/form-creator/FormBasicInfo'
 import TemplatesGrid from '@/components/form-creator/TemplatesGrid'
@@ -101,6 +101,7 @@ export default function FormEditor({ mode, formId }: FormEditorProps) {
   const [responseCount, setResponseCount] = useState(0)
   const [isDesignerOpen, setIsDesignerOpen] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [settingsTab, setSettingsTab] = useState<'general' | 'availability' | 'logic'>('general')
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [showActionMenu, setShowActionMenu] = useState(false)
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
@@ -720,81 +721,206 @@ export default function FormEditor({ mode, formId }: FormEditorProps) {
 
       {/* Settings modal (edit) */}
       {mode === 'edit' && showSettingsModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center overflow-auto pt-12 pb-12">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900">إعدادات النموذج</h2>
-              <button onClick={() => setShowSettingsModal(false)} className="text-gray-400 hover:text-gray-600">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start justify-center overflow-auto pt-6 sm:pt-12 pb-6 sm:pb-12">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0 z-10">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                إعدادات النموذج
+              </h2>
+              <button onClick={() => setShowSettingsModal(false)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition-colors">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            <div className="px-6 py-6 max-h-[70vh] overflow-y-auto space-y-6">
-              <FormBasicInfo formData={formData} onChange={(updates: any) => setFormData(updates)} />
+            
+            {/* Modal Tabs */}
+            <div className="flex border-b border-gray-100 bg-gray-50/50">
+              {(['general', 'availability', 'logic'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setSettingsTab(t)}
+                  className={`flex-1 py-4 text-sm font-bold transition-all relative ${settingsTab === t ? 'text-blue-600 bg-white' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100/50'}`}
+                >
+                  {t === 'general' ? 'إعدادات عامة' : t === 'availability' ? 'جدول التشغيل' : 'المنطق والتحويل'}
+                  {settingsTab === t && <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t-full" />}
+                </button>
+              ))}
+            </div>
 
-              {/* Availability schedule */}
-              <div>
-                <h3 className="font-bold text-gray-900 mb-3">جدول التوفر</h3>
-                {(() => {
-                  const avail = (formData.page_titles as any)?._availability
-                  const scheduleType = avail?.type || 'none'
-                  return <div className="space-y-3">
-                    <select value={scheduleType} onChange={(e) => {
-                      const type = e.target.value
-                      setFormData((prev: any) => ({ ...prev, page_titles: { ...prev.page_titles, _availability: type === 'none' ? null : { type, ...(type === 'weekly' ? { weekly: [{ day: 0, from: '09:00', to: '17:00' }] } : { from: '', to: '' }) } } }))
-                    }} className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm">
-                      <option value="none">متاح دائماً</option>
-                      <option value="weekly">أيام محددة في الأسبوع</option>
-                      <option value="date_range">نطاق تاريخ محدد</option>
-                    </select>
-                    {scheduleType === 'weekly' && <div className="space-y-2">
-                      {(avail?.weekly || []).map((slot: any, i: number) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <select value={slot.day} onChange={(e) => {
-                            const weekly = [...(avail?.weekly || [])]; weekly[i] = { ...weekly[i], day: parseInt(e.target.value) }
-                            setFormData((prev: any) => ({ ...prev, page_titles: { ...prev.page_titles, _availability: { ...avail, weekly } } }))
-                          }} className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm">
-                            {WEEKDAY_OPTIONS.map((d: any) => <option key={d.value} value={d.value}>{d.label}</option>)}
+            <div className="px-6 py-8 max-h-[70vh] overflow-y-auto">
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {settingsTab === 'general' && (
+                  <FormBasicInfo formData={formData} onChange={(updates: any) => setFormData(updates)} />
+                )}
+
+                {settingsTab === 'availability' && (
+                  <div className="space-y-6">
+                    <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl">
+                      <h3 className="font-bold text-blue-900 mb-2 flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        التحكم في توفر النموذج
+                      </h3>
+                      <p className="text-sm text-blue-700">يمكنك جدولة فتح وإغلاق النموذج تلقائياً.</p>
+                    </div>
+
+                    {(() => {
+                      const avail = (formData.page_titles as any)?._availability
+                      const scheduleType = avail?.type || 'none'
+                      return <div className="space-y-6">
+                        <div className="space-y-2">
+                          <label className="text-sm font-bold text-gray-700 block">نوع الجدولة</label>
+                          <select value={scheduleType} onChange={(e) => {
+                            const type = e.target.value
+                            setFormData((prev: any) => ({ ...prev, page_titles: { ...prev.page_titles, _availability: type === 'none' ? null : { type, ...(type === 'weekly' ? { weekly: [{ day: 0, from: '09:00', to: '17:00' }] } : { from: '', to: '' }) } } }))
+                          }} className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500">
+                            <option value="none">متاح دائماً (افتراضي)</option>
+                            <option value="weekly">تكرار أسبوعي (أيام محددة)</option>
+                            <option value="date_range">فترة زمنية محددة (تاريخ من وإلى)</option>
                           </select>
-                          <input type="time" value={slot.from} onChange={(e) => {
-                            const weekly = [...(avail?.weekly || [])]; weekly[i] = { ...weekly[i], from: e.target.value }
-                            setFormData((prev: any) => ({ ...prev, page_titles: { ...prev.page_titles, _availability: { ...avail, weekly } } }))
-                          }} className="rounded-xl border border-gray-200 px-3 py-2 text-sm w-24" />
-                          <input type="time" value={slot.to} onChange={(e) => {
-                            const weekly = [...(avail?.weekly || [])]; weekly[i] = { ...weekly[i], to: e.target.value }
-                            setFormData((prev: any) => ({ ...prev, page_titles: { ...prev.page_titles, _availability: { ...avail, weekly } } }))
-                          }} className="rounded-xl border border-gray-200 px-3 py-2 text-sm w-24" />
-                          <button onClick={() => {
-                            const weekly = (avail?.weekly || []).filter((_: any, j: number) => j !== i)
-                            setFormData((prev: any) => ({ ...prev, page_titles: { ...prev.page_titles, _availability: weekly.length > 0 ? { ...avail, weekly } : null } }))
-                          }} className="text-red-500 hover:text-red-700 p-1"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                        </div>
+
+                        {scheduleType === 'weekly' && (
+                          <div className="space-y-3 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            <h4 className="text-sm font-bold text-gray-900 mb-2">الأيام المتاحة</h4>
+                            {(avail?.weekly || []).map((slot: any, i: number) => (
+                              <div key={i} className="flex flex-wrap sm:flex-nowrap items-center gap-3 bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                                <select value={slot.day} onChange={(e) => {
+                                  const weekly = [...(avail?.weekly || [])]; weekly[i] = { ...weekly[i], day: parseInt(e.target.value) }
+                                  setFormData((prev: any) => ({ ...prev, page_titles: { ...prev.page_titles, _availability: { ...avail, weekly } } }))
+                                }} className="flex-1 min-w-[120px] rounded-lg border border-gray-200 px-3 py-2 text-sm">
+                                  {WEEKDAY_OPTIONS.map((d: any) => <option key={d.value} value={d.value}>{d.label}</option>)}
+                                </select>
+                                <div className="flex items-center gap-2">
+                                  <input type="time" value={slot.from} onChange={(e) => {
+                                    const weekly = [...(avail?.weekly || [])]; weekly[i] = { ...weekly[i], from: e.target.value }
+                                    setFormData((prev: any) => ({ ...prev, page_titles: { ...prev.page_titles, _availability: { ...avail, weekly } } }))
+                                  }} className="rounded-lg border border-gray-200 px-3 py-2 text-sm w-28" />
+                                  <span className="text-gray-400">إلى</span>
+                                  <input type="time" value={slot.to} onChange={(e) => {
+                                    const weekly = [...(avail?.weekly || [])]; weekly[i] = { ...weekly[i], to: e.target.value }
+                                    setFormData((prev: any) => ({ ...prev, page_titles: { ...prev.page_titles, _availability: { ...avail, weekly } } }))
+                                  }} className="rounded-lg border border-gray-200 px-3 py-2 text-sm w-28" />
+                                </div>
+                                <button onClick={() => {
+                                  const weekly = (avail?.weekly || []).filter((_: any, j: number) => j !== i)
+                                  setFormData((prev: any) => ({ ...prev, page_titles: { ...prev.page_titles, _availability: weekly.length > 0 ? { ...avail, weekly } : null } }))
+                                }} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                              </div>
+                            ))}
+                            <button onClick={() => setFormData((prev: any) => ({ ...prev, page_titles: { ...prev.page_titles, _availability: { ...avail, weekly: [...(avail?.weekly || []), { day: 0, from: '09:00', to: '17:00' }] } } }))}
+                              className="w-full py-3 border-2 border-dashed border-blue-200 text-blue-600 rounded-xl hover:bg-blue-50 transition-all text-sm font-bold flex items-center justify-center gap-2">
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                              إضافة يوم تشغيل
+                            </button>
+                          </div>
+                        )}
+
+                        {scheduleType === 'date_range' && (
+                          <div className="grid gap-4 sm:grid-cols-2 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            <div className="space-y-2">
+                              <label className="text-xs font-bold text-gray-500 block">تاريخ الفتح</label>
+                              <input type="datetime-local" value={avail?.from || ''} onChange={(e) => setFormData((prev: any) => ({ ...prev, page_titles: { ...prev.page_titles, _availability: { ...avail, from: e.target.value } } }))} className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-bold text-gray-500 block">تاريخ الإغلاق</label>
+                              <input type="datetime-local" value={avail?.to || ''} onChange={(e) => setFormData((prev: any) => ({ ...prev, page_titles: { ...prev.page_titles, _availability: { ...avail, to: e.target.value } } }))} className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    })()}
+                  </div>
+                )}
+
+                {settingsTab === 'logic' && (
+                  <div className="space-y-8">
+                    <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
+                      <h3 className="font-bold text-indigo-900 mb-2 flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        التحويل الذكي (Smart Redirect)
+                      </h3>
+                      <p className="text-sm text-indigo-700">يمكنك توجيه المستخدم لصفحة معينة أو عرض رسالة خاصة بناءً على إجاباته.</p>
+                    </div>
+
+                    <div className="space-y-4">
+                      {(formData.redirect_rules || []).map((rule: any, i: number) => (
+                        <div key={i} className="p-5 bg-white border border-gray-200 rounded-2xl shadow-sm space-y-4 relative">
+                          <button onClick={() => setFormData((prev: any) => ({ ...prev, redirect_rules: (prev.redirect_rules || []).filter((_: any, j: number) => j !== i) }))}
+                            className="absolute top-4 left-4 text-red-400 hover:text-red-600 p-1">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                          
+                          <div className="flex flex-wrap items-center gap-2 text-sm font-bold text-gray-700">
+                            <span>إذا كانت إجابة</span>
+                            <select 
+                              value={rule.question_id} 
+                              onChange={(e) => {
+                                const rules = [...(formData.redirect_rules || [])]; rules[i] = { ...rules[i], question_id: e.target.value }
+                                setFormData((prev: any) => ({ ...prev, redirect_rules: rules }))
+                              }}
+                              className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg"
+                            >
+                              <option value="">اختر السؤال...</option>
+                              {formData.questions?.filter(q => !DISPLAY_ONLY_QUESTION_TYPES.includes(q.type)).map(q => (
+                                <option key={q.id} value={q.id}>{q.text}</option>
+                              ))}
+                            </select>
+                            <select 
+                              value={rule.operator}
+                              onChange={(e) => {
+                                const rules = [...(formData.redirect_rules || [])]; rules[i] = { ...rules[i], operator: e.target.value }
+                                setFormData((prev: any) => ({ ...prev, redirect_rules: rules }))
+                              }}
+                              className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg"
+                            >
+                              <option value="equals">تساوي</option>
+                              <option value="not_equals">لا تساوي</option>
+                              <option value="contains">تحتوي على</option>
+                            </select>
+                            <input 
+                              type="text" 
+                              value={rule.value}
+                              onChange={(e) => {
+                                const rules = [...(formData.redirect_rules || [])]; rules[i] = { ...rules[i], value: e.target.value }
+                                setFormData((prev: any) => ({ ...prev, redirect_rules: rules }))
+                              }}
+                              placeholder="القيمة..."
+                              className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg min-w-[120px]"
+                            />
+                          </div>
+
+                          <div className="space-y-3 pt-2 border-t border-gray-50">
+                            <div className="space-y-1">
+                              <label className="text-xs text-gray-500 font-bold block">رابط التحويل (Redirect URL)</label>
+                              <input type="url" value={rule.redirect_url} onChange={(e) => {
+                                const rules = [...(formData.redirect_rules || [])]; rules[i] = { ...rules[i], redirect_url: e.target.value }
+                                setFormData((prev: any) => ({ ...prev, redirect_rules: rules }))
+                              }} placeholder="https://..." className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs text-gray-500 font-bold block">رسالة مخصصة (اختياري)</label>
+                              <input type="text" value={rule.message} onChange={(e) => {
+                                const rules = [...(formData.redirect_rules || [])]; rules[i] = { ...rules[i], message: e.target.value }
+                                setFormData((prev: any) => ({ ...prev, redirect_rules: rules }))
+                              }} placeholder="تظهر للمستخدم قبل التحويل..." className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                          </div>
                         </div>
                       ))}
-                      <button onClick={() => setFormData((prev: any) => ({ ...prev, page_titles: { ...prev.page_titles, _availability: { ...avail, weekly: [...(avail?.weekly || []), { day: 0, from: '09:00', to: '17:00' }] } } }))}
-                        className="text-blue-600 text-sm hover:underline">+ إضافة يوم</button>
-                    </div>}
-                    {scheduleType === 'date_range' && <div className="flex gap-2">
-                      <div><label className="block text-xs text-gray-500 mb-1">من</label><input type="date" value={avail?.from || ''} onChange={(e) => setFormData((prev: any) => ({ ...prev, page_titles: { ...prev.page_titles, _availability: { ...avail, from: e.target.value } } }))} className="rounded-xl border border-gray-200 px-3 py-2 text-sm" /></div>
-                      <div><label className="block text-xs text-gray-500 mb-1">إلى</label><input type="date" value={avail?.to || ''} onChange={(e) => setFormData((prev: any) => ({ ...prev, page_titles: { ...prev.page_titles, _availability: { ...avail, to: e.target.value } } }))} className="rounded-xl border border-gray-200 px-3 py-2 text-sm" /></div>
-                    </div>}
+                      
+                      <button onClick={() => setFormData((prev: any) => ({ ...prev, redirect_rules: [...(prev.redirect_rules || []), { question_id: '', operator: 'equals', value: '', redirect_url: '', message: '' }] }))}
+                        className="w-full py-4 border-2 border-dashed border-indigo-200 text-indigo-600 rounded-2xl hover:bg-indigo-50 transition-all font-bold flex items-center justify-center gap-2">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                        إضافة قاعدة تحويل ذكية
+                      </button>
+                    </div>
                   </div>
-                })()}
-              </div>
-
-              {/* Redirect rules */}
-              <div>
-                <h3 className="font-bold text-gray-900 mb-3">تحويل ذكي بعد الإرسال</h3>
-                {(formData.redirect_rules || []).map((rule: any, i: number) => (
-                  <div key={i} className="flex items-center gap-2 mb-2">
-                    <input type="url" value={rule.redirect_url} onChange={(e) => {
-                      const rules = [...(formData.redirect_rules || [])]; rules[i] = { ...rules[i], redirect_url: e.target.value }
-                      setFormData((prev: any) => ({ ...prev, redirect_rules: rules }))
-                    }} placeholder="رابط التحويل" className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm" />
-                    <button onClick={() => setFormData((prev: any) => ({ ...prev, redirect_rules: (prev.redirect_rules || []).filter((_: any, j: number) => j !== i) }))}
-                      className="text-red-500 hover:text-red-700 p-1"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
-                  </div>
-                ))}
-                <button onClick={() => setFormData((prev: any) => ({ ...prev, redirect_rules: [...(prev.redirect_rules || []), { question_id: '', operator: 'equals', value: '', redirect_url: '', message: '' }] }))}
-                  className="text-blue-600 text-sm hover:underline">+ إضافة قاعدة تحويل</button>
+                )}
               </div>
             </div>
           </div>
