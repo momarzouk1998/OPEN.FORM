@@ -487,7 +487,7 @@ export default function FormEditor({ mode, formId }: FormEditorProps) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
       const { error } = await supabase.from('user_templates').insert({
-        name: templateTitle, description: templateDescription, questions_data: (formData?.questions || []).map((q: any) => ({ ...q, options: undefined, options: parseOptions(q.options) })),
+        name: templateTitle, description: templateDescription, questions_data: (formData?.questions || []).map((q: any) => ({ ...q, options: parseOptions(q.options) })),
         category: 'general', created_by: user.id, approved: false
       })
       if (error) throw error
