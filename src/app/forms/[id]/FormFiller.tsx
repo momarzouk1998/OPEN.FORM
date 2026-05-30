@@ -20,6 +20,7 @@ interface Form {
   name: string
   description: string
   project_id: string
+  created_by?: string
   allow_multiple: boolean
   time_limit?: number | null
   expires_at?: string | null
@@ -233,6 +234,22 @@ export default function FormFiller({ form, questions, existingResponse: propExis
       })
     })
   }, [displayQuestions, answers])
+
+  const answerableQuestions = useMemo(() => {
+    return visibleQuestions.filter(q => 
+      !['static_text', 'static_image', 'divider', 'youtube', 'countdown_timer', 'payment_info_block'].includes(q.type)
+    )
+  }, [visibleQuestions])
+
+  const answersCount = useMemo(() => {
+    return answerableQuestions.filter(q => {
+      const ans = answers[q.id]
+      if (q.type === 'products_block') {
+        return Object.values(cart).some(qty => qty > 0)
+      }
+      return ans !== undefined && ans !== null && ans !== '' && (!Array.isArray(ans) || ans.length > 0)
+    }).length
+  }, [answerableQuestions, answers, cart])
 
   // Multi-page computation (based on visible questions only)
   const pages = Array.from(new Set(visibleQuestions.map(q => q.page || 1))).sort((a, b) => a - b)
@@ -659,6 +676,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
 
       // If allow_multiple is false and there's existing response, update it
       // Otherwise always insert a new response
+      let insertedId = ''
       if (!form.allow_multiple && existingResponse) {
         const { error: updateError } = await supabase
           .from('form_responses')
@@ -671,6 +689,7 @@ export default function FormFiller({ form, questions, existingResponse: propExis
           .eq('id', existingResponse.id)
 
         if (updateError) throw updateError
+        insertedId = existingResponse.id
       } else {
         // Insert new response (for allow_multiple=true or no existing response)
         const insertData: any = {
@@ -686,11 +705,36 @@ export default function FormFiller({ form, questions, existingResponse: propExis
           insertData.respondent_id = getRespondentId()
         }
 
-        const { error: insertError } = await supabase
+        const { data: insertResult, error: insertError } = await supabase
           .from('form_responses')
           .insert(insertData)
+          .select('id')
+          .single()
 
         if (insertError) throw insertError
+        insertedId = insertResult?.id || ''
+      }
+
+      // Send notifications (in-app dashboard & email)
+      if (form.created_by) {
+        // 1. Dashboard notification
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: form.created_by,
+            title: 'رد جديد على نموذجك',
+            body: `تلقيت رداً جديداً على نموذج "${form.name}"`,
+            type: 'response',
+            link: `/admin/results?formId=${form.id}`,
+            is_read: false
+          })
+
+        // 2. Email notification via API route
+        fetch('/api/forms/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ formId: form.id, responseId: insertedId })
+        }).catch(err => console.error('Error sending email notification:', err))
       }
 
       // Clear draft after successful submit
@@ -776,10 +820,10 @@ export default function FormFiller({ form, questions, existingResponse: propExis
         form={form}
         isPreview={isPreview}
         timeLeft={timeLeft}
-        visibleQuestions={visibleQuestions}
+        visibleQuestions={answerableQuestions}
         totalPages={totalPages}
         pageIndex={pageIndex}
-        answersCount={Object.keys(answers).filter(k => visibleQuestions.some(q => q.id === k)).length}
+        answersCount={answersCount}
         onBack={() => { if (!isPreview) router.back() }}
       />
 
@@ -862,7 +906,8 @@ export default function FormFiller({ form, questions, existingResponse: propExis
           pages={pages}
           currentPage={currentPage}
           form={form}
-          answersCount={Object.keys(answers).length}
+          answersCount={answersCount}
+          answers={answers}
           project={project}
           autoSave={autoSave}
           onPrev={goToPrevPage}

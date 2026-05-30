@@ -242,7 +242,8 @@ export default function FormEditor({ mode, formId }: FormEditorProps) {
         enable_auto_save: form.enable_auto_save,
         _is_test: !!pageTitles._is_test, _availability: pageTitles._availability || null,
         _payment: pageTitles._payment || [], _products: pageTitles._products || [],
-        _submit_button: pageTitles._submit_button || {}, _offer_countdown: pageTitles._offer_countdown || '' } as any)
+        _submit_button: pageTitles._submit_button || {}, _offer_countdown: pageTitles._offer_countdown || '',
+        _email_notifications: !!pageTitles._email_notifications } as any)
       try { localStorage.removeItem(`form_draft_${formId}`) } catch {}
 
       const { data: allForms } = await supabase.from('forms').select('*, questions(*)')
@@ -291,6 +292,29 @@ export default function FormEditor({ mode, formId }: FormEditorProps) {
     const removed = formData?.questions?.[index]
     if (removed) setDeletedQuestions((prev: any) => [...prev.slice(-19), { question: removed, index }])
     setFormData((prev: any) => ({ ...prev, questions: (prev.questions || []).filter((_: any, i: number) => i !== index) }))
+  }
+  const duplicateQuestion = (index: number) => {
+    const questionToDup = formData?.questions?.[index]
+    if (!questionToDup) return
+    const newQuestion = {
+      ...questionToDup,
+      id: `q_${Date.now()}_dup_${Math.random().toString(36).substring(2, 6)}`,
+      options: Array.isArray(questionToDup.options)
+        ? questionToDup.options.map(opt => ({ ...opt, id: `opt_${Date.now()}_${Math.random().toString(36).substring(2, 6)}` }))
+        : questionToDup.options,
+      matrix_rows: Array.isArray(questionToDup.matrix_rows)
+        ? questionToDup.matrix_rows.map(row => ({ ...row, id: `row_${Date.now()}_${Math.random().toString(36).substring(2, 6)}` }))
+        : questionToDup.matrix_rows,
+      matrix_columns: Array.isArray(questionToDup.matrix_columns)
+        ? questionToDup.matrix_columns.map(col => ({ ...col, id: `col_${Date.now()}_${Math.random().toString(36).substring(2, 6)}` }))
+        : questionToDup.matrix_columns
+    }
+    setFormData((prev: any) => {
+      const newQs = [...(prev.questions || [])]
+      newQs.splice(index + 1, 0, newQuestion)
+      return { ...prev, questions: newQs }
+    })
+    toast('تم نسخ السؤال بنجاح', 'success')
   }
   const undoDelete = () => {
     if (deletedQuestions.length === 0) return
@@ -385,7 +409,8 @@ export default function FormEditor({ mode, formId }: FormEditorProps) {
           page_titles: { ...formData.page_titles, _is_test: !!(formData.page_titles as any)?._is_test,
             _payment: formData.questions?.some((q: any) => q.type === 'payment_info_block') ? ((formData.page_titles as any)?._payment || []) : [],
             _products: formData.questions?.some((q: any) => q.type === 'products_block') ? ((formData.page_titles as any)?._products || []) : [],
-            _submit_button: (formData.page_titles as any)?._submit_button || {}, _offer_countdown: (formData.page_titles as any)?._offer_countdown || '' }
+            _submit_button: (formData.page_titles as any)?._submit_button || {}, _offer_countdown: (formData.page_titles as any)?._offer_countdown || '',
+            _email_notifications: !!(formData as any)._email_notifications }
         }).eq('id', formData.id)
         if (formError) throw formError
         await supabase.from('questions').delete().eq('form_id', formData.id)
@@ -552,6 +577,11 @@ export default function FormEditor({ mode, formId }: FormEditorProps) {
                 <button onClick={() => setIsDesignerOpen(true)} className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors" title="التصميم">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
                 </button>
+                {formData?.id && (
+                  <Link href={`/admin/results?formId=${formData.id}`} className="p-2.5 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors" title="الردود والتحليلات">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                  </Link>
+                )}
               </>
             )}
             {mode === 'create' && (
@@ -613,6 +643,12 @@ export default function FormEditor({ mode, formId }: FormEditorProps) {
         {mode === 'edit' && responseCount > 0 && (
           <div className="bg-gradient-to-l from-blue-50 to-indigo-50 rounded-2xl p-4 mb-6 border border-blue-100 flex items-center justify-between">
             <span className="text-sm text-gray-700">عدد الردود: <strong className="text-blue-600">{responseCount}</strong></span>
+            {formData?.id && (
+              <Link href={`/admin/results?formId=${formData.id}`} className="flex items-center gap-1.5 text-sm text-emerald-600 hover:text-emerald-700 font-medium transition-colors hover:bg-emerald-50 px-3 py-1.5 rounded-lg">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                عرض الردود والتحليلات
+              </Link>
+            )}
           </div>
         )}
 
@@ -642,6 +678,7 @@ export default function FormEditor({ mode, formId }: FormEditorProps) {
                       <div className="mb-3">
                         <QuestionList questions={[question]} onUpdateQuestion={(i: number, u: any) => updateQuestion(qIndex, u)}
                           onRemoveQuestion={() => removeQuestion(qIndex)} onMoveQuestion={(i: number, d: any) => moveQuestion(qIndex, d)}
+                          onDuplicateQuestion={() => duplicateQuestion(qIndex)}
                           onAddOption={(i: number) => addOption(qIndex)} onRemoveOption={(i: number, oi: number) => removeOption(qIndex, oi)}
                           onUpdateOption={(i: number, oi: number, u: any) => updateOption(qIndex, oi, u)}
                           onAddMatrixRow={(i: number) => addMatrixRow(qIndex)} onRemoveMatrixRow={(i: number, ri: number) => removeMatrixRow(qIndex, ri)}
@@ -660,6 +697,7 @@ export default function FormEditor({ mode, formId }: FormEditorProps) {
             ) : (
               <QuestionList questions={formData.questions || []} onUpdateQuestion={updateQuestion}
                 onRemoveQuestion={removeQuestion} onMoveQuestion={moveQuestion}
+                onDuplicateQuestion={duplicateQuestion}
                 onAddOption={addOption} onRemoveOption={removeOption} onUpdateOption={updateOption}
                 onAddMatrixRow={addMatrixRow} onRemoveMatrixRow={removeMatrixRow} onUpdateMatrixRow={updateMatrixRow}
                 onAddMatrixColumn={addMatrixColumn} onRemoveMatrixColumn={removeMatrixColumn} onUpdateMatrixColumn={updateMatrixColumn}

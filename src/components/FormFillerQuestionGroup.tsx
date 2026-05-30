@@ -4,6 +4,7 @@ import { DISPLAY_ONLY_QUESTION_TYPES } from '@/constants/questionTypes'
 import QuestionRenderer from '@/components/QuestionRenderer'
 import { getQuestionMaxScore } from '@/lib/scoringUtils'
 import type { Question } from '@/lib/formFillerUtils'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface Props {
   pageQuestions: Question[]
@@ -116,25 +117,47 @@ export default function FormFillerQuestionGroup({
         if (grp.group !== null && grp.questions.length > 1) {
           return (
             <div key={`row_${grp.group}`} className="flex flex-col sm:flex-row gap-4">
-              {grp.questions.map((question, gi) => {
-                const idx = grp.startIndex + gi
-                return (
-                  <div key={question.id} className="flex-1 min-w-0 bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 transition-all hover:shadow-md form-themed-card form-themed-spacing">
-                    {renderQuestionWithCard(question, idx)}
-                  </div>
-                )
-              })}
+              <AnimatePresence initial={false}>
+                {grp.questions.map((question, gi) => {
+                  const idx = grp.startIndex + gi
+                  return (
+                    <motion.div
+                      key={question.id}
+                      initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                      exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                      transition={{ duration: 0.25, ease: 'easeInOut' }}
+                      style={{ overflow: 'hidden' }}
+                      className="flex-1 min-w-0 bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 transition-all hover:shadow-md form-themed-card form-themed-spacing"
+                    >
+                      {renderQuestionWithCard(question, idx)}
+                    </motion.div>
+                  )
+                })}
+              </AnimatePresence>
             </div>
           )
         }
-        return grp.questions.map((question, gi) => {
-          const idx = grp.startIndex + gi
-          return (
-            <div key={question.id} className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 transition-all hover:shadow-md form-themed-card form-themed-spacing">
-              {renderQuestionWithCard(question, idx)}
-            </div>
-          )
-        })
+        return (
+          <AnimatePresence key={`single_${grp.group || grp.startIndex}`} initial={false}>
+            {grp.questions.map((question, gi) => {
+              const idx = grp.startIndex + gi
+              return (
+                <motion.div
+                  key={question.id}
+                  initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                  exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                  transition={{ duration: 0.25, ease: 'easeInOut' }}
+                  style={{ overflow: 'hidden' }}
+                  className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 transition-all hover:shadow-md form-themed-card form-themed-spacing"
+                >
+                  {renderQuestionWithCard(question, idx)}
+                </motion.div>
+              )
+            })}
+          </AnimatePresence>
+        )
       })}
     </div>
   )

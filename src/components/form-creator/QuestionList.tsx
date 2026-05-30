@@ -14,6 +14,7 @@ interface QuestionListProps {
   onUpdateQuestion: (index: number, updates: Partial<Question>) => void
   onRemoveQuestion: (index: number) => void
   onMoveQuestion: (index: number, direction: 'up' | 'down') => void
+  onDuplicateQuestion: (index: number) => void
   onAddOption: (qIndex: number) => void
   onRemoveOption: (qIndex: number, optIndex: number) => void
   onUpdateOption: (qIndex: number, optIndex: number, updates: any) => void
@@ -29,7 +30,7 @@ interface QuestionListProps {
 
 export default function QuestionList({
   questions, onUpdateQuestion, onRemoveQuestion, onMoveQuestion,
-  onAddOption, onRemoveOption, onUpdateOption,
+  onDuplicateQuestion, onAddOption, onRemoveOption, onUpdateOption,
   onAddMatrixRow, onRemoveMatrixRow, onUpdateMatrixRow,
   onAddMatrixColumn, onRemoveMatrixColumn, onUpdateMatrixColumn,
   onParseBulkText, formData
@@ -124,6 +125,15 @@ export default function QuestionList({
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <button
+                onClick={() => onDuplicateQuestion(qIndex)}
+                className="p-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all active:scale-90"
+                title="نسخ السؤال"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 5.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
                 </svg>
               </button>
               <button

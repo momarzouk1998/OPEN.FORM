@@ -230,6 +230,21 @@ export default function FormBasicInfo({ formData, onChange }: FormBasicInfoProps
             </div>
           </label>
         </div>
+
+        <div className="bg-rose-50 rounded-xl p-4">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!(formData as any)._email_notifications}
+              onChange={(e) => onChange({ ...formData, _email_notifications: e.target.checked } as any)}
+              className="w-5 h-5 mt-1 text-rose-600 rounded focus:ring-rose-500"
+            />
+            <div>
+              <span className="font-medium text-gray-800 block">إشعارات البريد الإلكتروني</span>
+              <span className="text-sm text-gray-600">استقبال إشعار على بريدك الإلكتروني عند كل رد جديد على النموذج</span>
+            </div>
+          </label>
+        </div>
       </div>
     </div>
   )

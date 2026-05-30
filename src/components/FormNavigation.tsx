@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { toast } from '@/lib/toast'
 
 interface FormNavigationProps {
   isFirstPage: boolean
@@ -11,6 +12,7 @@ interface FormNavigationProps {
   isPreview?: boolean
   form: any
   answersCount: number
+  answers: Record<string, any>
   project: { id: string; name: string; color: string } | null
   autoSave: { saveDraft: (answers: Record<string, any>) => void }
   onPrev: () => void
@@ -19,7 +21,11 @@ interface FormNavigationProps {
   onPageClick: (page: number) => void
 }
 
-export default function FormNavigation({ isFirstPage, isLastPage, submitting, pages, currentPage, isPreview, form, answersCount, project, autoSave, onPrev, onNext, onSubmit, onPageClick }: FormNavigationProps) {
+export default function FormNavigation({
+  isFirstPage, isLastPage, submitting, pages, currentPage,
+  isPreview, form, answersCount, answers, project, autoSave,
+  onPrev, onNext, onSubmit, onPageClick
+}: FormNavigationProps) {
   const router = useRouter()
 
   if (pages.length === 0) return null
@@ -85,7 +91,8 @@ export default function FormNavigation({ isFirstPage, isLastPage, submitting, pa
         <div className="pt-2">
           <button
             onClick={() => {
-              autoSave.saveDraft({})
+              autoSave.saveDraft(answers)
+              toast('تم حفظ المسودة بنجاح! يمكنك إكمال النموذج لاحقاً.', 'success')
               router.push(project ? `/projects/${project.id}` : '/dashboard')
             }}
             className="w-full py-3 bg-slate-50 text-slate-600 border border-slate-200 rounded-xl font-medium hover:bg-slate-100 transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 group"
