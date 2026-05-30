@@ -703,14 +703,19 @@ export default function FormEditor({ mode, formId }: FormEditorProps) {
                 onParseBulkText={parseBulkText} formData={formData} />
             )}
 
-            <div className="flex gap-3 mt-8">
+            <div className="flex flex-col sm:flex-row gap-4 mt-8 w-full">
               <AddQuestionMenu open={questionMenuOpen} selectedCategory={selectedCategory}
                 onToggle={() => setQuestionMenuOpen(!questionMenuOpen)}
                 onCategoryChange={(cat: string) => setSelectedCategory(cat as any)} onAddQuestion={addQuestion} />
               <button onClick={() => setShowQuestionPicker(true)}
-                className="py-4 px-6 border-2 border-dashed border-emerald-300 text-emerald-600 rounded-xl hover:bg-emerald-50 hover:border-emerald-400 font-bold transition-all flex items-center justify-center gap-2">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
-                استيراد سؤال
+                className="py-4 px-6 bg-gradient-to-r from-emerald-50/80 to-teal-50/80 dark:from-gray-850 dark:to-gray-800 border-2 border-dashed border-emerald-300/80 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-400 rounded-3xl hover:from-emerald-100/50 hover:to-teal-100/50 hover:border-emerald-400/90 hover:shadow-lg hover:shadow-emerald-500/5 active:scale-[0.99] font-extrabold transition-all flex items-center justify-center gap-2.5 group/import"
+              >
+                <div className="w-10 h-10 bg-gradient-to-br from-emerald-600 to-teal-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover/import:scale-110 transition-all duration-300">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+                  </svg>
+                </div>
+                <span className="text-base tracking-wide font-black">استيراد سؤال من نموذج سابق</span>
               </button>
             </div>
           </div>
