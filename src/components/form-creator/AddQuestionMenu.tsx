@@ -205,13 +205,9 @@ export default function AddQuestionMenu({ open, selectedCategory, onToggle, onCa
                           {info.icon}
                         </div>
                         
-                        {/* Status/Category Badge */}
-                        {isDevelopment ? (
+                        {/* Status/Category Badge (Only show Soon badge if under development) */}
+                        {isDevelopment && (
                           <span className="text-[8px] font-black bg-gray-100 dark:bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full border border-gray-200/50 uppercase">قريباً</span>
-                        ) : (
-                          <span className="text-[8px] font-black bg-gray-50 dark:bg-gray-800 text-gray-450 dark:text-gray-400 px-2 py-0.5 rounded-full capitalize">
-                            {ITEM_CATEGORIES[info.category]?.label.split(' ')[1] || 'حقل'}
-                          </span>
                         )}
                       </div>
                       
