@@ -1,5 +1,5 @@
 import { getUser as getAuthUser } from '@/lib/auth'
-import { query as dbQuery } from '@/lib/db'
+import { query as dbQuery, insert as dbInsert } from '@/lib/db'
 
 export const createClient = async () => {
   let _user: any = undefined
@@ -19,6 +19,10 @@ export const createClient = async () => {
     },
     from: (table: string) => {
       const qb: any = {
+        _action: 'select',
+        _insertData: null,
+        _updateData: null,
+        _returning: false,
         _selectCols: '*',
         _where: [] as string[],
         _params: [] as any[],
@@ -30,7 +34,6 @@ export const createClient = async () => {
         _count: false,
         _head: false,
         _joins: [] as string[],
-        _joinCols: [] as string[],
         eq: (col: string, val: any) => { qb._where.push('`' + col + '` = ?'); qb._params.push(val); return qb },
         neq: (col: string, val: any) => { qb._where.push('`' + col + '` != ?'); qb._params.push(val); return qb },
         gt: (col: string, val: any) => { qb._where.push('`' + col + '` > ?'); qb._params.push(val); return qb },
@@ -50,7 +53,17 @@ export const createClient = async () => {
         offset: (n: number) => { qb._offset = n; return qb },
         single: () => { qb._single = true; return qb },
         maybeSingle: () => { qb._maybeSingle = true; return qb },
+        insert: (data: any) => { qb._action = 'insert'; qb._insertData = data; return qb },
+        update: (data: any) => { qb._action = 'update'; qb._updateData = data; return qb },
+        delete: (opts?: any) => {
+          qb._action = 'delete'
+          if (opts && typeof opts === 'object') {
+            if ((opts as any).count === 'exact') qb._count = true
+          }
+          return qb
+        },
         select: function (columns = '*', opts?: any) {
+          if (qb._action === 'insert') qb._returning = true
           if (opts && typeof opts === 'object') {
             if ((opts as any).count === 'exact') qb._count = true
             if ((opts as any).head === true) qb._head = true
@@ -82,19 +95,56 @@ export const createClient = async () => {
           return qb
         },
         then: async (resolve: any) => {
-          if (qb._count && qb._head) {
-            const sql = 'SELECT COUNT(*) as count FROM `' + table + '`' + (qb._where.length ? ' WHERE ' + qb._where.join(' AND ') : '')
-            const rows = await dbQuery<{ count: number }>(sql, qb._params)
-            resolve({ data: null, count: rows[0]?.count || 0, error: null })
-            return
-          }
-          let sql = 'SELECT ' + qb._selectCols + ' FROM `' + table + '`'
-          if (qb._joins.length) sql += ' ' + qb._joins.join(' ')
-          if (qb._where.length) sql += ' WHERE ' + qb._where.join(' AND ')
-          if (qb._orderBy) sql += ' ' + qb._orderBy
-          if (qb._limit) sql += ' LIMIT ' + qb._limit
-          if (qb._offset) sql += ' OFFSET ' + qb._offset
           try {
+            if (qb._action === 'insert' || qb._action === 'update' || qb._action === 'delete') {
+              if (qb._action === 'insert') {
+                const rows = Array.isArray(qb._insertData) ? qb._insertData : [qb._insertData]
+                for (const row of rows) {
+                  if (!row.id) row.id = crypto.randomUUID()
+                  await dbInsert(table, row)
+                }
+                if (qb._returning) {
+                  const ids = rows.map(r => r.id)
+                  const placeholders = ids.map(() => '?').join(',')
+                  const inserted = await dbQuery('SELECT * FROM `' + table + '` WHERE id IN (' + placeholders + ')', ids)
+                  resolve({ data: qb._single || qb._maybeSingle ? inserted[0] || null : inserted, error: null })
+                  return
+                }
+                resolve({ data: rows.map(r => r.id), error: null })
+                return
+              }
+
+              if (qb._action === 'update') {
+                const keys = Object.keys(qb._updateData)
+                const values = Object.values(qb._updateData)
+                const setClause = keys.map(k => '`' + k + '` = ?').join(', ')
+                const sql = 'UPDATE `' + table + '` SET ' + setClause + (qb._where.length ? ' WHERE ' + qb._where.join(' AND ') : '')
+                await dbQuery(sql, [...values, ...qb._params])
+                resolve({ error: null })
+                return
+              }
+
+              if (qb._action === 'delete') {
+                let sql = 'DELETE FROM `' + table + '`'
+                if (qb._where.length) sql += ' WHERE ' + qb._where.join(' AND ')
+                await dbQuery(sql, qb._params)
+                resolve({ error: null })
+                return
+              }
+            }
+
+            if (qb._count && qb._head) {
+              const sql = 'SELECT COUNT(*) as count FROM `' + table + '`' + (qb._where.length ? ' WHERE ' + qb._where.join(' AND ') : '')
+              const rows = await dbQuery<{ count: number }>(sql, qb._params)
+              resolve({ data: null, count: rows[0]?.count || 0, error: null })
+              return
+            }
+            let sql = 'SELECT ' + qb._selectCols + ' FROM `' + table + '`'
+            if (qb._joins.length) sql += ' ' + qb._joins.join(' ')
+            if (qb._where.length) sql += ' WHERE ' + qb._where.join(' AND ')
+            if (qb._orderBy) sql += ' ' + qb._orderBy
+            if (qb._limit) sql += ' LIMIT ' + qb._limit
+            if (qb._offset) sql += ' OFFSET ' + qb._offset
             const rows = await dbQuery<any>(sql, qb._params)
             if (qb._single || qb._maybeSingle) {
               resolve({ data: rows[0] || null, error: null })
@@ -102,7 +152,7 @@ export const createClient = async () => {
               resolve({ data: rows, error: null })
             }
           } catch (e: any) {
-            resolve({ data: qb._single || qb._maybeSingle ? null : [], error: e })
+            resolve({ data: null, error: e.message || e })
           }
         },
       }

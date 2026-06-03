@@ -1,17 +1,21 @@
 'use client'
 
+async function doFetch(url: string, options?: RequestInit): Promise<any> {
+  const res = await fetch(url, options)
+  if (!res.ok) {
+    try {
+      const json = await res.json()
+      return { data: null, error: json.error || { message: 'خطأ في الاستعلام' } }
+    } catch {
+      return { data: null, error: { message: 'خطأ في الاتصال' } }
+    }
+  }
+  return res.json()
+}
+
 function buildUrl(table: string, params: Record<string, string>): string {
   const qs = new URLSearchParams({ table, ...params })
   return '/api/query?' + qs.toString()
-}
-
-async function fetchQuery(url: string): Promise<any> {
-  const res = await fetch(url)
-  if (!res.ok) {
-    const json = await res.json()
-    return { data: null, error: json.error || { message: 'خطأ في الاستعلام' } }
-  }
-  return res.json()
 }
 
 export function createClient() {
@@ -51,11 +55,15 @@ export function createClient() {
         getPublicUrl: (path: string) => ({ data: { publicUrl: '/uploads/' + path.split('/').pop() } }),
       }),
     },
-    rpc: (fn: string, params: any) => ({
+    rpc: (fn: string, _params: any) => ({
       then: async (resolve: any) => resolve({ data: null, error: { message: 'RPC not supported: ' + fn } }),
     }),
     from: (table: string) => {
       const qb: any = {
+        _action: 'select',
+        _insertData: null,
+        _updateData: null,
+        _returning: false,
         _eqCol: '', _eqVal: null,
         _orderCol: '', _orderDir: 'ASC',
         _single: false,
@@ -69,8 +77,18 @@ export function createClient() {
         maybeSingle: () => { qb._single = true; return qb },
         limit: (n: number) => { qb._limit = n; return qb },
         in: (col: string, vals: any[]) => { qb._inCol = col; qb._inVals = vals; return qb },
+        insert: (data: any) => { qb._action = 'insert'; qb._insertData = data; return qb },
+        update: (data: any) => { qb._action = 'update'; qb._updateData = data; return qb },
+        delete: (opts?: any) => {
+          qb._action = 'delete'
+          if (opts && typeof opts === 'object') {
+            if ((opts as any).count === 'exact') qb._count = true
+          }
+          return qb
+        },
         select: (columns = '*', opts?: any) => {
           qb._columns = columns
+          if (qb._action === 'insert') qb._returning = true
           if (opts && typeof opts === 'object') {
             if ((opts as any).count === 'exact') qb._count = true
             if ((opts as any).head === true) qb._head = true
@@ -78,10 +96,28 @@ export function createClient() {
           return qb
         },
         then: async (resolve: any) => {
+          if (qb._action === 'insert' || qb._action === 'update' || qb._action === 'delete') {
+            const payload: any = { table, action: qb._action }
+            if (qb._action === 'insert') {
+              payload.data = qb._insertData
+              if (qb._returning) payload.returning = true
+            }
+            if (qb._action === 'update') {
+              payload.data = qb._updateData
+              if (qb._eqCol) payload.where = { column: qb._eqCol, value: qb._eqVal }
+            }
+            if (qb._action === 'delete') {
+              if (qb._eqCol) payload.where = { column: qb._eqCol, value: qb._eqVal }
+            }
+            const result = await doFetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+            resolve(result)
+            return
+          }
+
           if (qb._count && qb._head) {
             const params: Record<string, string> = { table, action: 'count' }
             if (qb._eqCol) { params.eqCol = qb._eqCol; params.eqVal = String(qb._eqVal) }
-            const result = await fetchQuery(buildUrl(table, params))
+            const result = await doFetch(buildUrl(table, params))
             resolve({ data: null, count: result.count || 0, error: null })
             return
           }
@@ -91,7 +127,7 @@ export function createClient() {
           if (qb._eqCol) { params.eqCol = qb._eqCol; params.eqVal = String(qb._eqVal) }
           if (qb._orderCol) { params.orderCol = qb._orderCol; params.orderDir = qb._orderDir }
           if (qb._inVals.length) { params.inCol = qb._inCol; params.inVals = qb._inVals.join(',') }
-          const result = await fetchQuery(buildUrl(table, params))
+          const result = await doFetch(buildUrl(table, params))
           resolve(result)
         },
       }
