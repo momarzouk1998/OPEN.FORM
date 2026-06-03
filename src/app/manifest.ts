@@ -7,10 +7,10 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
 
   try {
     const supabase = await createClient()
-    const { data } = await supabase.from('app_settings').select('key, value')
+    const { data } = await supabase.from('app_settings').select('key_name, value')
     if (data) {
-      const logoSetting = data.find(s => s.key === 'app_logo')
-      const nameSetting = data.find(s => s.key === 'app_name')
+      const logoSetting = data.find((s: any) => s.key_name === 'app_logo')
+      const nameSetting = data.find((s: any) => s.key_name === 'app_name')
       if (logoSetting?.value) appLogo = logoSetting.value
       if (nameSetting?.value) appName = nameSetting.value
     }
