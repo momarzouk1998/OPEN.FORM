@@ -209,8 +209,8 @@ CREATE TABLE notifications (
   user_id VARCHAR(36) NOT NULL,
   title VARCHAR(255) NOT NULL,
   message TEXT,
-  type VARCHAR(50) DEFAULT 'info',
-  read TINYINT(1) DEFAULT 0,
+  `type` VARCHAR(50) DEFAULT 'info',
+  `read` TINYINT(1) DEFAULT 0,
   link TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
@@ -229,7 +229,7 @@ CREATE TABLE verification_codes (
   email VARCHAR(255) NOT NULL,
   code VARCHAR(6) NOT NULL,
   expires_at DATETIME NOT NULL,
-  used TINYINT(1) DEFAULT 0,
+  `used` TINYINT(1) DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
